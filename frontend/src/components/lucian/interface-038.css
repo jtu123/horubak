@@ -1,0 +1,39 @@
+/* Lucian UX/UI Prompt #038 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#038 */
+
+.u038{position:relative;width:350px;height:350px;user-select:none;-webkit-user-select:none}
+.u038-h{display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 12px}
+.u038-h b{font-size:18px;font-weight:760;letter-spacing:-.03em}
+.u038-h span{font-size:13px;color:var(--ux-ink-3)}
+.u038-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.u038-card{position:relative;padding:8px 8px 12px;border-radius:20px;background:var(--ux-surface);box-shadow:0 0 0 1px var(--ux-line);cursor:default;outline:none;transition:transform .45s var(--ux-spring),box-shadow .25s,opacity .35s,filter .35s}
+.u038-card:focus-visible{box-shadow:0 0 0 2px var(--ux-accent)}
+.u038-card.is-ctx{box-shadow:0 0 0 2px var(--ux-accent),0 16px 30px -18px var(--ux-shadow-strong);transform:translateY(-2px)}
+.u038-th{height:86px;border-radius:14px;background:var(--g);position:relative;overflow:hidden}
+.u038-th::after{content:"";position:absolute;left:12px;right:30%;bottom:12px;height:8px;border-radius:4px;background:rgba(255,255,255,.55);box-shadow:0 -14px 0 rgba(255,255,255,.35)}
+.u038-card b{display:block;margin:10px 4px 0;font-size:13.5px;font-weight:680;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.u038-card small{display:block;margin:2px 4px 0;font-size:11.5px;color:var(--ux-ink-3)}
+.u038-more{position:absolute;right:12px;top:12px;width:28px;height:28px;border:0;padding:0;border-radius:9px;background:rgba(255,255,255,.75);color:#2A2A30;display:grid;place-items:center;opacity:0;transition:opacity .2s}
+.u038-card:hover .u038-more,.u038-card:focus-within .u038-more{opacity:1}
+@media (hover:none){.u038-more{opacity:1}}
+.u038-more:focus-visible{outline:2px solid var(--ux-accent);outline-offset:1px}
+.u038-more svg{width:16px;height:16px;fill:currentColor}
+.u038-card.is-gone{transform:scale(.94)}
+.u038-undo{position:absolute;inset:0;display:grid;place-items:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.u038-card.is-gone .u038-undo{opacity:1;pointer-events:auto}
+.u038-undo button{height:34px;padding:0 14px;border:0;border-radius:11px;background:var(--ux-ink);color:var(--ux-page);font-size:13px;font-weight:700}
+.u038-card.is-gone>:not(.u038-undo){opacity:.3;filter:grayscale(1)}
+.u038-menu{position:absolute;z-index:10;width:200px;padding:6px;border-radius:16px;background:var(--ux-surface);box-shadow:0 0 0 1px var(--ux-line-2),0 24px 48px -20px var(--ux-shadow-strong);overflow:hidden;
+  height:var(--mh,auto);opacity:0;transform:scale(.85);visibility:hidden;transition:opacity .15s var(--ux-ease),transform .35s var(--ux-spring),height .4s var(--ux-spring),visibility 0s .35s}
+.u038-menu.is-open{opacity:1;transform:none;visibility:visible;transition:opacity .15s var(--ux-ease),transform .4s var(--ux-spring),height .4s var(--ux-spring)}
+.u038-track{display:flex;width:376px;gap:0;transition:transform .45s var(--ux-spring)}
+.u038-menu.is-sub .u038-track{transform:translateX(-188px)}
+.u038-p{width:188px;flex:none;margin:0;padding:0;list-style:none;transition:opacity .3s}
+.u038-menu.is-sub .u038-p:first-child,.u038-menu:not(.is-sub) .u038-p+.u038-p{opacity:0}
+.u038-back{color:var(--ux-ink-2)!important;font-weight:700!important}
+.u038-mi{display:flex;align-items:center;gap:10px;width:100%;height:38px;padding:0 10px;border:0;border-radius:10px;background:none;color:var(--ux-ink);font-size:13.5px;font-weight:620;text-align:left}
+.u038-mi:hover,.u038-mi:focus-visible,.u038-mi[aria-expanded="true"]{background:var(--ux-surface-2);outline:none}
+.u038-mi svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;color:var(--ux-ink-2)}
+.u038-mi kbd{margin-left:auto;font-family:inherit;font-size:11.5px;color:var(--ux-ink-3)}
+.u038-mi .u038-ar{margin-left:auto;width:14px;height:14px}
+.u038-mi.danger,.u038-mi.danger svg{color:var(--ux-danger)}
+.u038-sep{height:1px;margin:5px 8px;background:var(--ux-line)}

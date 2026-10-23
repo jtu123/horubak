@@ -1,0 +1,38 @@
+/* Application integration of original Lucian #046, #038 and #092 styles. */
+.command-dialog { padding: 0; border: 0; background: transparent; color: var(--text); width: 360px; max-width: calc(100vw - 32px); overflow: visible; }
+.command-dialog::backdrop { background: rgb(25 31 40 / 28%); backdrop-filter: blur(5px); }
+.command-dialog .u046 { max-width: 100%; height: min(460px,calc(100dvh - 48px)); }
+.command-dialog .command-group { padding: 0; margin: 0; list-style: none; }
+.command-dialog .u046-in:focus-visible { outline: none; }
+.command-dialog .command-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.command-dialog .u046-done { max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+.command-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 12px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; color: var(--muted); font-size: 12px; }
+.command-trigger kbd { font: inherit; font-size: 10px; opacity: .7; }
+.command-trigger:hover { background: var(--accent-soft); color: var(--accent-strong); }
+.bento-topbar { grid-template-columns: auto minmax(0,1fr) auto; gap: 20px; }
+.bento-main-nav { justify-self: center; }
+.context-host.u038 { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 200; }
+.context-host .u038-menu { position: fixed; }
+.context-host .u038-track { animation: context-panel-in .45s var(--ux-spring); }
+@keyframes context-panel-in { from { opacity: .3; transform: translateX(12px); } }
+.workspace-bento .project-card.u038-card { padding: 0; }
+.workspace-bento .project-card.u038-card.is-ctx { box-shadow: 0 0 0 2px var(--accent); }
+.project-more-trigger { width: 32px; height: 34px; }
+.workspace-bento .search-recovery { margin: 24px auto 4px; max-width: 100%; }
+.search-recovery .u092-in { display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-recovery .u092-ch { background: var(--accent-soft); color: var(--accent-strong); }
+.search-recovery .u092-meta b { font-size: 12.5px; font-weight: 700; }
+.search-recovery .u092-sg b { display: inline; font-size: 13px; font-weight: 700; }
+.search-recovery .u092-nt { font-size: 16.5px; }
+@media(max-width:1100px) { .command-trigger kbd { display: none; } .bento-main-nav a { padding-left: 10px; padding-right: 10px; } }
+@media(max-width:900px) { .bento-topbar { grid-template-columns: 1fr auto; } .bento-main-nav { justify-self: start; } }
+@media(max-width:600px) {
+  .command-trigger { padding: 0; width: 35px; min-height: 37px; border: 0; background: transparent; }
+  .command-trigger>span,.command-trigger kbd { display: none; }
+  .topbar-actions .command-trigger { width: 32px; }
+  .workspace-bento .search-recovery { padding: 16px; }
+  .search-recovery .u092-fs { flex-wrap: wrap; height: auto; min-height: 34px; }
+  .search-recovery .u092-ch { font-size: 11px; max-width: 125px; }
+  .search-recovery .u092-sg { font-size: 12px; gap: 6px; }
+}
+@media(prefers-reduced-motion:reduce) { .search-recovery .u092-lens { animation: none; } .context-host .u038-track { animation: none; } }

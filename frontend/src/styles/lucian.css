@@ -1,0 +1,230 @@
+/* Lucian UX/UI Prompt #032 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#032 */
+
+.u032{position:relative;width:340px;height:420px}
+.u032-zone{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:196px;border:0;padding:0;border-radius:26px;background:var(--ux-surface);color:var(--ux-ink);cursor:pointer;
+  transition:transform .5s var(--ux-spring),background-color .3s var(--ux-ease)}
+.u032-zone:focus-visible{outline:2px solid var(--ux-accent);outline-offset:4px}
+.u032-zone svg.u032-dash{position:absolute;left:1px;top:1px;width:calc(100% - 2px);height:calc(100% - 2px);overflow:visible;pointer-events:none}
+.u032-dash rect{fill:none;stroke:var(--ux-line-2);stroke-width:2;stroke-dasharray:8 7;transition:stroke .3s var(--ux-ease)}
+.u032-zone:hover .u032-dash rect,.u032.is-over .u032-dash rect{stroke:var(--ux-accent);animation:u032-march .9s linear infinite}
+@keyframes u032-march{to{stroke-dashoffset:-30}}
+.u032.is-over .u032-zone{transform:scale(1.03);background:color-mix(in srgb,var(--ux-accent) 7%,var(--ux-surface))}
+.u032-orb{width:60px;height:60px;border-radius:20px;display:grid;place-items:center;color:#fff;background:linear-gradient(140deg,#5B8CFF,#8B6CFF);box-shadow:0 16px 28px -14px rgba(91,108,255,.8);transition:transform .5s var(--ux-spring)}
+.u032-orb svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.u032-zone:hover .u032-orb{transform:translateY(-4px)}
+.u032.is-over .u032-orb{transform:translateY(-8px) scale(1.1) rotate(-6deg)}
+.u032-zone b{margin-top:14px;font-size:15.5px;font-weight:720;letter-spacing:-.02em}
+.u032-zone b em{font-style:normal;color:var(--ux-accent)}
+.u032-zone small{margin-top:4px;font-size:12.5px;color:var(--ux-ink-3)}
+.u032-file{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.u032-list{margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.u032-row{position:relative;display:flex;align-items:center;gap:12px;height:62px;padding:0 12px;border-radius:18px;background:var(--ux-surface);box-shadow:0 0 0 1px var(--ux-line);overflow:hidden;animation:u032-in .5s var(--ux-spring)}
+@keyframes u032-in{from{transform:translateY(-10px) scale(.96);opacity:0}}
+.u032-row.out{transition:transform .35s var(--ux-ease),opacity .3s;transform:translateX(30px);opacity:0}
+.u032-ic{width:36px;height:40px;flex:none;border-radius:9px;display:grid;place-items:end center;padding-bottom:5px;font-size:8.5px;font-weight:800;letter-spacing:.04em;color:#fff;background:var(--c)}
+.u032-meta{flex:1;min-width:0}
+.u032-meta b{display:block;font-size:14px;font-weight:660;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.u032-meta small{display:block;margin-top:3px;font-size:12px;color:var(--ux-ink-3);font-variant-numeric:tabular-nums}
+.u032-bar{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--ux-accent);transform-origin:0 50%;transform:scaleX(var(--p,0));transition:transform .2s linear,background-color .3s,opacity .5s .4s}
+.u032-row.done .u032-bar{background:var(--ux-mint);opacity:0}
+.u032-row.fail .u032-bar{background:var(--ux-danger)}
+.u032-st{width:30px;height:30px;flex:none;border-radius:50%;display:grid;place-items:center}
+.u032-st svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.u032-row.done .u032-st{background:var(--ux-mint);color:var(--ux-accent-ink);animation:u032-pop .45s var(--ux-spring)}
+@keyframes u032-pop{from{transform:scale(.3)}}
+.u032-row.done .u032-st path{stroke-dasharray:16;stroke-dashoffset:16;animation:u032-draw .4s var(--ux-ease) .15s forwards}
+@keyframes u032-draw{to{stroke-dashoffset:0}}
+.u032-row.fail .u032-meta small{color:var(--ux-danger)}
+.u032-retry{height:32px;padding:0 12px;border:0;border-radius:10px;background:color-mix(in srgb,var(--ux-danger) 12%,transparent);color:var(--ux-danger);font-size:12.5px;font-weight:700;white-space:nowrap}
+.u032-retry:focus-visible{outline:2px solid var(--ux-danger);outline-offset:2px}
+.u032-spin{width:20px;height:20px;border-radius:50%;border:2.5px solid var(--ux-surface-3);border-top-color:var(--ux-accent);animation:u032-rot .8s linear infinite}
+@keyframes u032-rot{to{transform:rotate(360deg)}}
+
+/* Lucian UX/UI Prompt #039 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#039 */
+
+.u039{position:relative;width:340px;height:380px}
+.u039-tabs{position:relative;display:flex;padding:5px;border-radius:999px;background:var(--ux-surface);box-shadow:0 0 0 1px var(--ux-line)}
+.u039-pill{position:absolute;left:0;top:5px;bottom:5px;width:var(--w,80px);border-radius:999px;background:var(--ux-ink);transform:translateX(var(--x,5px));box-shadow:0 8px 16px -10px var(--ux-shadow-strong);transition:transform .5s var(--ux-spring),width .5s var(--ux-spring)}
+.u039-tab{position:relative;flex:1;height:42px;border:0;padding:0;border-radius:999px;background:none;font-size:14px;font-weight:680;color:var(--ux-ink-2);white-space:nowrap;transition:color .35s var(--ux-ease)}
+.u039-tab[aria-selected="true"]{color:var(--ux-page)}
+.u039-tab:focus-visible{outline:2px solid var(--ux-accent);outline-offset:2px}
+.u039-panel{position:relative;height:312px;margin-top:14px;overflow:hidden;border-radius:22px}
+.u039-list{position:absolute;inset:0;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.u039-row{display:flex;align-items:center;gap:12px;padding:10px;border-radius:18px;background:var(--ux-surface);box-shadow:0 0 0 1px var(--ux-line);transition:transform .55s var(--ux-spring),opacity .35s var(--ux-ease)}
+.u039-art{position:relative;width:52px;height:52px;flex:none;border-radius:14px;background:var(--g);overflow:hidden}
+.u039-art::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.45),transparent 55%)}
+.u039-row b{display:block;font-size:15px;font-weight:700;letter-spacing:-.02em}
+.u039-row small{display:block;margin-top:3px;font-size:12.5px;color:var(--ux-ink-3)}
+.u039-row em{margin-left:auto;font-style:normal;font-size:12.5px;font-weight:650;color:var(--ux-ink-3);font-variant-numeric:tabular-nums}
+.u039-badge{margin-left:6px;padding:2px 6px;border-radius:6px;font-size:10.5px;font-weight:800;background:var(--ux-accent-soft);color:var(--ux-accent);vertical-align:2px}
+
+/* Lucian UX/UI Prompt #042 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#042 */
+
+.u042{position:relative;width:350px;height:400px;display:flex;flex-direction:column;padding:22px 20px 18px;border-radius:28px;background:var(--ux-surface);box-shadow:0 0 0 1px var(--ux-line),0 30px 60px -36px var(--ux-shadow-strong)}
+.u042-steps{position:relative;display:flex;justify-content:space-between;margin:0 6px;padding:0;list-style:none}
+.u042-line{position:absolute;left:17px;right:17px;top:16px;height:3px;border-radius:2px;background:var(--ux-surface-3)}
+.u042-line i{position:absolute;inset:0;border-radius:inherit;background:var(--ux-grad);transform-origin:0 50%;transform:scaleX(var(--p,0));transition:transform .6s var(--ux-ease)}
+.u042-st{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;width:34px}
+.u042-dot{position:relative;width:34px;height:34px;border:0;padding:0;border-radius:50%;background:var(--ux-surface);box-shadow:inset 0 0 0 2px var(--ux-line-2);font-size:13.5px;font-weight:780;color:var(--ux-ink-3);display:grid;place-items:center;transition:box-shadow .35s,background-color .35s,color .35s,transform .45s var(--ux-spring)}
+.u042-dot:focus-visible{outline:2px solid var(--ux-accent);outline-offset:3px}
+.u042-dot svg{position:absolute;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.u042-dot path{stroke-dasharray:16;stroke-dashoffset:16;transition:stroke-dashoffset .35s var(--ux-ease) .1s}
+.u042-st.cur .u042-dot{box-shadow:inset 0 0 0 2px var(--ux-accent),0 0 0 5px var(--ux-accent-soft);color:var(--ux-accent);transform:scale(1.08)}
+.u042-st.done .u042-dot{background:var(--ux-accent);box-shadow:none;color:var(--ux-accent-ink);cursor:pointer}
+.u042-st.done .u042-dot span{opacity:0}
+.u042-st.done .u042-dot svg{opacity:1}
+.u042-st.done .u042-dot path{stroke-dashoffset:0}
+.u042-st small{font-size:11.5px;font-weight:700;color:var(--ux-ink-3);white-space:nowrap;transition:color .3s}
+.u042-st.cur small,.u042-st.done small{color:var(--ux-ink)}
+.u042-view{position:relative;flex:1;margin-top:22px;overflow:hidden}
+.u042-pane{position:absolute;inset:0;transition:transform .55s var(--ux-ease),opacity .35s var(--ux-ease)}
+.u042-pane h4{margin:0;font-size:19px;font-weight:780;letter-spacing:-.03em}
+.u042-pane p{margin:5px 0 16px;font-size:13.5px;color:var(--ux-ink-3)}
+.u042-fld{display:flex;align-items:center;gap:10px;height:50px;padding:0 14px;border-radius:14px;background:var(--ux-surface-2);font-size:15px;font-weight:620;margin-bottom:8px}
+.u042-url{color:var(--ux-ink-3);font-weight:560}
+.u042-url b{color:var(--ux-ink);font-weight:700}
+.u042-fld small{margin-left:auto;font-size:12px;color:var(--ux-ink-3)}
+.u042-chips{display:flex;gap:6px}
+.u042-chips span{padding:8px 12px;border-radius:999px;font-size:13px;font-weight:650;box-shadow:inset 0 0 0 1px var(--ux-line-2);color:var(--ux-ink-2)}
+.u042-chips span.on{background:var(--ux-ink);color:var(--ux-page);box-shadow:none}
+.u042-av{width:30px;height:30px;flex:none;border-radius:50%;background:var(--c)}
+.u042-done{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center}
+.u042-big{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;background:var(--ux-mint);color:var(--ux-accent-ink);box-shadow:0 0 0 10px color-mix(in srgb,var(--ux-mint) 18%,transparent);transform:scale(.5);transition:transform .6s var(--ux-spring) .2s}
+.u042-big svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.u042-pane.on .u042-big{transform:none}
+.u042-done h4{margin-top:18px}
+.u042-foot{display:flex;gap:8px;margin-top:12px}
+.u042-b{height:50px;border:0;border-radius:15px;font-size:15px;font-weight:700;transition:transform .35s var(--ux-spring),opacity .3s,background-color .3s}
+.u042-b:active{transform:scale(.96)}
+.u042-b:focus-visible{outline:2px solid var(--ux-accent);outline-offset:2px}
+.u042-prev{width:96px;background:var(--ux-surface-2);color:var(--ux-ink)}
+.u042-prev[aria-disabled="true"]{opacity:.35}
+.u042-next{flex:1;background:var(--ux-ink);color:var(--ux-page)}
+.u042.is-last .u042-next{background:var(--ux-mint);color:var(--ux-accent-ink)}
+
+/* Lucian UX/UI Prompt #040 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#040 */
+
+.u040{--rw:76px;position:relative;display:flex;gap:10px;width:350px;height:520px}
+.u040.is-wide{--rw:200px}
+.u040-rail{position:relative;flex:none;width:var(--rw);padding:12px 10px;border-radius:24px;background:var(--ux-ink);color:var(--ux-page);overflow:hidden;transition:width .6s var(--ux-spring)}
+.u040-top{display:flex;align-items:center;gap:10px;height:44px;margin-bottom:14px}
+.u040-logo{width:36px;height:36px;flex:none;margin-left:10px;border-radius:12px;background:var(--ux-grad)}
+.u040-name{font-size:15.5px;font-weight:780;letter-spacing:-.03em;white-space:nowrap;opacity:0;transition:opacity .25s}
+.u040.is-wide .u040-name{opacity:1;transition:opacity .3s .15s}
+.u040-tog{position:absolute;right:-1px;top:16px;width:30px;height:36px;border:0;padding:0;border-radius:10px 0 0 10px;background:color-mix(in srgb,var(--ux-page) 14%,transparent);color:inherit;display:grid;place-items:center;opacity:0;transition:opacity .2s}
+.u040-rail:hover .u040-tog,.u040-tog:focus-visible,.u040.is-wide .u040-tog{opacity:1}
+@media (hover:none){.u040-tog{opacity:1}}
+.u040-tog:focus-visible{outline:2px solid var(--ux-accent);outline-offset:-2px}
+.u040-tog svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .5s var(--ux-spring)}
+.u040.is-wide .u040-tog svg{transform:rotate(180deg)}
+.u040-nav{position:relative;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.u040-hl{position:absolute;left:0;right:0;top:0;height:48px;border-radius:15px;background:color-mix(in srgb,var(--ux-page) 15%,transparent);transform:translateY(var(--y,0));transition:transform .5s var(--ux-spring);pointer-events:none}
+.u040-hl::before{content:"";position:absolute;left:-10px;top:12px;bottom:12px;width:4px;border-radius:0 4px 4px 0;background:var(--ux-grad)}
+.u040-it{position:relative;display:flex;align-items:center;gap:14px;width:100%;height:48px;padding:0 0 0 16px;border:0;border-radius:15px;background:none;color:inherit;opacity:.62;text-align:left;transition:opacity .25s}
+.u040-it:hover,.u040-it[aria-current="page"]{opacity:1}
+.u040-it:focus-visible{outline:2px solid var(--ux-accent);outline-offset:-2px}
+.u040-it svg{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.u040-it span{font-size:14.5px;font-weight:650;white-space:nowrap;opacity:0;transform:translateX(-8px);transition:opacity .2s,transform .35s var(--ux-ease)}
+.u040.is-wide .u040-it span{opacity:1;transform:none;transition:opacity .3s var(--ux-ease),transform .5s var(--ux-spring);transition-delay:calc(.12s + var(--i) * 35ms)}
+.u040-bd{position:absolute;left:34px;top:9px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#FF5A6E;color:#fff;font-size:10.5px;font-weight:800;display:grid;place-items:center;font-style:normal;box-shadow:0 0 0 2.5px var(--ux-ink);transition:left .5s var(--ux-spring)}
+.u040.is-wide .u040-bd{left:170px}
+.u040-me{position:absolute;left:10px;right:10px;bottom:12px;display:flex;align-items:center;gap:10px;height:52px;padding:0 0 0 10px;border-radius:16px;background:color-mix(in srgb,var(--ux-page) 8%,transparent)}
+.u040-me i{width:34px;height:34px;flex:none;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFD3A8,#FF7A93 60%,#8B6CFF)}
+.u040-me span{font-size:13px;font-weight:650;white-space:nowrap;opacity:0;transition:opacity .25s}
+.u040-me small{display:block;font-size:11.5px;opacity:.6}
+.u040.is-wide .u040-me span{opacity:1;transition-delay:.25s}
+.u040-main{flex:1;min-width:0;padding:18px 16px;border-radius:24px;background:var(--ux-surface);box-shadow:0 0 0 1px var(--ux-line);overflow:hidden}
+.u040-main small{display:block;font-size:12px;font-weight:700;color:var(--ux-ink-3)}
+.u040-main h3{margin:4px 0 16px;font-size:21px;font-weight:780;letter-spacing:-.035em;white-space:nowrap;transition:opacity .2s,transform .4s var(--ux-spring)}
+.u040-main h3.swap{opacity:0;transform:translateY(8px)}
+.u040-blk{height:88px;margin-bottom:10px;border-radius:16px;background:var(--ux-surface-2);position:relative;overflow:hidden}
+.u040-blk::before{content:"";position:absolute;left:14px;top:16px;width:34px;height:34px;border-radius:10px;background:var(--c)}
+.u040-blk::after{content:"";position:absolute;left:14px;right:30%;bottom:18px;height:8px;border-radius:4px;background:var(--ux-line-2);box-shadow:0 -14px 0 -1px var(--ux-line)}
+
+/* Lucian UX/UI Prompt #062 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#062 */
+
+.u062{position:relative;width:340px;height:480px;border-radius:30px;background:var(--ux-surface);box-shadow:0 0 0 1px var(--ux-line),0 30px 60px -36px var(--ux-shadow-strong);overflow:hidden}
+.u062.shake{animation:u062-no .5s cubic-bezier(.36,.07,.19,.97)}
+@keyframes u062-no{15%{transform:translateX(-9px) rotate(-.6deg)}30%{transform:translateX(8px) rotate(.5deg)}45%{transform:translateX(-6px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+.u062-pane{position:absolute;inset:0;padding:30px 26px 26px;display:flex;flex-direction:column;transition:transform .6s var(--ux-ease),opacity .4s}
+.u062-logo{width:44px;height:44px;border-radius:14px;background:var(--ux-grad);box-shadow:0 10px 20px -10px rgba(91,72,255,.6)}
+.u062-pane h3{margin:18px 0 4px;font-size:24px;font-weight:850;letter-spacing:-.045em}
+.u062-pane>p{margin:0 0 22px;font-size:13.5px;color:var(--ux-ink-3)}
+.u062-f{position:relative;margin-bottom:12px}
+.u062-f label{display:block;margin-bottom:6px;font-size:12.5px;font-weight:700;color:var(--ux-ink-2)}
+.u062-box{position:relative;display:flex;align-items:center;height:52px;border-radius:15px;background:var(--ux-surface-2);box-shadow:inset 0 0 0 1.5px transparent;transition:box-shadow .25s,background-color .25s}
+.u062-box:focus-within{background:var(--ux-surface);box-shadow:inset 0 0 0 1.5px var(--ux-accent),0 0 0 4px var(--ux-accent-soft)}
+.u062-f.bad .u062-box{box-shadow:inset 0 0 0 1.5px var(--ux-danger);background:color-mix(in srgb,var(--ux-danger) 6%,var(--ux-surface))}
+.u062-box input{flex:1;min-width:0;height:100%;border:0;padding:0 16px;background:none;font-size:15px;font-weight:600;color:var(--ux-ink);outline:none}
+.u062-box input:focus-visible{outline:none}
+.u062-box input::placeholder{color:var(--ux-ink-3);font-weight:500}
+.u062-eye{width:44px;height:44px;margin-right:4px;border:0;padding:0;border-radius:12px;display:grid;place-items:center;background:none;color:var(--ux-ink-3);transition:color .2s}
+.u062-eye:hover{color:var(--ux-ink)}
+.u062-eye:focus-visible{outline:2px solid var(--ux-accent);outline-offset:-4px}
+.u062-eye svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.u062-lid{transform-origin:12px 12px;transition:transform .35s var(--ux-spring)}
+.u062-eye[aria-pressed="false"] .u062-lid{transform:scaleY(.5)}
+.u062-slash{stroke-dasharray:24;stroke-dashoffset:0;transition:stroke-dashoffset .35s var(--ux-ease)}
+.u062-eye[aria-pressed="true"] .u062-slash{stroke-dashoffset:24}
+.u062-caps{position:absolute;right:0;top:0;font-size:11.5px;font-weight:800;color:var(--ux-warn);opacity:0;transition:opacity .2s}
+.u062-caps.on{opacity:1}
+.u062-err{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s var(--ux-ease)}
+.u062-err>span{overflow:hidden;min-height:0;font-size:12.5px;font-weight:650;color:var(--ux-danger)}
+.u062-err>span::before{content:"";display:block;height:7px}
+.u062-f.bad .u062-err{grid-template-rows:1fr}
+.u062-row{display:flex;justify-content:flex-end;margin:-2px 0 0}
+.u062-row a{font-size:12.5px;font-weight:700;color:var(--ux-accent);text-decoration:none}
+.u062-row a:focus-visible{outline:2px solid var(--ux-accent);outline-offset:2px;border-radius:4px}
+.u062-go{position:relative;align-self:center;width:100%;height:54px;margin-top:auto;border:0;border-radius:17px;background:var(--ux-ink);color:var(--ux-page);font-size:15.5px;font-weight:760;overflow:hidden;transition:width .45s var(--ux-spring),border-radius .45s var(--ux-spring),background-color .4s,transform .3s var(--ux-spring)}
+.u062-go:active{transform:scale(.97)}
+.u062-go:focus-visible{outline:2px solid var(--ux-accent);outline-offset:3px}
+.u062-go span{transition:opacity .2s}
+.u062-go i{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;opacity:0;animation:u062-spin .7s linear infinite}
+.u062-go svg{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.u062-go svg path{stroke-dasharray:26;stroke-dashoffset:26;transition:stroke-dashoffset .4s var(--ux-ease) .1s}
+.u062-go.busy,.u062-go.ok{width:54px;border-radius:27px}
+.u062-go.busy span,.u062-go.ok span{opacity:0}
+.u062-go.busy i{opacity:1}
+.u062-go.ok{background:var(--ux-mint);color:var(--ux-accent-ink)}
+.u062-go.ok svg path{stroke-dashoffset:0}
+@keyframes u062-spin{to{transform:rotate(360deg)}}
+.u062-hi{transform:translateX(100%);opacity:0;align-items:center;justify-content:center;text-align:center}
+.u062.is-in .u062-login{transform:translateX(-30%);opacity:0;pointer-events:none}
+.u062.is-in .u062-hi{transform:none;opacity:1}
+.u062-av{width:88px;height:88px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#FFE2C2,#F2A27A 45%,#B5577A);box-shadow:0 0 0 6px var(--ux-surface),0 0 0 8px var(--ux-mint)}
+.u062-hi h3{margin-top:22px}
+.u062-hi button{margin-top:22px;height:44px;padding:0 18px;border:0;border-radius:999px;background:var(--ux-surface-2);color:var(--ux-ink);font-size:13.5px;font-weight:700}
+.u062-hi button:focus-visible{outline:2px solid var(--ux-accent);outline-offset:2px}
+
+/* Lucian UX/UI Prompt #070 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#070 */
+
+.u070{position:relative;width:350px;height:370px}
+.u070-btns{display:flex;flex-wrap:wrap;gap:6px}
+.u070-btns button{height:38px;padding:0 14px;border:0;border-radius:999px;display:inline-flex;align-items:center;gap:6px;background:var(--ux-surface);box-shadow:0 0 0 1px var(--ux-line);font-size:13px;font-weight:720;color:var(--ux-ink);transition:transform .3s var(--ux-spring),box-shadow .3s}
+.u070-btns button:hover{box-shadow:0 0 0 1px var(--ux-line-2),0 8px 16px -10px var(--ux-shadow-strong)}
+.u070-btns button:active{transform:scale(.94)}
+.u070-btns button:focus-visible{outline:2px solid var(--ux-accent);outline-offset:2px}
+.u070-btns i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.u070-zone{position:absolute;left:0;right:0;bottom:0;height:300px;outline:none}
+.u070-t{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:12px;min-height:68px;padding:12px 12px 12px 14px;border-radius:20px;background:var(--ux-surface);box-shadow:0 0 0 1px var(--ux-line),0 16px 30px -18px var(--ux-shadow-strong);transform-origin:50% 100%;transform:translate(var(--dx,0px),var(--y,0px)) scale(var(--s,1));opacity:var(--o,1);transition:transform .5s var(--ux-spring),opacity .35s;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.u070-t.drag{transition:none}
+.u070-t.enter{transform:translateY(90px) scale(.9);opacity:0}
+.u070-t.leave{transform:translate(var(--dx,0px),var(--y,0px)) scale(var(--s,1));opacity:0;pointer-events:none}
+.u070-t.leave.side{transform:translate(calc(var(--dir,1) * 420px),var(--y,0px)) rotate(calc(var(--dir,1) * 8deg))}
+.u070-t>*{transition:opacity .25s}
+.u070-t.back>*{opacity:0}
+.u070-ic{width:36px;height:36px;flex:none;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c)}
+.u070-ic svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.u070-ic i{width:18px;height:18px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:u070-spin .7s linear infinite}
+@keyframes u070-spin{to{transform:rotate(360deg)}}
+.u070-tx{flex:1;min-width:0}
+.u070-tx b{display:block;font-size:14px;font-weight:780;letter-spacing:-.02em}
+.u070-tx small{display:block;margin-top:2px;font-size:12.5px;font-weight:600;color:var(--ux-ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.u070-act{height:32px;padding:0 11px;border:0;border-radius:10px;background:var(--ux-surface-2);font-size:12.5px;font-weight:750;color:var(--ux-ink)}
+.u070-x{width:30px;height:30px;flex:none;border:0;padding:0;border-radius:50%;display:grid;place-items:center;background:none;color:var(--ux-ink-3)}
+.u070-x:hover{background:var(--ux-surface-2);color:var(--ux-ink)}
+.u070-x svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.u070-act:focus-visible,.u070-x:focus-visible{outline:2px solid var(--ux-accent);outline-offset:1px}
+.u070-bar{position:absolute;left:16px;right:16px;bottom:0;height:2px;border-radius:2px;background:var(--c);opacity:.5;transform-origin:0 50%;transform:scaleX(var(--left,1))}
+.u070-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.u070-empty{position:absolute;left:0;right:0;bottom:24px;text-align:center;font-size:13px;font-weight:650;color:var(--ux-ink-3);transition:opacity .3s}
