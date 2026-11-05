@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import projectRoutes from "./routes/project.routes";
 
 const app = express();
 
@@ -20,8 +19,6 @@ app.get("/api/health", (_req, res) => {
     message: "Backend server is running.",
   });
 });
-
-app.use("/api/projects", projectRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
