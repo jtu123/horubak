@@ -1,0 +1,380 @@
+[
+  {
+    "name": "projects",
+    "width": 1280,
+    "mode": "light",
+    "client": 1265,
+    "scroll": 1265,
+    "theme": "light",
+    "title": "내 프로젝트7"
+  },
+  {
+    "name": "projects",
+    "width": 1280,
+    "mode": "dark",
+    "client": 1265,
+    "scroll": 1265,
+    "theme": "dark",
+    "title": "내 프로젝트7"
+  },
+  {
+    "name": "registration",
+    "width": 1280,
+    "mode": "light",
+    "client": 1265,
+    "scroll": 1265,
+    "theme": "light",
+    "title": "새 영상 등록"
+  },
+  {
+    "name": "registration",
+    "width": 1280,
+    "mode": "dark",
+    "client": 1265,
+    "scroll": 1265,
+    "theme": "dark",
+    "title": "새 영상 등록"
+  },
+  {
+    "name": "processing",
+    "width": 1280,
+    "mode": "light",
+    "client": 1280,
+    "scroll": 1280,
+    "theme": "light",
+    "title": "편집 준비"
+  },
+  {
+    "name": "processing",
+    "width": 1280,
+    "mode": "dark",
+    "client": 1280,
+    "scroll": 1280,
+    "theme": "dark",
+    "title": "편집 준비"
+  },
+  {
+    "name": "editor",
+    "width": 1280,
+    "mode": "light",
+    "client": 1265,
+    "scroll": 1265,
+    "theme": "light",
+    "title": "좋은 질문이 생각을 바꾸는 순간"
+  },
+  {
+    "name": "editor",
+    "width": 1280,
+    "mode": "dark",
+    "client": 1265,
+    "scroll": 1265,
+    "theme": "dark",
+    "title": "좋은 질문이 생각을 바꾸는 순간"
+  },
+  {
+    "name": "results",
+    "width": 1280,
+    "mode": "light",
+    "client": 1265,
+    "scroll": 1265,
+    "theme": "light",
+    "title": "편집 결과"
+  },
+  {
+    "name": "results",
+    "width": 1280,
+    "mode": "dark",
+    "client": 1265,
+    "scroll": 1265,
+    "theme": "dark",
+    "title": "편집 결과"
+  },
+  {
+    "name": "login",
+    "width": 1280,
+    "mode": "light",
+    "client": 1280,
+    "scroll": 1280,
+    "theme": "light",
+    "title": "로그인"
+  },
+  {
+    "name": "login",
+    "width": 1280,
+    "mode": "dark",
+    "client": 1280,
+    "scroll": 1280,
+    "theme": "dark",
+    "title": "로그인"
+  },
+  {
+    "name": "signup",
+    "width": 1280,
+    "mode": "light",
+    "client": 1265,
+    "scroll": 1265,
+    "theme": "light",
+    "title": "회원가입"
+  },
+  {
+    "name": "signup",
+    "width": 1280,
+    "mode": "dark",
+    "client": 1265,
+    "scroll": 1265,
+    "theme": "dark",
+    "title": "회원가입"
+  },
+  {
+    "name": "projects",
+    "width": 1440,
+    "mode": "light",
+    "client": 1425,
+    "scroll": 1425,
+    "theme": "light",
+    "title": "내 프로젝트7"
+  },
+  {
+    "name": "projects",
+    "width": 1440,
+    "mode": "dark",
+    "client": 1425,
+    "scroll": 1425,
+    "theme": "dark",
+    "title": "내 프로젝트7"
+  },
+  {
+    "name": "registration",
+    "width": 1440,
+    "mode": "light",
+    "client": 1425,
+    "scroll": 1425,
+    "theme": "light",
+    "title": "새 영상 등록"
+  },
+  {
+    "name": "registration",
+    "width": 1440,
+    "mode": "dark",
+    "client": 1425,
+    "scroll": 1425,
+    "theme": "dark",
+    "title": "새 영상 등록"
+  },
+  {
+    "name": "processing",
+    "width": 1440,
+    "mode": "light",
+    "client": 1440,
+    "scroll": 1440,
+    "theme": "light",
+    "title": "편집 준비"
+  },
+  {
+    "name": "processing",
+    "width": 1440,
+    "mode": "dark",
+    "client": 1440,
+    "scroll": 1440,
+    "theme": "dark",
+    "title": "편집 준비"
+  },
+  {
+    "name": "editor",
+    "width": 1440,
+    "mode": "light",
+    "client": 1425,
+    "scroll": 1425,
+    "theme": "light",
+    "title": "좋은 질문이 생각을 바꾸는 순간"
+  },
+  {
+    "name": "editor",
+    "width": 1440,
+    "mode": "dark",
+    "client": 1425,
+    "scroll": 1425,
+    "theme": "dark",
+    "title": "좋은 질문이 생각을 바꾸는 순간"
+  },
+  {
+    "name": "results",
+    "width": 1440,
+    "mode": "light",
+    "client": 1440,
+    "scroll": 1440,
+    "theme": "light",
+    "title": "편집 결과"
+  },
+  {
+    "name": "results",
+    "width": 1440,
+    "mode": "dark",
+    "client": 1440,
+    "scroll": 1440,
+    "theme": "dark",
+    "title": "편집 결과"
+  },
+  {
+    "name": "login",
+    "width": 1440,
+    "mode": "light",
+    "client": 1440,
+    "scroll": 1440,
+    "theme": "light",
+    "title": "로그인"
+  },
+  {
+    "name": "login",
+    "width": 1440,
+    "mode": "dark",
+    "client": 1440,
+    "scroll": 1440,
+    "theme": "dark",
+    "title": "로그인"
+  },
+  {
+    "name": "signup",
+    "width": 1440,
+    "mode": "light",
+    "client": 1440,
+    "scroll": 1440,
+    "theme": "light",
+    "title": "회원가입"
+  },
+  {
+    "name": "signup",
+    "width": 1440,
+    "mode": "dark",
+    "client": 1440,
+    "scroll": 1440,
+    "theme": "dark",
+    "title": "회원가입"
+  },
+  {
+    "name": "projects",
+    "width": 1920,
+    "mode": "light",
+    "client": 1905,
+    "scroll": 1905,
+    "theme": "light",
+    "title": "내 프로젝트7"
+  },
+  {
+    "name": "projects",
+    "width": 1920,
+    "mode": "dark",
+    "client": 1905,
+    "scroll": 1905,
+    "theme": "dark",
+    "title": "내 프로젝트7"
+  },
+  {
+    "name": "registration",
+    "width": 1920,
+    "mode": "light",
+    "client": 1920,
+    "scroll": 1920,
+    "theme": "light",
+    "title": "새 영상 등록"
+  },
+  {
+    "name": "registration",
+    "width": 1920,
+    "mode": "dark",
+    "client": 1920,
+    "scroll": 1920,
+    "theme": "dark",
+    "title": "새 영상 등록"
+  },
+  {
+    "name": "processing",
+    "width": 1920,
+    "mode": "light",
+    "client": 1920,
+    "scroll": 1920,
+    "theme": "light",
+    "title": "편집 준비"
+  },
+  {
+    "name": "processing",
+    "width": 1920,
+    "mode": "dark",
+    "client": 1920,
+    "scroll": 1920,
+    "theme": "dark",
+    "title": "편집 준비"
+  },
+  {
+    "name": "editor",
+    "width": 1920,
+    "mode": "light",
+    "client": 1905,
+    "scroll": 1905,
+    "theme": "light",
+    "title": "좋은 질문이 생각을 바꾸는 순간"
+  },
+  {
+    "name": "editor",
+    "width": 1920,
+    "mode": "dark",
+    "client": 1905,
+    "scroll": 1905,
+    "theme": "dark",
+    "title": "좋은 질문이 생각을 바꾸는 순간"
+  },
+  {
+    "name": "results",
+    "width": 1920,
+    "mode": "light",
+    "client": 1920,
+    "scroll": 1920,
+    "theme": "light",
+    "title": "편집 결과"
+  },
+  {
+    "name": "results",
+    "width": 1920,
+    "mode": "dark",
+    "client": 1920,
+    "scroll": 1920,
+    "theme": "dark",
+    "title": "편집 결과"
+  },
+  {
+    "name": "login",
+    "width": 1920,
+    "mode": "light",
+    "client": 1920,
+    "scroll": 1920,
+    "theme": "light",
+    "title": "로그인"
+  },
+  {
+    "name": "login",
+    "width": 1920,
+    "mode": "dark",
+    "client": 1920,
+    "scroll": 1920,
+    "theme": "dark",
+    "title": "로그인"
+  },
+  {
+    "name": "signup",
+    "width": 1920,
+    "mode": "light",
+    "client": 1920,
+    "scroll": 1920,
+    "theme": "light",
+    "title": "회원가입"
+  },
+  {
+    "name": "signup",
+    "width": 1920,
+    "mode": "dark",
+    "client": 1920,
+    "scroll": 1920,
+    "theme": "dark",
+    "title": "회원가입"
+  }
+]

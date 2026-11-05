@@ -8,7 +8,7 @@ import type { Project } from '../../types';
 import './interface-038.css';
 
 interface Props { project: Project; index: number; onOpen: () => void; onRename: () => void; onFavorite: () => void; onDelete: () => void; children: (trigger: ReactNode) => ReactNode }
-export function ProjectMenu({ project, index, onOpen, onRename, onFavorite, onDelete, children }: Props) {
+export function ProjectMenu({ project, onOpen, onRename, onFavorite, onDelete, children }: Props) {
   const uid = useId();
   const navigate = useNavigate();
   const card = useRef<HTMLElement>(null);
@@ -16,8 +16,6 @@ export function ProjectMenu({ project, index, onOpen, onRename, onFavorite, onDe
   const panel = useRef<HTMLUListElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const restore = useRef<HTMLElement | null>(null);
-  const hold = useRef<number | undefined>(undefined);
-  const held = useRef(false);
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
   const [position, setPosition] = useState({ left: 0, top: 0, origin: 'top left' });
   const [sub, setSub] = useState(false);
@@ -41,12 +39,11 @@ export function ProjectMenu({ project, index, onOpen, onRename, onFavorite, onDe
     document.addEventListener('pointerdown',pointer); document.addEventListener('keydown',key); window.addEventListener('resize',moved); window.addEventListener('scroll',moved,true);
     return () => { document.removeEventListener('pointerdown',pointer); document.removeEventListener('keydown',key); window.removeEventListener('resize',moved); window.removeEventListener('scroll',moved,true); };
   }, [anchor]);
-  useEffect(() => () => window.clearTimeout(hold.current), []);
   const actions = sub ? [
     { name: '뒤로', Icon: ArrowLeft, action: () => setSub(false) },
     { name: '내 프로젝트', Icon: FolderOpen, action: () => { close(); navigate('/projects'); } },
     { name: '즐겨찾기', Icon: Star, action: () => { close(); navigate('/projects?view=favorites'); } },
-    { name: '결과 보관함', Icon: Clapperboard, action: () => { close(); navigate('/projects?view=exports'); } },
+    { name: '편집 결과', Icon: Clapperboard, action: () => { close(); navigate('/projects?view=exports'); } },
   ] : [
     { name: '열기', Icon: ArrowUpRight, action: () => { close(); onOpen(); } },
     { name: '이름 바꾸기', Icon: Pencil, action: () => { close(); onRename(); } },
@@ -67,14 +64,9 @@ export function ProjectMenu({ project, index, onOpen, onRename, onFavorite, onDe
     if (event.key === 'ArrowRight' && !sub && current === 3) { event.preventDefault(); setSub(true); }
   }}>{actions.map((action, i) => <li key={action.name} role="none">{!sub && i === 4 && <div className="u038-sep" role="separator" />}<button type="button" className={`u038-mi ${!sub && i === 4 ? 'danger' : ''}`} role="menuitem" aria-haspopup={!sub && i === 3 ? 'menu' : undefined} aria-expanded={!sub && i === 3 ? false : undefined} onClick={action.action}><action.Icon />{action.name}{!sub && i === 3 && <ChevronRight className="u038-ar" />}</button></li>)}</ul>;
   return <>
-    <article ref={card} className={`project-card u038-card ${anchor ? 'is-ctx' : ''}`} tabIndex={0} aria-label={project.title} aria-haspopup="menu" style={{ animationDelay: `${index * 45}ms` }} onContextMenu={event => { event.preventDefault(); openAt(event.clientX,event.clientY,trigger.current!); }} onKeyDown={event => {
+    <article ref={card} className={`project-card u038-card ${anchor ? 'is-ctx' : ''}`} tabIndex={0} aria-label={project.title} aria-haspopup="menu" onContextMenu={event => { event.preventDefault(); openAt(event.clientX,event.clientY,trigger.current!); }} onKeyDown={event => {
       if ((event.shiftKey && event.key === 'F10') || event.key === 'ContextMenu' || (event.target === event.currentTarget && event.key === 'Enter')) { event.preventDefault(); const rect = event.currentTarget.getBoundingClientRect(); openAt(rect.left+40,rect.top+60,trigger.current!); }
-    }} onPointerDown={event => {
-      if (event.pointerType !== 'touch' || (event.target as HTMLElement).closest('.card-actions')) return;
-      held.current = false;
-      const { clientX,clientY } = event;
-      hold.current = window.setTimeout(() => { held.current = true; openAt(clientX,clientY,trigger.current!); },480);
-    }} onPointerMove={() => window.clearTimeout(hold.current)} onPointerUp={() => window.clearTimeout(hold.current)} onPointerCancel={() => window.clearTimeout(hold.current)} onClickCapture={event => { if (held.current) { event.preventDefault(); event.stopPropagation(); held.current = false; } }}>
+    }}>
       {children(<button ref={trigger} className="project-more-trigger icon-button" type="button" aria-label={`${project.title} 더 보기`} aria-haspopup="menu" aria-expanded={!!anchor} aria-controls={anchor ? uid : undefined} onClick={event => { if (anchor) close(); else { const rect = event.currentTarget.getBoundingClientRect(); openAt(rect.right,rect.bottom,event.currentTarget); } }}><MoreHorizontal size={18} /></button>)}
     </article>
     {typeof document !== 'undefined' && createPortal(<div className="ux u038 context-host"><div ref={menu} id={uid} className={`u038-menu ${anchor ? 'is-open' : ''}`} role="menu" aria-label={`${project.title} 메뉴`} aria-hidden={!anchor} inert={!anchor} style={{ left: position.left, top: position.top, transformOrigin: position.origin, '--mh': `${height}px` } as CSSProperties}>

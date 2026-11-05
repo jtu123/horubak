@@ -2,17 +2,19 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { seedProjects } from './data';
 import { passwordDigest } from './lib';
-import type { DemoAccount, DemoUser, Project, ToastMessage } from './types';
+import { addProjectClip, getProjectClips, loadProjectCollection, normalizeProject, patchProject, selectProjectClip, updateProjectClip } from './workspace-model';
+import type { LoadedProjects } from './workspace-model';
+import type { Candidate, DemoAccount, DemoUser, EditState, Project, ToastMessage } from './types';
 
 function read<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
 }
-function loadProjects(id: string): Project[] {
-  const stored = read<unknown>(`moment.projects.${id}.v1`, null);
-  return Array.isArray(stored) && stored.every(p => p && typeof p.id === 'string' && typeof p.title === 'string' && ['lecture', 'speech', 'podcast'].includes(p.genre)) ? stored as Project[] : seedProjects();
+function loadProjects(id: string): LoadedProjects {
+  try { return loadProjectCollection(localStorage, `moment.projects.${id}.v1`, seedProjects); }
+  catch { return { projects: seedProjects().map(p => normalizeProject(p)!), writeAllowed: false, notice: '브라우저 저장소를 사용할 수 없어요. 변경 내용은 이 창에서만 유지됩니다.' }; }
 }
 interface Workspace {
-  user: DemoUser | null; projects: Project[]; theme: 'light' | 'dark'; toasts: ToastMessage[]; storageError: boolean;
+  user: DemoUser | null; projects: Project[]; theme: 'light' | 'dark'; toasts: ToastMessage[]; storageError: boolean; storageNotice?: string;
   enterDemo: () => void;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
@@ -20,6 +22,12 @@ interface Workspace {
   updateProject: (id: string, patch: Partial<Project>) => void;
   addProject: (project: Project, file?: File) => void;
   deleteProject: (id: string) => void;
+  createClip: (projectId: string, candidate?: Candidate) => string;
+  selectClip: (projectId: string, clipId: string) => void;
+  updateClip: (projectId: string, clipId: string, patch: Partial<EditState>) => void;
+  renameClip: (projectId: string, clipId: string, title: string) => void;
+  duplicateClip: (projectId: string, clipId: string) => string;
+  deleteClip: (projectId: string, clipId: string) => void;
   attachVideo: (id: string, file: File) => void;
   videos: Record<string, string>;
   toggleTheme: () => void;
@@ -29,16 +37,24 @@ interface Workspace {
 const Context = createContext<Workspace | null>(null);
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<DemoUser | null>(() => { const u = read<DemoUser | null>('moment.session.v1', null); return u && typeof u.id === 'string' && typeof u.name === 'string' ? u : null; });
-  const [projects, setProjects] = useState<Project[]>(() => loadProjects(user?.id ?? 'guest'));
+  const [initialLoad] = useState(() => loadProjects(user?.id ?? 'guest'));
+  const [projects, setProjects] = useState<Project[]>(initialLoad.projects);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => read<string>('moment.theme.v1', 'light') === 'dark' ? 'dark' : 'light');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [storageError, setStorageError] = useState(false);
+  const [storageError, setStorageError] = useState(!initialLoad.writeAllowed);
+  const [storageNotice, setStorageNotice] = useState(initialLoad.notice);
+  const saveAllowed = useRef(initialLoad.writeAllowed);
   const [videos, setVideos] = useState<Record<string, string>>({});
   const urls = useRef(new Map<string, string>());
   const toastSeq = useRef(0);
   const notify: Workspace['notify'] = (title, description, kind = 'success') => setToasts(old => [{ id: ++toastSeq.current, title, description, kind }, ...old].slice(0, 4));
+  const disconnectVideos = () => { urls.current.forEach(url => URL.revokeObjectURL(url)); urls.current.clear(); setVideos({}); };
   const switchUser = (next: DemoUser) => {
-    setProjects(loadProjects(next.id)); setUser(next);
+    const loaded = loadProjects(next.id);
+    saveAllowed.current = loaded.writeAllowed;
+    setStorageError(!loaded.writeAllowed); setStorageNotice(loaded.notice);
+    if (user?.id !== next.id) disconnectVideos();
+    setProjects(loaded.projects); setUser(next);
     try { localStorage.setItem('moment.session.v1', JSON.stringify(next)); } catch { setStorageError(true); }
   };
   useEffect(() => {
@@ -47,6 +63,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [theme]);
   useEffect(() => {
     if (!user) return;
+    if (!saveAllowed.current) { setStorageError(true); return; }
     try { localStorage.setItem(`moment.projects.${user.id}.v1`, JSON.stringify(projects)); setStorageError(false); } catch { setStorageError(true); }
   }, [projects, user]);
   const processing = projects.some(p => p.status === 'processing');
@@ -80,11 +97,29 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('moment.accounts.v1', JSON.stringify([...accounts, account]));
     switchUser({ id: account.id, name: account.name, email: account.email, guest: false });
   };
-  const updateProject = (id: string, patch: Partial<Project>) => setProjects(old => old.map(p => p.id === id ? { ...p, ...patch, updatedAt: new Date().toISOString() } : p));
-  return <Context.Provider value={{ user, projects, theme, toasts, storageError, login, signup, updateProject, videos, attachVideo,
+  const updateProject = (id: string, patch: Partial<Project>) => setProjects(old => old.map(p => p.id === id ? patchProject(p, patch) : p));
+  const createClip: Workspace['createClip'] = (projectId, candidate) => {
+    const id = crypto.randomUUID();
+    setProjects(old => old.map(p => p.id === projectId ? addProjectClip(p, id, candidate) : p));
+    return id;
+  };
+  const selectClip: Workspace['selectClip'] = (projectId, clipId) => setProjects(old => old.map(p => p.id === projectId ? selectProjectClip(p, clipId) : p));
+  const updateClip: Workspace['updateClip'] = (projectId, clipId, patch) => setProjects(old => old.map(p => p.id === projectId ? updateProjectClip(p, clipId, patch) : p));
+  const renameClip: Workspace['renameClip'] = (projectId, clipId, title) => setProjects(old => old.map(p => p.id === projectId ? normalizeProject({ ...p, clips: getProjectClips(p).map(clip => clip.id === clipId ? { ...clip, title: title.trim() || clip.title, updatedAt: new Date().toISOString() } : clip), updatedAt: new Date().toISOString() })! : p));
+  const duplicateClip: Workspace['duplicateClip'] = (projectId, clipId) => {
+    const id = crypto.randomUUID(); const now = new Date().toISOString();
+    setProjects(old => old.map(p => {
+      if (p.id !== projectId) return p;
+      const original = getProjectClips(p).find(clip => clip.id === clipId);
+      return original ? normalizeProject({ ...p, clips: [...getProjectClips(p), { ...original, id, title: `${original.title} 복사본`, edit: { ...original.edit }, createdAt: now, updatedAt: now }], activeClipId: id, updatedAt: now })! : p;
+    }));
+    return id;
+  };
+  const deleteClip: Workspace['deleteClip'] = (projectId, clipId) => setProjects(old => old.map(p => p.id === projectId ? normalizeProject({ ...p, clips: getProjectClips(p).filter(clip => clip.id !== clipId), updatedAt: new Date().toISOString() })! : p));
+  return <Context.Provider value={{ user, projects, theme, toasts, storageError, storageNotice, login, signup, updateProject, videos, attachVideo, createClip, selectClip, updateClip, renameClip, duplicateClip, deleteClip,
     enterDemo: () => switchUser({ id: 'guest', name: '크리에이터', email: 'guest@moment.local', guest: true }),
-    logout: () => { setUser(null); try { localStorage.removeItem('moment.session.v1'); } catch { setStorageError(true); } },
-    addProject: (project, file) => { setProjects(old => [project, ...old]); if (file) attachVideo(project.id, file); },
+    logout: () => { disconnectVideos(); setUser(null); try { localStorage.removeItem('moment.session.v1'); } catch { setStorageError(true); } },
+    addProject: (project, file) => { setProjects(old => old.some(p => p.id === project.id) ? old : [normalizeProject(project)!, ...old]); if (file) attachVideo(project.id, file); },
     deleteProject: id => { const url = urls.current.get(id); if (url) URL.revokeObjectURL(url); urls.current.delete(id); setVideos(v => { const next = { ...v }; delete next[id]; return next; }); setProjects(old => old.filter(p => p.id !== id)); },
     toggleTheme: () => setTheme(t => t === 'light' ? 'dark' : 'light'), notify, dismissToast: id => setToasts(old => old.filter(t => t.id !== id)),
   }}>{children}</Context.Provider>;

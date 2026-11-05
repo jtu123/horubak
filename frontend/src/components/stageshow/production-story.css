@@ -1,0 +1,26 @@
+/* Stageshow static-card composition, adapted for Horubak. Desktop only. */
+.production-story { margin:0; min-width:0; }
+.production-story figcaption { margin:14px 0 0; text-align:center; color:var(--muted,#697586); font:11px/18px -apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif; }
+.horubak-story {
+  .ss-stage { --gutter:24px; border-radius:16px; background:var(--ss-canvas); overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Segoe UI",sans-serif; }
+  .hs-window { position:absolute; top:24px; left:104px; width:460px; height:320px; border-radius:12px; background:var(--ss-surface); box-shadow:var(--ss-shadow-hero); }
+  .hs-window .ss-window__body { display:flex; }
+  .hs-sidebar { display:flex; flex-direction:column; gap:19px; flex:none; width:120px; padding:22px 16px; border-right:1px solid var(--ss-line); background:var(--ss-canvas); color:var(--ss-icon); }
+  .hs-active-nav { display:flex; align-items:center; gap:8px; color:var(--ss-accent); font-size:11px; line-height:16px; }
+  .hs-main { flex:1; min-width:0; padding:17px 18px; }
+  .hs-heading { display:flex; align-items:center; gap:18px; margin-bottom:13px; font-size:12px; font-weight:600; color:var(--ss-text-strong); }
+  .hs-list { display:flex; flex-direction:column; }
+  .hs-row { height:36px; margin:0 -8px; border-radius:8px; border-bottom:1px solid var(--ss-line-faint); font-size:11px; line-height:16px; color:var(--ss-text); }
+  .hs-row[data-selected] { background:var(--ss-accent-soft); color:var(--ss-text-strong); }
+  .hs-row .ss-row__title { white-space:nowrap; font-weight:400; }
+  .hs-row[data-selected] .ss-row__title { font-weight:600; }
+  .hs-row svg { flex:none; color:var(--ss-icon); }
+  .hs-clip { position:absolute; left:24px; bottom:24px; width:176px; padding:12px; border:1px solid var(--ss-line); border-radius:12px; background:var(--ss-surface); box-shadow:var(--ss-shadow-satellite); }
+  .hs-clip-art { height:74px; display:flex; align-items:center; justify-content:center; border-radius:7px; background:var(--ss-accent-soft); color:var(--ss-accent); }
+  .hs-clip-details { display:flex; flex-direction:column; gap:4px; padding:12px 0; }
+  .hs-clip-title { font-size:12px; line-height:17px; font-weight:600; color:var(--ss-text-strong); }
+  .hs-clip-time { font-size:10px; line-height:15px; color:var(--ss-text); font-variant-numeric:tabular-nums; }
+  .hs-clip-footer { display:flex; align-items:center; gap:12px; padding-top:10px; border-top:1px solid var(--ss-line); color:var(--ss-text); font-size:10px; line-height:16px; }
+  .hs-clip-footer>span:first-child { display:flex; align-items:center; gap:5px; flex:1; min-width:0; color:var(--ss-accent); }
+}
+

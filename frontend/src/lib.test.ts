@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildSrt, formatTime, rangeError, validateSourceUrl, validateVideo } from './lib';
-import { CANDIDATES, makeTranscript } from './data';
+import { CANDIDATES, SCENE_EVIDENCE, makeTranscript } from './data';
 import type { Genre } from './types';
 
 describe('input boundaries', () => {
@@ -36,7 +36,14 @@ describe('shared fixture contract', () => {
     const transcript = makeTranscript(genre);
     for (const candidate of CANDIDATES[genre]) {
       expect(rangeError(candidate.start, candidate.end, 3600)).toBeUndefined();
-      for (const id of candidate.evidenceIds) expect(transcript.some(u => u.id === id)).toBe(true);
+      for (const id of candidate.evidenceIds) {
+        if (candidate.evidenceKind === 'scene' || candidate.evidenceKind === 'sound') {
+          const evidence = SCENE_EVIDENCE.find(item => item.id === id);
+          expect(evidence?.kind).toBe(candidate.evidenceKind);
+          expect(evidence!.start).toBeLessThanOrEqual(candidate.start);
+          expect(evidence!.end).toBeGreaterThanOrEqual(candidate.end);
+        } else expect(transcript.some(u => u.id === id)).toBe(true);
+      }
       if (candidate.warning) {
         expect(rangeError(candidate.warning.correctedStart, candidate.warning.correctedEnd, 3600)).toBeUndefined();
         expect(candidate.warning.correctedStart).toBeLessThan(candidate.start);

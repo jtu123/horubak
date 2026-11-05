@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seedProjects } from './data';
+import { createVisualSample, seedProjects } from './data';
 import { recoverySuggestions, searchProjects } from './project-search';
 
 describe('project search and recovery', () => {
@@ -19,5 +19,11 @@ describe('project search and recovery', () => {
   });
   it('never suggests a filter removal that still has no results', () => {
     expect(recoverySuggestions([], { query: 'test', genre: 'lecture', view: 'exports' })).toEqual([]);
+  });
+
+  it('finds all-video projects by their manually selected purpose and focus', () => {
+    const sample = createVisualSample();
+    expect(searchProjects([sample], { query: '풍경과움직임', genre: 'general', view: 'all' })).toEqual([sample]);
+    expect(searchProjects([sample], { query: '하이라이트', genre: 'all', view: 'all' })).toEqual([sample]);
   });
 });

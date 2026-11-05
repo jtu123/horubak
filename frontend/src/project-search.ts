@@ -10,7 +10,7 @@ export function searchProjects(projects: Project[], filter: ProjectFilter) {
     (filter.view !== 'favorites' || project.favorite) &&
     (filter.view !== 'exports' || project.status === 'completed') &&
     (filter.genre === 'all' || project.genre === filter.genre) &&
-    searchText(project.title).includes(query));
+    searchText([project.title, project.contentProfile?.focus ?? '', project.contentProfile?.purpose ?? ''].join(' ')).includes(query));
 }
 export function activeProjectFilters(filter: ProjectFilter): Array<{ key: FilterKey; label: string }> {
   return [

@@ -1,56 +1,85 @@
-// Lucian UX/UI Prompt #040 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#040
+// Adapted from Lucian UX/UI #040 · MIT (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#040
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, CircleHelp, Clapperboard, FolderOpen, LayoutGrid, LogOut, Menu, Moon, Plus, Search, Star, Sun } from 'lucide-react';
+import { ArrowUpRight, BarChart3, ChevronDown, ChevronRight, CircleHelp, FolderOpen, Info, Library, ListVideo, LogOut, Moon, Search, Send, Settings2, Sun, Users, X } from 'lucide-react';
 import { useWorkspace } from '../../store';
 import { Brand } from '../Brand';
-import { SITE_NAME } from '../../site';
 import { Modal } from '../Modal';
 import { openCommandPalette } from './CommandPalette';
+import '../../styles/workspace-v3.css';
+
+const PRIMARY = [
+  { label: '프로젝트', path: '/projects', Icon: FolderOpen },
+  { label: '라이브러리', path: '/library', Icon: Library },
+  { label: '작업센터', path: '/jobs', Icon: ListVideo },
+];
+const MORE = [
+  { label: '게시·예약', path: '/publishing', Icon: Send },
+  { label: '팀·검토', path: '/team', Icon: Users },
+  { label: '성과', path: '/analytics', Icon: BarChart3 },
+];
 
 export function WorkspaceShell() {
-  const { user, logout, theme, toggleTheme, storageError } = useWorkspace();
-  const [wide, setWide] = useState(true); const [mobile, setMobile] = useState(false); const [help, setHelp] = useState(false);
-  const location = useLocation(); const navigate = useNavigate(); const nav = useRef<HTMLUListElement>(null);
-  const section = new URLSearchParams(location.search).get('view') ?? 'all';
-  const items = [{ label: '내 프로젝트', path: '/projects', icon: LayoutGrid, key: 'all' }, { label: '즐겨찾기', path: '/projects?view=favorites', icon: Star, key: 'favorites' }, { label: '결과 보관함', path: '/projects?view=exports', icon: Clapperboard, key: 'exports' }];
-  const current = items.findIndex(i => i.key === section);
-  useEffect(() => { setMobile(false); }, [location.pathname, location.search]);
-  useEffect(() => { if (!mobile) return; const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobile(false); }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }, [mobile]);
-  const pageTitle = location.pathname.includes('/new') ? '새 영상 등록' : location.pathname.includes('/processing') ? '처리 현황' : location.pathname.includes('/editor') ? '하이라이트 편집' : location.pathname.includes('/results') ? '결과 확인' : items[Math.max(0, current)].label;
-  const helpDialog = help && <Modal title="사용 안내" onClose={() => setHelp(false)}><div className="guide-steps">{['영상 등록', '후보·맥락 확인', '구간·자막·구도 편집'].map((text, i) => <div key={text}><span>{i + 1}</span>{text}</div>)}</div><div className="notice"><Check size={17} /><span>브라우저에만 저장되는 데모입니다. 업로드·AI 분석·영상 출력은 연결 전입니다.</span></div><button className="btn primary full" onClick={() => setHelp(false)}>확인</button></Modal>;
-  if (location.pathname === '/projects') return <div className="ux bento-workspace">
-    <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
-    <header className="bento-topbar">
-      <Link className="bento-home-brand" to="/projects" aria-label={`${SITE_NAME} 홈`}><Brand /></Link>
-      <nav className="bento-main-nav" aria-label="주 메뉴">{items.map(({ path, key, label, icon: Icon }) => <Link key={key} to={path} aria-current={section === key ? 'page' : undefined}><Icon size={16} />{label}</Link>)}</nav>
-      <div className="bento-topbar-actions"><button className="command-trigger" onClick={openCommandPalette} aria-label="빠른 실행 열기" title="빠른 실행 (Ctrl+Shift+K)"><Search size={17} /><span>빠른 실행</span><kbd>Ctrl ⇧ K</kbd></button><span className="demo-badge"><span /> 데모</span><button className="icon-button" aria-label="사용 가이드" onClick={() => setHelp(true)}><CircleHelp size={19} /></button><button className="icon-button" aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'} onClick={toggleTheme}>{theme === 'light' ? <Moon size={19} /> : <Sun size={19} />}</button><button className="bento-profile" onClick={() => { logout(); navigate('/login'); }} aria-label={`${user?.name}님 로그아웃`}><span aria-hidden="true">{user?.name.slice(0, 1)}</span><LogOut size={17} /></button></div>
-    </header>
-    {storageError && <div className="storage-error" role="alert">브라우저 저장 공간을 사용할 수 없어요. 변경 내용은 이 창에서만 유지됩니다.</div>}
-    <main id="main-content" className="bento-main-content"><Outlet /></main>
-    <footer className="bento-site-footer"><button onClick={() => setHelp(true)}>브라우저 데모 · 안내</button></footer>
-    {helpDialog}
-  </div>;
-  return <div className={`ux u040 app-shell ${wide ? 'is-wide' : ''} ${mobile ? 'mobile-open' : ''}`}>
-    <a href="#main-content" className="skip-link">본문으로 바로 가기</a>
-    {mobile && <button className="nav-backdrop" aria-label="모바일 메뉴 닫기" onClick={() => setMobile(false)} />}
-    <nav className="u040-rail app-sidebar" aria-label="주 메뉴">
-      <div className="u040-top"><Link to="/projects" className="u040-logo sidebar-brand" aria-label={`${SITE_NAME} 홈`}><Brand small /></Link><span className="u040-name">{SITE_NAME}</span></div>
-      <button className="u040-tog" aria-expanded={wide} aria-label={wide ? '메뉴 접기' : '메뉴 펼치기'} onClick={() => setWide(v => !v)}><ChevronRight /></button>
+  const { user, logout, theme, toggleTheme, storageError, storageNotice } = useWorkspace();
+  const [dismissedNotice, setDismissedNotice] = useState('');
+  const [help, setHelp] = useState(false);
+  const [account, setAccount] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [more, setMore] = useState(MORE.some(item => location.pathname.startsWith(item.path)));
+  const accountRoot = useRef<HTMLDivElement>(null);
+  const accountButton = useRef<HTMLButtonElement>(null);
+  const activeItem = [...PRIMARY, ...MORE, { label: '설정', path: '/settings' }].find(item => location.pathname.startsWith(item.path));
+  const pageTitle = location.pathname.endsWith('/new') ? '새 영상' : location.pathname.includes('/processing') ? '처리 현황' : location.pathname.includes('/editor') ? '클립 편집' : location.pathname.includes('/results') ? '편집 결과' : activeItem?.label ?? '프로젝트';
 
-      <ul className="u040-nav" ref={nav} onKeyDown={e => { if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return; const buttons = [...e.currentTarget.querySelectorAll<HTMLAnchorElement>('a')]; const index = buttons.indexOf(document.activeElement as HTMLAnchorElement); if (index < 0) return; e.preventDefault(); buttons[(index + (e.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length].focus(); }}>
-        <li className="u040-hl" role="presentation" style={{ '--y': `${Math.max(0, current) * 52}px` } as CSSProperties} />
-        {items.map(({ label, path, icon: Icon, key }, i) => <li key={path}><Link to={path} className="u040-it" aria-current={section === key ? 'page' : undefined} style={{ '--i': i } as CSSProperties}><Icon aria-hidden="true" /><span>{label}</span></Link></li>)}
-      </ul>
-      <button className="sidebar-new" onClick={() => navigate('/projects/new')} title="새 영상 등록"><Plus size={19} /><span>새 영상 등록</span></button>
-      <div className="sidebar-bottom"><button className="sidebar-help" onClick={() => setHelp(true)} title="사용 가이드"><CircleHelp size={18} /><span>사용 가이드</span></button><button className="u040-me" onClick={() => { logout(); navigate('/login'); }} title="로그아웃"><i aria-hidden="true">{user?.name.slice(0, 1)}</i><span>{user?.name}<small>{user?.guest ? '게스트' : '데모'}</small></span><LogOut className="logout-icon" size={15} /></button></div>
-    </nav>
-    <section className="u040-main app-main"><header className="topbar"><div className="breadcrumb"><button className="icon-button mobile-menu" aria-label="메뉴 열기" onClick={() => setMobile(true)}><Menu size={20} /></button><FolderOpen size={16} /><Link to="/projects">프로젝트</Link><ChevronRight size={13} /><span>{pageTitle}</span></div><div className="topbar-actions"><button className="command-trigger" onClick={openCommandPalette} aria-label="빠른 실행 열기" title="빠른 실행 (Ctrl+Shift+K)"><Search size={17} /><span>빠른 실행</span><kbd>Ctrl ⇧ K</kbd></button><span className="demo-badge"><span /> 데모</span><button className="icon-button" aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'} onClick={toggleTheme}>{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button><button className="top-avatar" onClick={() => setHelp(true)} aria-label="사용 안내">{user?.name.slice(0, 1)}</button></div></header>
+  useEffect(() => { setAccount(false); if (MORE.some(item => location.pathname.startsWith(item.path))) setMore(true); }, [location.pathname, location.search]);
+  useEffect(() => {
+    if (!account) return;
+    accountRoot.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+    const pointer = (event: PointerEvent) => { if (!accountRoot.current?.contains(event.target as Node)) setAccount(false); };
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); setAccount(false); accountButton.current?.focus(); } };
+    document.addEventListener('pointerdown', pointer);
+    document.addEventListener('keydown', key);
+    return () => { document.removeEventListener('pointerdown', pointer); document.removeEventListener('keydown', key); };
+  }, [account]);
+
+  return <div className="ux app-shell workspace-v3">
+    <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
+    <aside className="app-sidebar">
+      <Link className="sidebar-brand" to="/projects" aria-label="호루박 홈"><Brand /></Link>
+      <div className="workspace-name"><span className="workspace-monogram" aria-hidden="true">{user?.name.slice(0, 1)}</span><span><b>개인 작업공간</b><small>{user?.guest ? '샘플 게스트' : user?.name}</small></span></div>
+      <nav className="sidebar-nav" aria-label="주 메뉴">
+        {PRIMARY.map(({ label, path, Icon }) => <Link key={path} to={path} aria-current={location.pathname.startsWith(path) ? 'page' : undefined}><Icon size={18} /><span>{label}</span></Link>)}
+        <button className="sidebar-more" onClick={() => setMore(value => !value)} aria-expanded={more} aria-controls="workspace-more"><span>더보기</span><ChevronDown size={14} className={more ? 'expanded' : ''} /></button>
+        {more && <div className="sidebar-extra" id="workspace-more">{MORE.map(({ label, path, Icon }) => <Link key={path} to={path} aria-current={location.pathname.startsWith(path) ? 'page' : undefined}><Icon size={18} /><span>{label}</span></Link>)}</div>}
+      </nav>
+      <div className="sidebar-bottom">
+        <div className="workspace-demo-state"><span /><div><b>브라우저 데모</b><small>작업은 이 브라우저에 저장돼요</small></div></div>
+        <Link className="sidebar-help" to="/settings" aria-current={location.pathname === '/settings' ? 'page' : undefined}><Settings2 size={17} />설정</Link>
+        <button className="sidebar-help" onClick={() => setHelp(true)}><CircleHelp size={17} />사용 안내<ArrowUpRight size={13} /></button>
+      </div>
+    </aside>
+    <div className="app-main">
+      <header className="topbar">
+        <div className="breadcrumb"><span className="workspace-breadcrumb">작업공간</span><ChevronRight size={12} /><span>{pageTitle}</span></div>
+        <div className="topbar-actions">
+          <button className="command-trigger" onClick={openCommandPalette} title="빠른 실행 (Ctrl+Shift+K)" aria-label="빠른 실행 열기"><Search size={15} /><span>빠른 실행</span><kbd>Ctrl ⇧ K</kbd></button>
+          <button className="icon-button theme-trigger" aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'} onClick={toggleTheme}>{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button>
+          <div className="account-wrap" ref={accountRoot}>
+            <button ref={accountButton} className="account-trigger" aria-label="계정 메뉴" aria-haspopup="menu" aria-expanded={account} onClick={() => setAccount(value => !value)}><span className="account-avatar" aria-hidden="true">{user?.name.slice(0, 1)}</span><ChevronDown size={13} /></button>
+            {account && <div className="account-menu" role="menu" aria-label="계정" onKeyDown={event => {
+              const controls = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')];
+              const index = controls.indexOf(document.activeElement as HTMLButtonElement);
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); controls[(index + (event.key === 'ArrowDown' ? 1 : -1) + controls.length) % controls.length]?.focus(); }
+              if (event.key === 'Tab') setAccount(false);
+            }}><div className="account-info"><b>{user?.name}</b><small>{user?.guest ? '샘플 게스트' : user?.email}</small></div><button role="menuitem" onClick={() => { accountButton.current?.focus(); setAccount(false); navigate('/settings'); }}><Settings2 size={16} />설정</button><button role="menuitem" onClick={() => { accountButton.current?.focus(); setAccount(false); setHelp(true); }}><CircleHelp size={16} />사용 안내</button><button role="menuitem" onClick={() => { logout(); navigate('/login'); }}><LogOut size={16} />로그아웃</button></div>}
+          </div>
+        </div>
+      </header>
       {storageError && <div className="storage-error" role="alert">브라우저 저장 공간을 사용할 수 없어요. 변경 내용은 이 창에서만 유지됩니다.</div>}
-      <main id="main-content" className="page-content"><Outlet /></main>
-      <footer className="app-footer"><span>{SITE_NAME} </span><span><span className="status-dot" /> 브라우저 저장</span></footer>
-    </section>
-    {helpDialog}
+      {storageNotice && storageNotice !== dismissedNotice && <div className="storage-recovery-note" role="status"><Info size={15} /><span>{storageNotice}</span><button className="icon-button" aria-label="저장 안내 닫기" onClick={() => setDismissedNotice(storageNotice)}><X size={15} /></button></div>}
+      <main id="main-content" className="page-content" tabIndex={-1}><Outlet /></main>
+    </div>
+    {help && <Modal title="원본에서 클립까지" onClose={() => setHelp(false)}><div className="guide-steps">{['분야 제한 없이 영상 등록', '영상·소리·발화 근거로 후보 확인', '여러 클립으로 저장하고 각각 편집'].map((text, index) => <div key={text}><span>{index + 1}</span>{text}</div>)}</div><div className="notice"><CircleHelp size={16} /><span>샘플과 로컬 원본으로 편집 흐름을 확인하는 데모입니다. 실제 인증·AI 분석·서버 저장·영상 출력은 연결 전입니다.</span></div><button className="btn primary full" style={{ marginTop: 20 }} onClick={() => setHelp(false)}>확인</button></Modal>}
   </div>;
 }
