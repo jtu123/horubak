@@ -1,4 +1,5 @@
 import type { Candidate, Clip, ContentProfile, ContentSignal, EditState, Genre, Project, ProjectStatus } from './types';
+import { getOutputProfile } from './output-profile';
 
 const EPOCH = '1970-01-01T00:00:00.000Z';
 const GENRE_VALUES: Genre[] = ['lecture', 'speech', 'podcast', 'general'];
@@ -24,6 +25,8 @@ function normalizeEdit(value: unknown, duration: number, title: string): EditSta
     subtitleVisible: typeof value.subtitleVisible === 'boolean' ? value.subtitleVisible : true,
     cropX: finite(value.cropX, 50), cropY: finite(value.cropY, 50), scale: finite(value.scale, 1),
     contextApplied: value.contextApplied === true, layout: value.layout === 'speaker' ? 'speaker' : 'full',
+    ...(Object.hasOwn(value, 'aspectRatio') ? { aspectRatio: getOutputProfile(value.aspectRatio).ratio } : {}),
+    ...(Object.hasOwn(value, 'showSafeArea') ? { showSafeArea: value.showSafeArea === true } : {}),
   };
 }
 

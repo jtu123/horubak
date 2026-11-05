@@ -1,0 +1,88 @@
+{
+  "recordedAt": "2026-11-05T17:07:06.502Z",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "browser": "Chrome isolated context",
+  "cases": [
+    {
+      "name": "Guest entry and desktop login",
+      "pass": true,
+      "detail": "Fresh isolated guest, 4 samples, centered login"
+    },
+    {
+      "name": "Dashboard search and keyboard command",
+      "pass": true
+    },
+    {
+      "name": "Candidate preview, hide and restore",
+      "pass": true
+    },
+    {
+      "name": "Independent clip adoption and editing",
+      "pass": true,
+      "detail": {
+        "warningId": "c019883a-8de4-4866-84ec-95b79153eb21",
+        "firstId": "legacy-sample-lecture"
+      }
+    },
+    {
+      "name": "Context comparison, explicit apply and undo",
+      "pass": true
+    },
+    {
+      "name": "Editor bounds reject invalid export",
+      "pass": true
+    },
+    {
+      "name": "Selected clip JSON and sample SRT downloads",
+      "pass": true,
+      "detail": {
+        "json": "c019883a-8de4-4866-84ec-95b79153eb21",
+        "srt": true,
+        "mp4": false
+      }
+    },
+    {
+      "name": "Clip rename, duplicate, cancel and delete",
+      "pass": true
+    },
+    {
+      "name": "Non-speech evidence and disabled fabricated captions",
+      "pass": true
+    },
+    {
+      "name": "URL registration preserves intent without fake analysis",
+      "pass": true
+    },
+    {
+      "name": "Local upload, remove safety, actual playback",
+      "pass": true,
+      "detail": {
+        "duration": 52.208333,
+        "width": 854,
+        "height": 480
+      }
+    },
+    {
+      "name": "Reload and source reconnect preserve edit",
+      "pass": true
+    },
+    {
+      "name": "Local brand preset survives reload",
+      "pass": true
+    },
+    {
+      "name": "Workspace backup has all clip data and honest service state",
+      "pass": true,
+      "detail": {
+        "projects": 6,
+        "sourceFilesIncluded": false
+      }
+    }
+  ],
+  "pass": 14,
+  "total": 14,
+  "pageErrors": []
+}

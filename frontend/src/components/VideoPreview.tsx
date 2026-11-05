@@ -4,6 +4,8 @@ import { Poster } from './Poster';
 import { formatTime, validateVideo } from '../lib';
 import { useWorkspace } from '../store';
 import type { EditState, Project } from '../types';
+import { getOutputProfile } from '../output-profile';
+import '../styles/output-profile.css';
 
 export function SourceReconnect({ project }: { project: Project }) {
   const input = useRef<HTMLInputElement>(null);
@@ -42,6 +44,7 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
   const [muted, setMuted] = useState(false);
   const url = videos[project.id];
   const sample = project.source === 'sample';
+  const profile = getOutputProfile(edit.aspectRatio);
   const invalidBounds = ![edit.start, edit.end, project.duration].every(Number.isFinite) || edit.start < 0 || edit.end <= edit.start || edit.end > project.duration;
   useEffect(() => {
     const node = video.current;
@@ -61,7 +64,7 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
   useEffect(() => { setError(false); }, [url]);
   useEffect(() => { if (invalidBounds) onPlaying(false); }, [invalidBounds, onPlaying]);
   return <div className="preview-player">
-    <div className="preview-stage"><div className={'portrait-frame' + (edit.layout === 'full' ? ' full-frame' : '')} ref={frame}>
+    <div className="preview-stage"><div className={'portrait-frame output-frame' + (edit.layout === 'full' ? ' full-frame' : '')} data-aspect-ratio={profile.ratio} style={{ width: 'min(100%, calc(var(--output-frame-height) * ' + profile.width / profile.height + '))', height: 'auto', maxHeight: 'none', aspectRatio: profile.cssRatio }} ref={frame}>
       <div className="preview-source" style={{ transform: 'scale(' + edit.scale + ')' }}>
         {url ? <video ref={video} src={url} muted={muted} playsInline preload="metadata" style={{ objectPosition: edit.cropX + '% ' + edit.cropY + '%' }} onLoadedMetadata={event => { event.currentTarget.currentTime = Math.min(Math.max(0, time), Math.max(0, event.currentTarget.duration - .05)); }} onTimeUpdate={event => {
           const value = event.currentTarget.currentTime;
@@ -71,9 +74,10 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
       </div>
       <span className="preview-watermark">{sample ? '샘플 이미지' : '원본 미리보기'}</span>
       {edit.subtitleVisible && edit.subtitle && <div className="subtitle-overlay" style={{ fontSize: edit.subtitleSize + 'px', color: edit.subtitleColor }}><span>{edit.subtitle}</span></div>}
+      {edit.showSafeArea && <div className="preview-safe-area" aria-label="일반 안전영역 가이드"><span>일반 안전영역</span></div>}
       {sample && <span className="sample-frame-tag">이미지·구간 조작 예시</span>}
       {error && <div className="video-error" role="alert">영상을 재생할 수 없어요.<br />H.264/AAC MP4로 다시 연결해 주세요.</div>}
-    </div><span className="aspect-label">9:16 · 자막·구도 미리보기</span></div>
+    </div><span className="aspect-label">{profile.ratio} · 자막·구도 미리보기</span></div>
     <div className="player-controls"><button className="icon-button" aria-label="구간 처음으로" onClick={() => { onTime(edit.start); if (video.current) video.current.currentTime = edit.start; }}><RotateCcw size={16} /></button><button className="play-button" aria-label={playing ? '일시 정지' : '미리보기 재생'} disabled={(!url && !sample) || error || invalidBounds} onClick={() => onPlaying(!playing)}>{playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}</button><span className="player-time">{formatTime(Math.max(0, time - edit.start))}<span> / {formatTime(Math.max(0, edit.end - edit.start))}</span></span><button className="icon-button" disabled={!url} aria-label={muted ? '음소거 해제' : '음소거'} aria-pressed={muted} onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={16} /> : <Volume2 size={16} />}</button><button className="icon-button" aria-label="미리보기 전체 화면" onClick={() => { if (document.fullscreenElement) void document.exitFullscreen(); else void frame.current?.requestFullscreen().catch(() => {}); }}><Maximize2 size={16} /></button></div>
   </div>;
 }

@@ -1,0 +1,14 @@
+/* Desktop edit actions remain usable when the title or clip name is long. */
+.v3-editor-heading{flex-wrap:wrap;row-gap:14px}
+.v3-editor-heading>div:first-child{min-width:260px}
+.v3-editor-title h1{overflow-wrap:anywhere}
+.v3-editor-actions{max-width:100%;flex-wrap:wrap;margin-left:auto}
+.v3-history-actions{display:flex;align-items:center;gap:4px}
+.v3-history-actions>.icon-button{width:36px;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--card)}
+.v3-editor-actions>.v3-shortcut-help{width:36px;height:36px;border:1px solid var(--border);border-radius:8px;background:var(--card)}
+.v3-shortcut-table{width:100%;border-collapse:collapse;margin:8px 0 18px}
+.v3-shortcut-table th,.v3-shortcut-table td{padding:12px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:20px;text-align:left}
+.v3-shortcut-table th{font-weight:500}
+.v3-shortcut-table td{text-align:right;color:var(--muted)}
+.v3-shortcut-table kbd{font:inherit;border:1px solid var(--border);border-radius:4px;padding:3px 6px;background:var(--soft);white-space:nowrap}
+.v3-shortcut-note{font-size:12px;line-height:21px;color:var(--muted)}

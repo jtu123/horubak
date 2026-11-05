@@ -1,0 +1,15 @@
+/* Desktop candidate discovery. Controls appear only for projects with candidates. */
+.candidate-explorer{padding:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:18px}
+.candidate-explorer-fields{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.candidate-explorer-search{display:flex;align-items:center;gap:8px;min-width:190px;flex:1;height:36px;padding:0 11px;background:var(--soft);border:1px solid var(--border);border-radius:7px;color:var(--muted)}
+.candidate-explorer-search>svg{flex:none}.candidate-explorer-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font-size:12px}
+.candidate-explorer-search:focus-within{outline:2px solid var(--focus);outline-offset:2px}
+.candidate-explorer-search>.icon-button{width:23px;height:24px;flex:none}
+.candidate-explorer-fields select{min-width:115px;max-width:160px;height:36px;padding:0 26px 0 10px;font-size:12px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text)}
+.candidate-explorer-summary{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:12px;margin-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);line-height:20px}
+.candidate-explorer-summary .text-link{font-size:11px}.candidate-explorer-summary>span{margin-left:auto}
+.candidate-selection-notice{font-size:11px;color:var(--muted);line-height:19px;margin-top:8px}
+.candidate-selection-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 14px;background:var(--accent-soft);border:1px solid var(--border);border-radius:9px;margin-bottom:16px}
+.candidate-selection-bar>span{font-size:12px;line-height:20px}.candidate-selection-bar>span>small{font-size:11px;color:var(--muted);margin-left:10px}.candidate-selection-bar>.btn{margin-left:auto;min-height:34px;font-size:12px;padding:0 12px}.candidate-selection-bar>.text-link{font-size:11px}
+.candidate-card-selection{display:flex;align-items:center;gap:7px;width:max-content;max-width:100%;font-size:11px;line-height:20px;color:var(--muted);margin-bottom:10px;cursor:pointer}.candidate-card-selection input{width:15px;height:15px;accent-color:var(--accent);margin:0}.candidate-card-selection:has(input:checked){color:var(--accent-strong)}
+.v3-hub-candidate.is-selected{border-color:var(--accent-strong);box-shadow:0 0 0 1px var(--accent-strong)}

@@ -1,0 +1,436 @@
+{
+  "cases": [
+    {
+      "name": "Candidate filters clear selection and recover empty results",
+      "pass": true
+    },
+    {
+      "name": "Batch adoption is idempotent and preserves existing clip",
+      "pass": true
+    },
+    {
+      "name": "Four real preview ratios and matching JSON targets",
+      "pass": true,
+      "detail": {
+        "9:16": [
+          1080,
+          1920
+        ],
+        "1:1": [
+          1080,
+          1080
+        ],
+        "16:9": [
+          1920,
+          1080
+        ],
+        "4:5": [
+          1080,
+          1350
+        ]
+      }
+    },
+    {
+      "name": "Undo redo round trip and divergent edits",
+      "pass": true
+    },
+    {
+      "name": "History keyboard shortcuts preserve native input and modal behavior",
+      "pass": true
+    },
+    {
+      "name": "Clip history isolation and reload persistence",
+      "pass": true
+    },
+    {
+      "name": "Desktop theme and ratio layout matrix",
+      "pass": true,
+      "detail": {
+        "combinations": 30
+      }
+    }
+  ],
+  "pass": 7,
+  "total": 7,
+  "pageErrors": [],
+  "matrix": [
+    {
+      "width": 1280,
+      "theme": "light",
+      "screen": "candidates",
+      "overflow": 0,
+      "outside": []
+    },
+    {
+      "width": 1280,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "9:16",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 639.5625,
+        "y": 308,
+        "width": 196.875,
+        "height": 350
+      }
+    },
+    {
+      "width": 1280,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "1:1",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 563,
+        "y": 308,
+        "width": 350,
+        "height": 350
+      }
+    },
+    {
+      "width": 1280,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "16:9",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 525,
+        "y": 308,
+        "width": 426,
+        "height": 239.625
+      }
+    },
+    {
+      "width": 1280,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "4:5",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 598,
+        "y": 308,
+        "width": 280,
+        "height": 350
+      }
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "screen": "candidates",
+      "overflow": 0,
+      "outside": []
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "9:16",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 639.5625,
+        "y": 308,
+        "width": 196.875,
+        "height": 350
+      }
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "1:1",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 563,
+        "y": 308,
+        "width": 350,
+        "height": 350
+      }
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "16:9",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 525,
+        "y": 308,
+        "width": 426,
+        "height": 239.625
+      }
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "4:5",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 598,
+        "y": 308,
+        "width": 280,
+        "height": 350
+      }
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "screen": "candidates",
+      "overflow": 0,
+      "outside": []
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "9:16",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 719.5625,
+        "y": 308,
+        "width": 196.875,
+        "height": 350
+      }
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "1:1",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 643,
+        "y": 308,
+        "width": 350,
+        "height": 350
+      }
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "16:9",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 525,
+        "y": 308,
+        "width": 586,
+        "height": 329.625
+      }
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "4:5",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 678,
+        "y": 308,
+        "width": 280,
+        "height": 350
+      }
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "screen": "candidates",
+      "overflow": 0,
+      "outside": []
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "9:16",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 719.5625,
+        "y": 308,
+        "width": 196.875,
+        "height": 350
+      }
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "1:1",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 643,
+        "y": 308,
+        "width": 350,
+        "height": 350
+      }
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "16:9",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 525,
+        "y": 308,
+        "width": 586,
+        "height": 329.625
+      }
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "4:5",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 678,
+        "y": 308,
+        "width": 280,
+        "height": 350
+      }
+    },
+    {
+      "width": 1920,
+      "theme": "light",
+      "screen": "candidates",
+      "overflow": 0,
+      "outside": []
+    },
+    {
+      "width": 1920,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "9:16",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 959.5625,
+        "y": 308,
+        "width": 196.875,
+        "height": 350
+      }
+    },
+    {
+      "width": 1920,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "1:1",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 883,
+        "y": 308,
+        "width": 350,
+        "height": 350
+      }
+    },
+    {
+      "width": 1920,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "16:9",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 746.890625,
+        "y": 308,
+        "width": 622.21875,
+        "height": 349.984375
+      }
+    },
+    {
+      "width": 1920,
+      "theme": "light",
+      "screen": "editor",
+      "ratio": "4:5",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 918,
+        "y": 308,
+        "width": 280,
+        "height": 350
+      }
+    },
+    {
+      "width": 1920,
+      "theme": "dark",
+      "screen": "candidates",
+      "overflow": 0,
+      "outside": []
+    },
+    {
+      "width": 1920,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "9:16",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 959.5625,
+        "y": 308,
+        "width": 196.875,
+        "height": 350
+      }
+    },
+    {
+      "width": 1920,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "1:1",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 883,
+        "y": 308,
+        "width": 350,
+        "height": 350
+      }
+    },
+    {
+      "width": 1920,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "16:9",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 746.890625,
+        "y": 308,
+        "width": 622.21875,
+        "height": 349.984375
+      }
+    },
+    {
+      "width": 1920,
+      "theme": "dark",
+      "screen": "editor",
+      "ratio": "4:5",
+      "overflow": 0,
+      "outside": [],
+      "frame": {
+        "x": 918,
+        "y": 308,
+        "width": 280,
+        "height": 350
+      }
+    }
+  ]
+}

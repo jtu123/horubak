@@ -1,6 +1,7 @@
 /** Legacy presets remain readable; new video projects use the general profile. */
 export type Genre = 'lecture' | 'speech' | 'podcast' | 'general';
 export type ContentSignal = 'speech' | 'visual' | 'music' | 'screen';
+export type AspectRatio = '9:16' | '1:1' | '16:9' | '4:5';
 export interface ContentProfile { purpose: string; focus?: string; signals: ContentSignal[] }
 export type ProjectStatus = 'ready' | 'processing' | 'completed' | 'cancelled' | 'failed';
 export interface Utterance { id: string; start: number; end: number; text: string; speaker: string }
@@ -30,6 +31,8 @@ export interface EditState {
   scale: number;
   contextApplied: boolean;
   layout: 'speaker' | 'full';
+  aspectRatio?: AspectRatio;
+  showSafeArea?: boolean;
 }
 export interface Project {
   id: string;
