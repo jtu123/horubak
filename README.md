@@ -46,48 +46,6 @@ Windows에서는 의존성을 설치한 뒤 최상위의 **사이트 실행.cmd*
 | 브랜드 프리셋 | 로컬 저장·미리보기. 최종 렌더 적용은 미연결 |
 | 게시·협업·성과·결제·API 연동 | 미연결. 실제 성공/사용량을 만들어 표시하지 않음 |
 
-## 검증
-
-frontend 폴더에서 실행합니다.
-
-```powershell
-pnpm --config.verify-deps-before-run=false test
-pnpm --config.verify-deps-before-run=false build
-```
-
-검증은 설치된 의존성을 그대로 사용하며 실행 전 자동 재설치를 생략합니다. 의존성이 없다면 먼저 위 설치 절차를 실행하세요.
-
-| 검증 | 최근 결과 |
-|---|---|
-| 단위 테스트 | 38/38 통과 · 데이터 이전·클립 독립 편집·장면 근거·출력 규칙 |
-| TypeScript·프로덕션 빌드 | 통과 · 팀원 변경 병합 후 재확인 |
-| 데스크톱 화면 | 96/96 통과 · 16개 경로 × 3개 해상도 × 라이트/다크 |
-| 실제 브라우저 조작 | 14/14 통과 · 저장·복원·보정·다운로드·로컬 영상 재생·재연결 등 |
-| Stageshow | 정적 촬영 4건 --still --gate 통과 · 애니메이션 검수 제외 |
-
-실행 증거와 미검증 범위: [v3 검수 기록](docs/ui-review-v3.md) · [화면 검수 행렬](docs/ui-v3-layout-matrix.json) · [기능 검수 결과](docs/ui-v3-functional-results.json). v2의 21개 시험·42개 화면 조합 기록은 별도 보존했습니다. 백엔드 기능 시험은 위 프론트엔드 검증에 포함되지 않습니다.
-
-이는 에이전트 검증입니다. 사용자의 직접 검수·처음 사용하는 사람의 사용성·스크린 리더·실제 서버 권한/AI 품질/부하는 별도 검증 대상입니다. 모션 줄이기는 브라우저 에뮬레이션과 실제 OS 설정을 구분합니다.
-
-## 코드와 연동
-
-```text
-backend/                           팀원 SFR-001 서버 준비 구조 (주요 구현 미완료)
-frontend/src/pages/                 화면
-frontend/src/components/lucian/     Lucian 요소와 원본 CSS
-frontend/src/components/stageshow/  정적 제작 흐름·Stageshow 키트 일부·라이선스·검수 기록
-frontend/src/styles/                테마·레이아웃
-frontend/src/services/contracts.ts  팀원 API 인터페이스
-frontend/src/project-search.ts      검색·필터 복구
-frontend/src/project-presentation.ts 상태·출처·다운로드 표시 규칙
-frontend/src/data.ts                발화·장면/음향 샘플
-frontend/src/workspace-model.ts     v3 이전·독립 클립·호환 편집 상태
-frontend/src/store.tsx              브라우저 데모 상태
-docs/                              연동·디자인·검수 기록
-```
-
-현재 실행 가능한 데모는 `frontend`입니다. `backend`의 Express·Multer·ffprobe 의존성 추가가 API 동작이나 프론트엔드 연결 완료를 의미하지는 않습니다. 기존 Spring 인증·Python 분석 설계와 실제 서버 사이의 책임·연결 규격은 통합 단계에서 맞춰야 합니다.
-
 ## 관련 문서
 - [Lucian 사용·변경 내역]
 - [Stageshow 정적 검수](frontend/src/components/stageshow/REHEARSAL.md)
