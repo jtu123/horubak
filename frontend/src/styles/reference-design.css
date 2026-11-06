@@ -1,11 +1,12 @@
-/* Reference-inspired desktop design layer. Original licensed interaction ports remain intact. */
+/* Horubak's desktop studio surfaces and interactions. */
 body{font-family:var(--font-ui);font-size:13px;line-height:1.6;letter-spacing:-.15px}
 button,input,select,textarea{font-family:inherit}
-h1{font-size:30px;line-height:38px;font-weight:600;letter-spacing:-1.05px}h2{font-size:18px;line-height:26px;font-weight:600;letter-spacing:-.45px}h3{font-size:14px;line-height:22px;font-weight:600;letter-spacing:-.25px}
+h1,h2,h3{word-break:keep-all;overflow-wrap:anywhere}
+h1{font-size:36px;line-height:1.17;font-weight:800;letter-spacing:-.045em}h2{font-size:20px;line-height:1.35;font-weight:730;letter-spacing:-.03em}h3{font-size:14px;line-height:22px;font-weight:650;letter-spacing:-.25px}
 ::selection{background:var(--accent-soft);color:var(--text)}
-.brand{font-size:23px;letter-spacing:-1.3px;font-weight:700}
-.btn{min-height:38px;padding:0 16px;border-radius:9px;gap:7px;font-size:12px;font-weight:550;transition:background-color 120ms ease,border-color 120ms ease,transform 120ms var(--ease-out)}
-.btn.primary{background:var(--accent);border-color:var(--accent);border-radius:99px;color:var(--accent-ink);box-shadow:0 2px 3px rgb(59 33 126 / 10%)}
+.brand{font-size:23px;letter-spacing:-1.3px;font-weight:800}
+.btn{min-height:38px;padding:0 16px;border-radius:99px;gap:7px;font-size:12px;font-weight:650;transition:background-color 140ms ease,border-color 140ms ease,transform 140ms var(--ease-out)}
+.btn.primary{background:var(--accent);border-color:var(--accent);border-radius:99px;color:var(--accent-ink);box-shadow:0 2px 4px rgb(15 20 53 / 14%)}
 .btn.secondary{background:var(--card);border-color:var(--border);color:var(--text)}.btn.danger{border-radius:99px;background:var(--danger-soft);color:var(--danger)}
 .btn:active:not(:disabled){transform:scale(.98)}
 .icon-button{width:34px;height:34px;border-radius:9px;color:var(--muted);transition:background-color 120ms ease,transform 120ms var(--ease-out)}.icon-button:active:not(:disabled){transform:scale(.96)}
@@ -16,8 +17,8 @@ h1{font-size:30px;line-height:38px;font-weight:600;letter-spacing:-1.05px}h2{fon
 .tiny-tag,.source-badge{font-size:10px;line-height:17px;border-radius:99px;background:var(--soft);padding:3px 8px;border:1px solid var(--border)}
 .notice,.settings-note,.editor-demo-note{border:1px solid var(--border);border-radius:10px;background:var(--soft);color:var(--muted);font-size:11px;line-height:19px}
 .back-link{font-size:11px;color:var(--muted);margin-bottom:13px}.page-heading{margin-bottom:26px}
-.workspace-v3 .page-eyebrow{font-size:11px;line-height:18px;letter-spacing:0;color:var(--muted);margin-bottom:6px}
-.workspace-v3 .page-heading h1{font-size:30px;line-height:38px;letter-spacing:-1px}.workspace-v3 .page-heading p{font-size:12px;line-height:21px;margin-top:7px}
+.workspace-v3 .page-eyebrow{font-size:11px;line-height:18px;letter-spacing:.1em;font-weight:700;color:var(--accent-strong);margin-bottom:9px}
+.workspace-v3 .page-heading h1{font-size:clamp(30px,3vw,46px);line-height:1.14;letter-spacing:-.05em;font-weight:800}.workspace-v3 .page-heading p{font-size:13px;line-height:21px;margin-top:9px}
 
 /* Explicitly expanded Lucian rail, never hover-expanded under the user's pointer. */
 .reference-workspace.app-shell{--rail-size:76px;grid-template-columns:var(--rail-size) minmax(0,1fr);padding:12px 12px 12px 0;min-height:100dvh}
@@ -47,31 +48,35 @@ h1{font-size:30px;line-height:38px;font-weight:600;letter-spacing:-1.05px}h2{fon
 .reference-workspace.rail-expanded .sidebar-label{position:static;width:auto;height:auto;margin:0;overflow:visible;clip:auto}
 .reference-workspace.rail-expanded .sidebar-nav [data-label]::after,.reference-workspace.rail-expanded .sidebar-help[data-label]::after{display:none}
 .reference-workspace.rail-expanded .workspace-demo-state{display:flex;padding:12px 10px 16px;gap:8px}.reference-workspace.rail-expanded .workspace-demo-state>span{background:var(--accent-strong)}
-.reference-workspace .app-main{min-width:0;background:var(--card);border:1px solid var(--border);border-radius:18px;min-height:calc(100dvh - 24px)}
-.reference-workspace .topbar{height:65px;min-height:65px;padding:0 28px;border-bottom:1px solid var(--border);border-radius:18px 18px 0 0;background:var(--card)}
+.reference-workspace .app-main{min-width:0;background:var(--card);border:1px solid var(--border);border-radius:14px;min-height:calc(100dvh - 24px);box-shadow:var(--surface-shadow)}
+.reference-workspace .topbar{height:65px;min-height:65px;padding:0 28px;border-bottom:1px solid var(--border);border-radius:14px 14px 0 0;background:var(--card)}
 .reference-workspace .topbar-location{display:flex;align-items:center;gap:28px;min-width:0}.reference-workspace .topbar-brand{display:flex;align-items:center;flex:none}
 .reference-workspace .topbar-brand .brand{font-size:21px;line-height:30px}.reference-workspace .breadcrumb{gap:9px;font-size:11px}
 .reference-workspace .breadcrumb .workspace-breadcrumb{color:var(--muted)}.reference-workspace .topbar-actions{gap:9px;flex:none}
 .reference-workspace .command-trigger{height:33px;min-height:33px;padding:0 11px;font-size:11px;border-radius:99px;background:var(--soft);border-color:var(--border)}
 .reference-workspace .command-trigger kbd{font-size:9px;padding:1px 4px;background:var(--card)}
-.reference-workspace .theme-trigger{width:33px;height:33px;background:none;border:1px solid var(--border);border-radius:50%}
 .reference-workspace .account-trigger{height:34px;gap:6px}.reference-workspace .account-avatar{width:29px;height:29px;border:1px solid var(--border);background:var(--accent-soft);color:var(--accent-strong);font-size:11px}
 .reference-workspace .account-menu{top:43px;border-radius:12px;padding:7px;font-size:12px}.reference-workspace .account-info{padding:10px}
 .reference-workspace .account-info small{font-size:11px}.reference-workspace .account-menu button{font-size:12px;border-radius:8px}
 .reference-workspace .page-content{padding:28px 30px 34px}.reference-workspace .skip-link{left:calc(var(--rail-size) + 20px)}
-.app-toasts{top:18px;left:calc(50% + 38px);width:360px}.u070-t{border-radius:12px!important;border-color:var(--border)!important;box-shadow:var(--menu-shadow)!important}
+.app-toasts{top:18px;left:calc(50% + 38px);width:360px}
+.u070-t{border-radius:12px!important;border-color:var(--border)!important;box-shadow:var(--menu-shadow)!important;translate:var(--dx,0px) 0;transition:translate 160ms var(--ease-out),opacity 160ms var(--ease-out)}
+.u070-t.enter{translate:0 -5px;opacity:0}
+.u070-t:active:not(.leave){transition:none}
+.u070-t.side{translate:calc(80px * var(--dir,1)) 0}
 
 /* Quiet centered login: intentional whitespace, clear fields and a single primary action. */
-.login-page{background:var(--page)}.login-header{height:82px;padding:24px 36px}
-.login-header .icon-button{border:1px solid var(--border);background:var(--card);border-radius:50%}
-.login-body{padding:24px 32px 32px}.login-form-area{width:410px}
-.login-card{padding:36px;border-radius:22px;background:var(--card);box-shadow:var(--surface-shadow)}
-.login-card h1{font-size:28px;line-height:36px;font-weight:600;letter-spacing:-1px;margin:0 0 27px}
-.login-card .field-label{margin-top:20px;font-size:12px;font-weight:500}.login-card .text-input{min-height:46px;background:var(--soft);border-color:var(--border);font-size:13px;border-radius:10px}
+.login-page{background:linear-gradient(180deg,var(--page) 0 74%,var(--ink-panel) 74%)}
+.login-header{height:74px;padding:20px 36px;border-bottom:1px solid var(--border)}
+.login-body{padding:34px 32px 28px}.login-form-area{width:448px;max-width:100%;padding:13px;border:1px solid var(--border);border-radius:22px;background:var(--card);box-shadow:var(--surface-shadow)}
+.login-card{padding:29px 29px 24px;border:0;border-radius:13px;background:var(--soft);box-shadow:none}
+.login-card h1{font-size:42px;line-height:1.1;font-weight:800;letter-spacing:-.05em;margin:0 0 25px}
+.login-card .field-label{margin-top:20px;font-size:12px;font-weight:650}.login-card .text-input{min-height:46px;background:var(--card);border-color:var(--input-border);font-size:13px;border-radius:10px}
 .password-field .icon-button{top:6px;right:6px}.login-card .btn{min-height:44px;margin-top:27px;font-size:13px}
 .login-switch{font-size:12px;margin-top:21px}.login-divider{font-size:11px;gap:14px;margin:24px 0 18px}
-.demo-enter{min-height:43px;border-radius:99px;font-size:12px;background:var(--card)}
-.login-disclaimer{font-size:11px;line-height:19px;padding:0 8px;margin-top:18px}.login-footer{font-size:11px;padding:24px}
+.demo-enter{min-height:43px;border-radius:99px;font-size:12px;background:var(--card);transition:background-color 140ms ease,transform 140ms var(--ease-out)}
+.demo-enter:active{transform:scale(.98)}
+.login-disclaimer{font-size:11px;line-height:19px;padding:0 8px;margin:14px 0 6px}.login-footer{font-size:11px;padding:20px;color:var(--ink-panel-muted)}
 .signup-form .signup-ack{font-size:11px;line-height:19px}.signup-errors{border-radius:10px;font-size:11px;line-height:19px}
 
 /* Registration and the static Stageshow illustration have separate design responsibilities. */
@@ -92,7 +97,7 @@ h1{font-size:30px;line-height:38px;font-weight:600;letter-spacing:-1.05px}h2{fon
 
 /* Project discovery, candidates and saved clips. */
 .v3-project-hub{max-width:1320px}.v3-hub-heading{margin:4px 0 24px;gap:20px}
-.v3-hub-heading h1{font-size:29px;line-height:38px;font-weight:600;letter-spacing:-1px}.v3-eyebrow{font-size:11px;line-height:19px;gap:7px}
+.v3-hub-heading h1{font-size:clamp(32px,3.25vw,48px);line-height:1.16;font-weight:800;letter-spacing:-.05em}.v3-eyebrow{font-size:11px;line-height:19px;gap:7px}
 .v3-hub-heading p{font-size:11px;line-height:19px}.v3-hub-heading-actions>.btn{min-height:37px;font-size:12px}
 .v3-hub-summary{padding:14px 17px;border-radius:11px;background:var(--soft);gap:24px;margin-bottom:24px}.v3-hub-summary>div{font-size:11px;gap:7px}
 .app-tabs [role="tablist"]{background:var(--soft);padding:4px;border:1px solid var(--border);border-radius:99px;gap:3px}
@@ -109,7 +114,7 @@ h1{font-size:30px;line-height:38px;font-weight:600;letter-spacing:-1.05px}h2{fon
 .v3-hub-candidate-body{padding:16px}.v3-hub-candidate h3{font-size:15px;line-height:24px;min-height:48px;letter-spacing:-.35px}
 .v3-hub-candidate-body>p{font-size:11px;line-height:19px;min-height:38px}.v3-candidate-meta{font-size:10px;line-height:17px}
 .v3-candidate-meta .v3-saved-label{border-radius:99px;padding:1px 6px;background:var(--success-surface);color:var(--green)}
-.v3-candidate-actions>.btn{min-height:33px;height:33px;font-size:11px}.v3-cover-play{width:38px;height:38px;color:#332a4b;box-shadow:0 2px 12px rgb(35 23 64 / 8%)}
+.v3-candidate-actions>.btn{min-height:33px;height:33px;font-size:11px}.v3-cover-play{width:38px;height:38px;color:var(--ink-panel);box-shadow:0 2px 12px rgb(15 20 53 / 12%)}
 .v3-cover-play svg{width:16px;height:16px}.v3-context-label{font-size:10px}
 .v3-clip-row{border-radius:12px;padding:13px 15px;gap:17px}.v3-clip-row.is-active{border-color:var(--accent-strong)}
 .v3-clip-row-title h3 button{font-size:13px}.v3-clip-row-title p{font-size:10px}
@@ -119,7 +124,7 @@ h1{font-size:30px;line-height:38px;font-weight:600;letter-spacing:-1.05px}h2{fon
 .v3-project-job{min-height:85px;padding:18px}.v3-job-icon{width:38px;height:38px;border-radius:11px;background:var(--accent-soft);color:var(--accent-strong)}
 
 /* Editor spatial geometry preserves the four real output ratios. */
-.v3-editor{max-width:1600px;margin:0 auto}.v3-editor-title h1{font-size:24px;line-height:33px;letter-spacing:-.8px}
+.v3-editor{max-width:1600px;margin:0 auto}.v3-editor-title h1{font-size:28px;line-height:1.25;font-weight:800;letter-spacing:-.035em}
 .v3-editor-title>.v3-count{font-size:10px;line-height:18px;padding:2px 7px;border-radius:99px;background:var(--soft)}
 .v3-editor-heading{margin-bottom:20px}.v3-editor-heading .back-link{font-size:11px;margin-bottom:8px}
 .v3-editor-actions{gap:7px}.v3-editor-actions>.btn{font-size:11px;min-height:35px}
@@ -128,11 +133,14 @@ h1{font-size:30px;line-height:38px;font-weight:600;letter-spacing:-1.05px}h2{fon
 .v3-demo-strip{font-size:10px;line-height:18px;padding:9px 12px;background:var(--soft);border:1px solid var(--border);border-radius:9px;margin-bottom:20px}
 .v3-editor .editor-layout{grid-template-columns:220px minmax(400px,1fr) 248px;gap:16px}
 .v3-editor .editor-panel,.v3-editor .preview-panel{border-radius:13px;box-shadow:none}
-.v3-editor .preview-toolbar{font-size:11px;padding:12px 15px}.v3-editor .preview-stage{background:var(--soft);padding:18px 16px 10px}
-.v3-editor .preview-player{--output-frame-height:340px}.v3-editor .aspect-label{font-size:10px;color:var(--muted);margin-top:8px}
+.v3-editor .preview-toolbar{font-size:11px;padding:12px 15px}
+.v3-editor .preview-stage,.v3-results .preview-stage,.v3-source-player .preview-stage{background:radial-gradient(ellipse at 50% 0%,var(--ink-panel-raised),var(--ink-panel) 76%)}
+.v3-editor .preview-stage{padding:18px 16px 10px}
+.v3-editor .preview-player{--output-frame-height:340px}.v3-editor .aspect-label{font-size:10px;margin-top:8px}
+.preview-stage .aspect-label{color:var(--ink-panel-muted)}
 .v3-editor .player-controls{min-height:47px;gap:7px}.play-button{width:32px;height:32px;background:var(--text);color:var(--card)}.player-time{font-size:11px}
 .v3-editor-explorer>.app-tabs{padding:12px 10px 0}.v3-editor-explorer .panel-subheading{padding:13px 13px 10px;font-size:10px}
-.v3-editor-clip{padding:12px 9px;gap:8px;border-radius:10px}.v3-editor-clip b{font-size:11px;line-height:19px;font-weight:550}
+.v3-editor-clip{padding:12px 9px;gap:8px;border-radius:10px}.v3-editor-clip b{font-size:11px;line-height:19px;font-weight:550;word-break:keep-all;overflow-wrap:anywhere}
 .v3-editor-clip.selected{background:var(--accent-soft)}.v3-editor-clip small{font-size:10px;line-height:18px}.v3-explorer-link{padding:14px 13px;font-size:10px}
 .v3-reason{padding:14px 15px}.v3-reason>p{font-size:11px;line-height:20px}.v3-context-open{background:var(--warning-soft);border-radius:9px;font-size:11px}
 .v3-timeline{padding:16px;margin-top:0}.v3-timeline .timeline-heading h2{font-size:11px}.v3-timeline .timeline-heading>span{font-size:10px}
@@ -175,21 +183,27 @@ h1{font-size:30px;line-height:38px;font-weight:600;letter-spacing:-1.05px}h2{fon
 .processing-step-icon{border-radius:10px}.done .processing-step-icon{background:var(--success-surface);color:var(--green);border-color:transparent}.project-status.completed{color:var(--green)}
 
 /* Native dialogs and fast Lucian keyboard interactions. */
-.modal{width:540px;border-radius:18px;box-shadow:0 18px 70px rgb(24 18 40 / 18%)}
-.modal::backdrop,.command-dialog::backdrop{background:rgb(30 25 42 / 28%);backdrop-filter:blur(3px)}
+.modal{width:540px;border-radius:18px;box-shadow:0 18px 70px rgb(12 17 42 / 23%)}
+.modal[open]{opacity:1;translate:0 0;transition:opacity 200ms var(--ease-out),translate 200ms var(--ease-out)}
+@starting-style{.modal[open]{opacity:0;translate:0 6px}}
+.modal::backdrop,.command-dialog::backdrop{background:rgb(15 18 43 / 36%);backdrop-filter:blur(3px)}
 .modal-inner{padding:27px}.modal-heading{margin-bottom:22px}.modal-heading h2{font-size:21px;line-height:29px;letter-spacing:-.6px;font-weight:550}
 .modal-heading .icon-button{width:28px;height:28px;border:1px solid var(--border);border-radius:50%}.modal-actions{margin-top:24px;gap:8px}.modal-actions>.btn{min-height:37px;font-size:12px}
 .comparison-grid>div{border-radius:12px;background:var(--soft)}.comparison-grid>div:last-child{background:var(--accent-soft);border-color:var(--accent-strong)}
 .context-evidence{border-radius:10px;font-size:12px;background:var(--warning-soft)}.export-spec{border-radius:12px;background:var(--soft)}
-.command-dialog{border-radius:16px;width:510px;box-shadow:0 18px 65px rgb(24 18 40 / 18%)}.command-field{padding:16px 18px;gap:10px}.command-field input{font-size:13px}
+.command-dialog{border-radius:16px;width:510px;box-shadow:0 18px 65px rgb(12 17 42 / 23%)}.command-field{padding:16px 18px;gap:10px}.command-field input{font-size:13px}
 .command-list{padding:8px}.command-list [role="option"]{min-height:42px;border-radius:9px;font-size:12px}.command-list small{font-size:10px}.command-footer{padding:12px 18px;font-size:10px}
 .u038-menu{border-radius:12px;padding:6px}.u038-mi{height:36px;font-size:12px;border-radius:8px}.u038-mi svg{width:16px;height:16px}
 @media(hover:hover) and (pointer:fine){
- .btn.primary:hover:not(:disabled){background:var(--accent-strong);border-color:var(--accent-strong)}
- :root[data-theme="dark"] .btn.primary:hover:not(:disabled){background:#8057dc;border-color:#8057dc}
- .btn.secondary:hover:not(:disabled),.icon-button:hover:not(:disabled){background:var(--soft)}
+ .btn.primary:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover);filter:none}
+ .btn.secondary:hover:not(:disabled),.icon-button:hover:not(:disabled),.demo-enter:hover{background:var(--soft)}
  .reference-workspace .sidebar-nav a:hover,.reference-workspace .sidebar-help:hover,.reference-workspace .sidebar-more:hover{background:var(--soft);color:var(--text)}
  .reference-workspace .sidebar-nav [data-label]:hover::after,.reference-workspace .sidebar-help[data-label]:hover::after{opacity:1;visibility:visible}
  .v3-hub-candidate:hover,.v3-clip-row:hover{border-color:var(--input-border);box-shadow:none}
 }
-@media(prefers-reduced-motion:reduce){.btn,.icon-button{transition:none}.modal::backdrop,.command-dialog::backdrop{backdrop-filter:none}}
+@media(prefers-reduced-motion:reduce){
+ .btn,.icon-button,.demo-enter,.modal[open],.u070-t{transition:none}
+ .btn:active:not(:disabled),.icon-button:active:not(:disabled),.demo-enter:active{transform:none}
+ .u070-t.enter{translate:none;opacity:1}
+ .modal::backdrop,.command-dialog::backdrop{backdrop-filter:none}
+}

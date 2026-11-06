@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { seedProjects } from './data';
 import { passwordDigest } from './lib';
@@ -57,7 +57,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setProjects(loaded.projects); setUser(next);
     try { localStorage.setItem('moment.session.v1', JSON.stringify(next)); } catch { setStorageError(true); }
   };
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem('moment.theme.v1', JSON.stringify(theme)); } catch { setStorageError(true); }
   }, [theme]);

@@ -1,42 +1,73 @@
-import { Check, Clapperboard, Film, Layers3 } from 'lucide-react';
+import { useState, type MouseEvent } from 'react';
+import { Bookmark, Check, Film, Layers3, Play } from 'lucide-react';
 import { Stage, Bar, Text, Window, Row } from './kit';
+import { CANDIDATES, SCENE_EVIDENCE } from '../../data';
+import { formatTime } from '../../lib';
 import { useWorkspace } from '../../store';
 import './production-story.css';
 
-// Adapted from Stageshow examples/static-card. This is a static, labeled
-// illustration; it never reads, modifies, or pretends to analyze project data.
+const scenes = CANDIDATES.general;
+const featured = scenes[0];
+const waveform = [8, 14, 11, 18, 13, 22, 29, 24, 16, 23, 13, 10, 17, 22, 12, 8, 13, 9, 15, 12, 8, 11];
+
+// Adapted from Stageshow examples/static-card. The control plays one local
+// example state change using the supplied sample content.
 export function ProductionStory({ previewTheme }: { previewTheme?: 'light' | 'dark' } = {}) {
   const { theme } = useWorkspace();
   const sceneTheme = previewTheme ?? theme;
+  const [preview, setPreview] = useState({ saved: false, instant: false });
+  function togglePreview(event: MouseEvent<HTMLButtonElement>) {
+    setPreview(current => ({ saved: !current.saved, instant: event.detail === 0 }));
+  }
   return <figure className="production-story" aria-labelledby="production-story-caption">
-    <Stage width={400} height={300} theme={sceneTheme} greys="warm" accent={sceneTheme === 'dark' ? '#bca4ff' : '#7050df'} fidelity="realistic" className="horubak-story">
-      {() => <>
-        <Window title="추천 후보" className="hs-window">
-          <aside className="hs-sidebar">
-            <Film size={18} />
-            <Bar w={38} h={5} />
-            <Bar w={46} h={5} />
-            <div className="hs-active-nav"><Layers3 size={14} /><Text>후보</Text></div>
-            <Bar w={32} h={5} />
-          </aside>
-          <div className="hs-main">
-            <div className="hs-heading"><Text>원본에서 찾은 장면</Text><Bar w={22} h={6} /></div>
-            <div className="hs-list">
-              <Row pad={8} className="hs-row" lead={<Film size={16} />} title={<Text>숲길의 시작</Text>} />
-              <Row pad={8} selected className="hs-row" lead={<Film size={16} />} title={<Text>빛이 머무는 순간</Text>} data-target="selected-scene"><Bar w={38} h={5} /></Row>
-              <Row pad={8} className="hs-row" lead={<Film size={16} />} title={<Text>다시, 길 위로</Text>} />
-              {[54, 78, 60].map((w, i) => <Row key={i} pad={8} className="hs-row" lead={<Bar w={16} h={14} r={4} />} title={<Bar w={w} h={5} />} />)}
+    <div aria-hidden="true" data-saved={preview.saved || undefined} data-instant={preview.instant || undefined}>
+      <Stage width={400} height={300} theme={sceneTheme} accent={sceneTheme === 'dark' ? '#a0adff' : '#3548bd'} fidelity="realistic" className="horubak-story">
+        {() => <>
+          <Window title="후보 탐색" lights="grey" className="hs-window">
+            <aside className="hs-sidebar">
+              <Film size={16} />
+              <Layers3 size={16} className="hs-rail-active" />
+              <Bar w={12} h={4} />
+            </aside>
+            <div className="hs-main">
+              <div className="hs-list">
+                {scenes.map((scene, index) => <Row
+                  key={scene.id}
+                  pad={8}
+                  selected={index === 0}
+                  className="hs-row"
+                  lead={<Film size={14} />}
+                  title={<Text>{SCENE_EVIDENCE[index].title}</Text>}
+                  meta={<Text>{formatTime(scene.start)}</Text>}
+                />)}
+              </div>
+              <div className="hs-waveform">
+                <div className="hs-waveform-selection" />
+                {waveform.map((height, index) => <i key={index} style={{ height }} />)}
+              </div>
+            </div>
+          </Window>
+          <div className="hs-clip">
+            <div className="hs-clip-status">
+              <span className="hs-clip-source"><Bookmark size={13} /><Text>선택한 구간</Text></span>
+              <span className="hs-clip-saved"><Check size={13} /><Text>클립에 보관됨</Text></span>
+            </div>
+            <Text className="hs-clip-title">{SCENE_EVIDENCE[0].title}</Text>
+            <div className="hs-clip-details">
+              <Text>{formatTime(featured.start) + ' – ' + formatTime(featured.end)}</Text>
+              <Text>{String(featured.end - featured.start) + '초'}</Text>
             </div>
           </div>
-        </Window>
-        <div className="hs-clip">
-          <div className="hs-clip-art"><Clapperboard size={28} /></div>
-          <div className="hs-clip-details"><Text className="hs-clip-title">빛이 머무는 순간</Text><Text className="hs-clip-time">00:24 — 01:12</Text></div>
-          <div className="hs-clip-footer"><span><Check size={14} /><Text>편집 보관</Text></span><Text>48초</Text></div>
-        </div>
-      </>}
-    </Stage>
-    <figcaption id="production-story-caption">제작 흐름 예시 · 실제 분석 결과가 아닙니다</figcaption>
+        </>}
+      </Stage>
+    </div>
+    <figcaption>
+      <span id="production-story-caption">샘플 영상의 편집 흐름</span>
+      <button type="button" aria-pressed={preview.saved} onClick={togglePreview}>
+        <Play size={12} aria-hidden="true" />
+        클립 보관 예시
+      </button>
+    </figcaption>
   </figure>;
 }
 

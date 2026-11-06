@@ -53,6 +53,12 @@ export function Dashboard() {
   const clipCount = projects.reduce((total, project) => total + getProjectClips(project).length, 0);
   const favoriteCount = projects.filter(project => project.favorite).length;
   const connectedCount = projects.filter(project => project.source !== 'sample' && !!videos[project.id]).length;
+  const metrics = [
+    { label: '프로젝트', value: projects.length, Icon: FolderOpen, hint: '등록한 원본' },
+    { label: '저장한 클립', value: clipCount, Icon: Layers3, hint: '브라우저 편집' },
+    { label: '즐겨찾기', value: favoriteCount, Icon: Star, hint: '자주 여는 작업' },
+    { label: '연결된 원본', value: connectedCount, Icon: Link2, hint: '현재 창의 로컬 파일' },
+  ];
   const showOverview = !query && signal === 'all' && view === 'all';
   const title = view === 'favorites' ? '즐겨찾기' : view === 'exports' ? '편집 결과' : '프로젝트';
   const open = (project: Project) => navigate('/projects/' + project.id + (['processing', 'failed', 'cancelled'].includes(project.status) ? '/processing' : ''));
@@ -61,19 +67,57 @@ export function Dashboard() {
   const sample = () => { const project = createVisualSample(); const existing = projects.find(item => item.id === project.id); if (existing) open(existing); else { addProject(project); notify('장면 기반 샘플을 추가했어요'); open(project); } };
 
   return <div className="dashboard dashboard-v3 reference-dashboard">
-    <div className="page-heading dashboard-heading"><div><div className="page-eyebrow">안녕하세요, {user?.guest ? '크리에이터' : user?.name}님.</div><h1>{title}<span className="project-count" role="status" aria-label={filtered.length + '개 프로젝트'}>{filtered.length}</span></h1><p>오늘도 좋은 순간을 남겨보세요.</p></div><div className="heading-actions"><button className="btn secondary" onClick={sample}><Image size={16} />샘플 둘러보기</button><Link className="btn primary" to="/projects/new"><Plus size={17} />새 영상</Link></div></div>
-    {showOverview && <section className="ref-metrics" aria-label="작업공간 요약">
-      {[{ label: '프로젝트', value: projects.length, Icon: FolderOpen, hint: '원본 기준', kind: 'lime' }, { label: '저장한 클립', value: clipCount, Icon: Layers3, hint: '브라우저 편집', kind: 'violet' }, { label: '즐겨찾기', value: favoriteCount, Icon: Star, hint: '자주 여는 작업', kind: 'neutral' }, { label: '연결된 원본', value: connectedCount, Icon: Link2, hint: '현재 창의 로컬 파일', kind: 'neutral' }].map(({ label, value, Icon, hint, kind }) => <div className="ref-metric" key={label}><div className="ref-metric-label"><Icon size={14} /><span>{label}</span></div><div className="ref-metric-value"><strong>{value.toLocaleString('ko-KR')}</strong><span className={'ref-metric-chip ' + kind}>{hint}</span></div></div>)}
-    </section>}
-    {recent && showOverview && <div className="ref-focus-grid">
-      <section className="resume-card ref-focus-card" aria-label="최근 작업 이어서 보기">
-        <div className="ref-focus-header"><span><Clock3 size={14} />최근 작업</span><span className="ref-focus-date">{new Date(recent.updatedAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} 수정</span></div>
-        <div className="ref-focus-body"><div className="resume-thumb ref-focus-art"><Poster genre={recent.genre} /><span>{recent.source === 'sample' ? '샘플 포스터' : '원본 프로젝트'}</span></div><div className="resume-copy ref-focus-copy"><span className={'ref-focus-state ' + recent.status}>{describeProject(recent, recent.edit, !!videos[recent.id]).statusLabel}</span><h2 title={recent.title}>{recent.title}</h2><p>{getProjectLabel(recent)}<i />{recent.duration ? formatTime(recent.duration) : '길이 미확인'}<i />{getProjectClips(recent).length}개 클립</p><button className="btn secondary" onClick={() => open(recent)}>이어서 작업<ArrowRight size={15} /></button></div></div>
-        <div className="ref-focus-footer"><span><Clapperboard size={13} />원본 하나에서 여러 클립으로</span><span>{recent.source === 'sample' ? '미리 준비한 샘플' : videos[recent.id] ? '원본 연결됨' : '원본 재연결 가능'}</span></div>
+    <header className="page-heading dashboard-heading" data-overview={view === 'all'}>
+      <div className="page-eyebrow"><span aria-hidden="true" />호루박 작업공간</div>
+      <h1>{title}<span className="project-count" role="status" aria-label={filtered.length + '개 프로젝트'}>{filtered.length}</span></h1>
+      <div className="ref-heading-footer">
+        <p>안녕하세요, {user?.guest ? '크리에이터' : user?.name}님. 영상의 좋은 순간을 클립으로 남겨보세요.</p>
+        <div className="heading-actions">
+          <Link className="btn primary" to="/projects/new"><Plus size={17} />새 영상</Link>
+          <button className="ref-text-action" onClick={sample}>샘플 둘러보기<ArrowRight size={15} /></button>
+        </div>
+      </div>
+    </header>
+    {showOverview && <div className="ref-showcase">
+      {recent && <div className="ref-focus-grid">
+        <section className="resume-card ref-focus-card" aria-label="최근 작업 이어서 보기">
+          <div className="ref-focus-header">
+            <span><Clock3 size={14} />최근 작업</span>
+            <time className="ref-focus-date" dateTime={recent.updatedAt}>{new Date(recent.updatedAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} 수정</time>
+          </div>
+          <div className="ref-focus-body">
+            <div className="resume-thumb ref-focus-art">
+              <Poster genre={recent.genre} />
+              <span>{recent.source === 'sample' ? '샘플 포스터' : videos[recent.id] ? '원본 연결됨' : '원본 프로젝트'}</span>
+            </div>
+            <div className="resume-copy ref-focus-copy">
+              <span className={'ref-focus-state ' + recent.status}>{describeProject(recent, recent.edit, !!videos[recent.id]).statusLabel}</span>
+              <h2 title={recent.title}>{recent.title}</h2>
+              <p>{getProjectLabel(recent)}<i />{recent.duration ? formatTime(recent.duration) : '길이 미확인'}<i />{getProjectClips(recent).length}개 클립</p>
+              <button className="btn secondary" onClick={() => open(recent)}>이어서 작업<ArrowRight size={15} /></button>
+            </div>
+          </div>
+        </section>
+        <aside className="ref-guide" aria-label="클립 제작 안내">
+          <div className="ref-guide-heading"><Layers3 size={15} />제작 가이드</div>
+          <h2>원본에서 클립까지</h2>
+          <ol>
+            <li><span>01</span><p>원본에서 원하는 순간 찾기</p></li>
+            <li><span>02</span><p>후보를 내 클립에 보관하기</p></li>
+            <li><span>03</span><p>자막과 구도를 확인하기</p></li>
+          </ol>
+          <div className="ref-guide-foot">
+            <span><Check size={13} />편집은 이 브라우저에 저장돼요</span>
+            <button onClick={() => open(recent)} className="ref-guide-action ref-text-action">프로젝트 열기<ArrowRight size={14} /></button>
+          </div>
+        </aside>
+      </div>}
+      <section className="ref-metrics" aria-label="작업공간 요약">
+        {metrics.map(({ label, value, Icon, hint }) => <div className="ref-metric" key={label}>
+          <div className="ref-metric-label"><Icon size={15} /><span>{label}</span></div>
+          <div className="ref-metric-value"><strong>{value.toLocaleString('ko-KR')}</strong><span className="ref-metric-chip">{hint}</span></div>
+        </div>)}
       </section>
-      <aside className="ref-guide" aria-label="클립 제작 안내">
-        <div className="ref-guide-heading"><span><Layers3 size={15} />제작 가이드</span><span className="ref-guide-tag">시작하기</span></div><h2>다음 클립을 준비해요</h2><ol><li><span>1</span><p>원본에서 원하는 순간 찾기</p></li><li><span>2</span><p>후보를 내 클립에 보관하기</p></li><li><span>3</span><p>자막과 구도를 확인하기</p></li></ol><div className="ref-guide-foot"><span><Check size={13} />편집은 이 브라우저에 저장돼요</span><button onClick={() => open(recent)} className="ref-guide-action">프로젝트 열기<ArrowRight size={14} /></button></div>
-      </aside>
     </div>}
     <div className="ref-collection-heading"><h2>프로젝트 모음</h2><span>원하는 작업을 이어서 시작하세요.</span></div>
     <div className="project-view-tabs" aria-label="프로젝트 모음"><Link to="/projects" aria-current={view === 'all' ? 'page' : undefined}>전체 프로젝트</Link><Link to="/projects?view=favorites" aria-current={view === 'favorites' ? 'page' : undefined}><Star size={14} />즐겨찾기</Link><Link to="/projects?view=exports" aria-current={view === 'exports' ? 'page' : undefined}>편집 결과</Link><span className="collection-summary">원본 {projects.length}개<span />클립 {clipCount}개</span></div>

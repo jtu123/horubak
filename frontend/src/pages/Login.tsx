@@ -2,9 +2,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff, Moon, Sun } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { Brand } from '../components/Brand';
 import { SignupForm } from '../components/lucian/SignupForm';
+import { ThemeToggle } from '../components/lucian/ThemeToggle';
 import { SITE_NAME } from '../site';
 import { useWorkspace } from '../store';
 
@@ -41,7 +42,7 @@ function LoginForm({ onLogin, onComplete }: { onLogin: (email: string, password:
   </form>;
 }
 export function Login() {
-  const { login, signup, enterDemo, theme, toggleTheme } = useWorkspace();
+  const { login, signup, enterDemo } = useWorkspace();
   const navigate = useNavigate(); const [params] = useSearchParams();
   const registering = params.get('mode') === 'signup';
   useEffect(() => {
@@ -50,7 +51,7 @@ export function Login() {
   }, [registering]);
   const complete = () => navigate('/projects');
   return <div className="login-page ux">
-    <header className="login-header"><Brand /><button className="icon-button" aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'} onClick={toggleTheme}>{theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}</button></header>
+    <header className="login-header"><Brand /><ThemeToggle /></header>
     <main className="login-body"><section className="login-form-area" aria-label={registering ? '회원가입' : '로그인'}>
       {registering ? <SignupForm onCreate={signup} onComplete={complete} /> : <LoginForm onLogin={login} onComplete={complete} />}
       <p className="login-switch">{registering ? '이미 프로필이 있나요?' : '처음 오셨나요?'} <Link to={registering ? '/login' : '/login?mode=signup'}>{registering ? '로그인' : '회원가입'}</Link></p>

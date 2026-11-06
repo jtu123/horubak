@@ -1,0 +1,57 @@
+/* Lucian UX/UI Prompt #219 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#219 */
+.u219-tg {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--ux-surface);
+  box-shadow: inset 0 0 0 1px var(--ux-line);
+  color: var(--ux-ink);
+}
+
+.u219-tg:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.u219-tg svg {
+  width: 16px;
+  height: 16px;
+  transform: rotate(0deg);
+}
+
+.u219-tg[aria-pressed="true"] svg { transform: rotate(-90deg); }
+:root[data-u219-reveal] .u219-tg svg { transition: transform .6s cubic-bezier(.3, 1.4, .5, 1); }
+
+@media (hover: hover) and (pointer: fine) {
+  .u219-tg:hover { background: var(--ux-surface-2); }
+}
+
+/* The dark snapshot is the circular layer in both directions. */
+:root[data-u219-reveal]::view-transition { pointer-events: none; }
+:root[data-u219-reveal]::view-transition-group(root) { animation: none; }
+:root[data-u219-reveal]::view-transition-old(root),
+:root[data-u219-reveal]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-u219-reveal="dark"]::view-transition-new(root) {
+    animation: u219-circle .7s cubic-bezier(.65, 0, .35, 1) both;
+  }
+
+  :root[data-u219-reveal="light"]::view-transition-old(root) {
+    z-index: 1;
+    animation: u219-circle .7s cubic-bezier(.65, 0, .35, 1) reverse both;
+  }
+}
+
+@keyframes u219-circle {
+  from { clip-path: circle(0px at var(--u219-center)); }
+  to { clip-path: circle(var(--u219-radius) at var(--u219-center)); }
+}

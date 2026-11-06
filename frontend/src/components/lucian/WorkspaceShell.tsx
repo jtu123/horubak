@@ -1,11 +1,12 @@
 // Adapted from Lucian UX/UI #040 · MIT (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#040
 import { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowUpRight, BarChart3, ChevronDown, ChevronRight, CircleHelp, Clapperboard, FolderOpen, Info, Library, ListVideo, LogOut, Moon, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Search, Send, Settings2, Sun, Users, X } from 'lucide-react';
+import { ArrowUpRight, BarChart3, ChevronDown, ChevronRight, CircleHelp, Clapperboard, FolderOpen, Info, Library, ListVideo, LogOut, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Search, Send, Settings2, Users, X } from 'lucide-react';
 import { useWorkspace } from '../../store';
 import { Brand } from '../Brand';
 import { Modal } from '../Modal';
 import { openCommandPalette } from './CommandPalette';
+import { ThemeToggle } from './ThemeToggle';
 import '../../styles/workspace-v3.css';
 
 const PRIMARY = [
@@ -20,7 +21,7 @@ const MORE = [
 ];
 
 export function WorkspaceShell() {
-  const { user, logout, theme, toggleTheme, storageError, storageNotice } = useWorkspace();
+  const { user, logout, storageError, storageNotice } = useWorkspace();
   const [dismissedNotice, setDismissedNotice] = useState('');
   const [help, setHelp] = useState(false);
   const [account, setAccount] = useState(false);
@@ -66,7 +67,7 @@ export function WorkspaceShell() {
         <div className="topbar-location"><Link className="topbar-brand" to="/projects" aria-label="호루박 작업공간"><Brand /></Link><div className="breadcrumb"><span className="workspace-breadcrumb">작업공간</span><ChevronRight size={12} /><span>{pageTitle}</span></div></div>
         <div className="topbar-actions">
           <button className="command-trigger" onClick={openCommandPalette} title="빠른 실행 (Ctrl+Shift+K)" aria-label="빠른 실행 열기"><Search size={15} /><span>빠른 실행</span><kbd>Ctrl ⇧ K</kbd></button>
-          <button className="icon-button theme-trigger" aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'} onClick={toggleTheme}>{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button>
+          <ThemeToggle />
           <div className="account-wrap" ref={accountRoot}>
             <button ref={accountButton} className="account-trigger" aria-label="계정 메뉴" aria-haspopup="menu" aria-expanded={account} onClick={() => setAccount(value => !value)}><span className="account-avatar" aria-hidden="true">{user?.name.slice(0, 1)}</span><ChevronDown size={13} /></button>
             {account && <div className="account-menu" role="menu" aria-label="계정" onKeyDown={event => {

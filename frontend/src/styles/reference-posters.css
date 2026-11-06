@@ -1,13 +1,13 @@
-/* Original sample cover artwork. No imagery or marks from the reference reel. */
+/* Horubak sample cover artwork, with a distinct ink-and-paper palette per genre. */
 .poster.reference-poster{
-  --cover-bg:#e8e2f4;--cover-ink:#35294c;--cover-muted:#8c7ca9;--cover-paper:#faf8ff;--cover-back:#bcaadb;--cover-pop:#d5e99d;
+  --cover-bg:#dce5ff;--cover-ink:#172a64;--cover-muted:#5870b4;--cover-paper:#fcfcff;--cover-back:#a2b5eb;--cover-pop:#bccbff;
   background:var(--cover-bg);color:var(--cover-ink);padding:25px 24px;isolation:isolate;
 }
-.poster.reference-poster.poster-speech{--cover-bg:#e5ebd5;--cover-ink:#3d4831;--cover-muted:#94a77e;--cover-paper:#f7f8ed;--cover-back:#bdcba5;--cover-pop:#7962ac}
-.poster.reference-poster.poster-podcast{--cover-bg:#e8e6e1;--cover-ink:#393a38;--cover-muted:#94958d;--cover-paper:#f7f6f1;--cover-back:#cbc8be;--cover-pop:#7962ac}
-.poster.reference-poster.poster-general{--cover-bg:#ded9ef;--cover-ink:#43335c;--cover-muted:#a190c2;--cover-paper:#f7f4ff;--cover-back:#baa9d9;--cover-pop:#d5e99d}
+.poster.reference-poster.poster-speech{--cover-bg:#e3eee8;--cover-ink:#234b42;--cover-muted:#5c8076;--cover-paper:#f7faf7;--cover-back:#afc9c2;--cover-pop:#669687}
+.poster.reference-poster.poster-podcast{--cover-bg:#f2e9d8;--cover-ink:#533f26;--cover-muted:#866c43;--cover-paper:#fffbf2;--cover-back:#d8c5a4;--cover-pop:#b59a6d}
+.poster.reference-poster.poster-general{--cover-bg:#dce7eb;--cover-ink:#203e54;--cover-muted:#607d92;--cover-paper:#f7fbff;--cover-back:#abc2d2;--cover-pop:#99bbcf}
 .poster.reference-poster .poster-edition{display:block;position:relative;z-index:1;color:var(--cover-ink);opacity:.65;font:500 8px/12px "Segoe UI",sans-serif;letter-spacing:.12em;margin-bottom:9px}
-.poster.reference-poster .poster-type{font-size:29px;line-height:1.22;font-weight:600;letter-spacing:-1.15px;color:var(--cover-ink)}
+.poster.reference-poster .poster-type{font-size:29px;line-height:1.22;font-weight:750;letter-spacing:-1.15px;color:var(--cover-ink)}
 .poster.reference-poster .poster-type em{color:inherit;font-weight:400}
 .poster.reference-poster .poster-drawing{left:23%;right:-3%;top:14%;bottom:1%;opacity:1;transform:none}
 .poster.reference-poster .poster-drawing>svg{display:block;width:100%;height:100%;stroke:none;fill:none;overflow:visible}
@@ -47,7 +47,7 @@
 .output-frame .preview-watermark,
 .output-frame .sample-frame-tag {
   color: #fff;
-  background: #29242f;
+  background: var(--ink-panel);
 }
 
 .output-frame .sample-frame-tag {

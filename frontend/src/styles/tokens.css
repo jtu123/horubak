@@ -1,12 +1,13 @@
 /* Horubak design tokens. Lucian-compatible aliases preserve the licensed interactions. */
 :root {
  color-scheme:light;
- --page:#f3f3f0;--card:#fff;--soft:#f7f7f5;--text:#202020;--muted:#72726f;--border:#e6e6e2;--input-border:#c5c4bf;
- --accent:#7050df;--accent-strong:#6341d0;--accent-soft:#f0ecfb;--accent-ink:#fff;--focus:#7653df;--green:#465c26;--danger:#b4404b;
- --lime-soft:#e1efb5;--lime-ink:#3f5127;--success-surface:var(--lime-soft);
+ --page:#f5f4f1;--card:#fffefa;--soft:#f0f1f6;--text:#14152e;--muted:#52566b;--border:#dedfe7;--input-border:#a8acc1;
+ --accent:#20265f;--accent-hover:#3548a7;--accent-strong:#3548a7;--accent-soft:#e8ecff;--accent-ink:#fff;--focus:#465bcc;--green:#315844;--danger:#a53349;
+ --ink-panel:#12132e;--ink-panel-raised:#1c2044;--ink-panel-text:#f9f8ff;--ink-panel-muted:#bbc1de;--ink-panel-line:#3d4268;
+ --lime-soft:#e0f2e7;--lime-ink:#315844;--success-surface:var(--lime-soft);
  --danger-soft:#fff0f0;--warning:#84651e;--warning-soft:#faf4df;--menu-shadow:0 6px 28px rgb(29 25 42 / 10%);
  --ease-out:cubic-bezier(.23,1,.32,1);
- --faint:#858580;--raised:#fff;--surface-shadow:0 2px 4px rgb(29 25 42 / 2%),0 8px 24px rgb(29 25 42 / 3%);
+ --faint:#64697d;--raised:#fff;--surface-shadow:0 1px 3px rgb(17 21 48 / 6%),0 12px 34px rgb(17 21 48 / 7%);
  --font-ui:"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",Arial,sans-serif;
  --ux-page:var(--page);--ux-surface:var(--card);--ux-surface-2:var(--soft);--ux-surface-3:var(--border);
  --ux-ink:var(--text);--ux-ink-2:var(--muted);--ux-ink-3:var(--muted);--ux-line:var(--border);--ux-line-2:var(--input-border);
@@ -14,8 +15,9 @@
  --ux-mint:var(--green);--ux-warn:var(--warning);--ux-danger:var(--danger);--ux-ease:var(--ease-out);--ux-spring:var(--ease-out);
 }
 :root[data-theme="dark"] {
- color-scheme:dark;--page:#151518;--card:#202024;--soft:#29282e;--text:#f1eff6;--muted:#b1adb9;--border:#3b3842;--input-border:#686270;
- --accent:#7854d8;--accent-strong:#c0aaff;--accent-ink:#fff;--accent-soft:#322847;--focus:#b99af9;--green:#d6ed9c;--danger:#ffadb5;--danger-soft:#3a252c;--warning:#e6cf91;--warning-soft:#393222;
- --lime-soft:#303c25;--lime-ink:#d6ed9c;--menu-shadow:0 8px 30px rgb(0 0 0 / 25%);
- --faint:#a6a0af;--raised:#2a282f;--surface-shadow:0 2px 12px rgb(0 0 0 / 12%);
+ color-scheme:dark;--page:#10111a;--card:#171925;--soft:#222638;--text:#f8f7fb;--muted:#b8bdd4;--border:#353951;--input-border:#6e7698;
+ --accent:#4558cc;--accent-hover:#4f63d6;--accent-strong:#b2bfff;--accent-ink:#fff;--accent-soft:#282f54;--focus:#a5b4ff;--green:#b8e6c9;--danger:#ffb5c2;--danger-soft:#3a2531;--warning:#e6cf91;--warning-soft:#393222;
+ --ink-panel:#10132b;--ink-panel-raised:#202644;--ink-panel-line:#42496e;
+ --lime-soft:#233b33;--lime-ink:#b8e6c9;--menu-shadow:0 8px 30px rgb(0 0 0 / 32%);
+ --faint:#a6aec8;--raised:#23273a;--surface-shadow:0 2px 12px rgb(0 0 0 / 18%);
 }
