@@ -5,6 +5,7 @@ import { App } from './App';
 import { WorkspaceProvider } from './store';
 import './styles/tokens.css';
 import './styles/app.css';
+import './styles/reference-design.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

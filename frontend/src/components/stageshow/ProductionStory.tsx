@@ -9,7 +9,7 @@ export function ProductionStory({ previewTheme }: { previewTheme?: 'light' | 'da
   const { theme } = useWorkspace();
   const sceneTheme = previewTheme ?? theme;
   return <figure className="production-story" aria-labelledby="production-story-caption">
-    <Stage width={400} height={300} theme={sceneTheme} greys="cool" accent={sceneTheme === 'dark' ? '#83b3ff' : '#1b64da'} fidelity="realistic" className="horubak-story">
+    <Stage width={400} height={300} theme={sceneTheme} greys="warm" accent={sceneTheme === 'dark' ? '#bca4ff' : '#7050df'} fidelity="realistic" className="horubak-story">
       {() => <>
         <Window title="추천 후보" className="hs-window">
           <aside className="hs-sidebar">

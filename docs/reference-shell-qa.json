@@ -1,0 +1,31 @@
+{
+  "cases": [
+    {
+      "name": "Summary matches local projects and menu rail remains accessible",
+      "pass": true
+    },
+    {
+      "name": "Project list card menus and favorite metrics update",
+      "pass": true
+    },
+    {
+      "name": "Account help keyboard and theme work",
+      "pass": true
+    },
+    {
+      "name": "Expanded rail fits 1280px editor and primary labels contrast",
+      "pass": true,
+      "detail": {
+        "lightContrast": 5.381916360097095,
+        "darkContrast": 5.3382150140361775
+      }
+    },
+    {
+      "name": "Reduced motion retains palette and keyboard dialogs",
+      "pass": true
+    }
+  ],
+  "pass": 5,
+  "total": 5,
+  "pageErrors": []
+}

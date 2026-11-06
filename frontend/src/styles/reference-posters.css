@@ -1,0 +1,68 @@
+/* Original sample cover artwork. No imagery or marks from the reference reel. */
+.poster.reference-poster{
+  --cover-bg:#e8e2f4;--cover-ink:#35294c;--cover-muted:#8c7ca9;--cover-paper:#faf8ff;--cover-back:#bcaadb;--cover-pop:#d5e99d;
+  background:var(--cover-bg);color:var(--cover-ink);padding:25px 24px;isolation:isolate;
+}
+.poster.reference-poster.poster-speech{--cover-bg:#e5ebd5;--cover-ink:#3d4831;--cover-muted:#94a77e;--cover-paper:#f7f8ed;--cover-back:#bdcba5;--cover-pop:#7962ac}
+.poster.reference-poster.poster-podcast{--cover-bg:#e8e6e1;--cover-ink:#393a38;--cover-muted:#94958d;--cover-paper:#f7f6f1;--cover-back:#cbc8be;--cover-pop:#7962ac}
+.poster.reference-poster.poster-general{--cover-bg:#ded9ef;--cover-ink:#43335c;--cover-muted:#a190c2;--cover-paper:#f7f4ff;--cover-back:#baa9d9;--cover-pop:#d5e99d}
+.poster.reference-poster .poster-edition{display:block;position:relative;z-index:1;color:var(--cover-ink);opacity:.65;font:500 8px/12px "Segoe UI",sans-serif;letter-spacing:.12em;margin-bottom:9px}
+.poster.reference-poster .poster-type{font-size:29px;line-height:1.22;font-weight:600;letter-spacing:-1.15px;color:var(--cover-ink)}
+.poster.reference-poster .poster-type em{color:inherit;font-weight:400}
+.poster.reference-poster .poster-drawing{left:23%;right:-3%;top:14%;bottom:1%;opacity:1;transform:none}
+.poster.reference-poster .poster-drawing>svg{display:block;width:100%;height:100%;stroke:none;fill:none;overflow:visible}
+.poster.reference-poster .poster-footer{position:absolute;left:24px;bottom:15px;color:var(--cover-ink);opacity:.5;font:500 7px/10px "Segoe UI",sans-serif;letter-spacing:.14em;z-index:1}
+.reference-poster .cover-paper-back,.reference-poster .cover-film-back,.reference-poster .cover-audio-back{fill:var(--cover-back)}
+.reference-poster .cover-paper,.reference-poster .cover-film,.reference-poster .cover-audio{fill:var(--cover-paper);stroke:var(--cover-back);stroke-width:1}
+.reference-poster .cover-rule,.reference-poster .cover-film-line{stroke:var(--cover-back);stroke-width:4;stroke-linecap:round}
+.reference-poster .cover-medallion,.reference-poster .cover-accent-dot{fill:var(--cover-pop)}
+.reference-poster .cover-question{stroke:var(--cover-ink);stroke-width:3;stroke-linecap:round}
+.reference-poster .cover-check{stroke:var(--cover-ink);stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+.reference-poster .cover-orbit{stroke:var(--cover-back);stroke-width:1.2}
+.reference-poster .cover-podium{fill:var(--cover-back)}
+.reference-poster .cover-podium-top{fill:var(--cover-paper)}
+.reference-poster .cover-mic{stroke:var(--cover-ink);stroke-width:3;stroke-linecap:round}
+.reference-poster .cover-mic-head,.reference-poster .cover-wave,.reference-poster .cover-play-mark{fill:var(--cover-ink)}
+.reference-poster .cover-audio-line{stroke:var(--cover-muted);stroke-width:4;stroke-linecap:round}
+.poster.reference-poster.vertical{padding:25px 18px}
+.poster.reference-poster.vertical .poster-type{font-size:27px;line-height:1.25}
+.poster.reference-poster.vertical .poster-drawing{left:0;right:-22%;top:29%;bottom:12%}
+.poster.reference-poster.vertical .poster-footer{left:18px;bottom:14px;font-size:6px}
+.poster.reference-poster.mini{padding:8px 9px}
+.poster.reference-poster.mini .poster-type{font-size:12px;line-height:1.2;letter-spacing:-.4px}
+.poster.reference-poster.mini .poster-edition,.poster.reference-poster.mini .poster-footer{display:none}
+.poster.reference-poster.mini .poster-drawing{left:21%;right:-13%;top:10%;bottom:-6%;opacity:.8}
+
+/* Preserve room for the artwork title while keeping the app's labels readable. */
+.project-cover .reference-poster .poster-edition,
+.v3-candidate-cover .reference-poster .poster-edition,
+.output-frame .reference-poster .poster-edition {
+  visibility: hidden;
+}
+
+.output-frame .reference-poster .poster-footer {
+  display: none;
+}
+
+.output-frame .preview-watermark,
+.output-frame .sample-frame-tag {
+  color: #fff;
+  background: #29242f;
+}
+
+.output-frame .sample-frame-tag {
+  left: 50%;
+  right: auto;
+  bottom: 9px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 18px);
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 15px;
+}
+
+.output-frame .subtitle-overlay {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}

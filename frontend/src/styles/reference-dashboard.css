@@ -1,0 +1,70 @@
+/* FleetFlow reference composition interpreted for the real Horubak workspace. */
+.workspace-v3 .reference-dashboard{max-width:1520px;margin:0 auto}
+.workspace-v3 .reference-dashboard .dashboard-heading{align-items:center;margin-bottom:24px}
+.workspace-v3 .reference-dashboard .dashboard-heading .page-eyebrow{font-size:12px;color:var(--muted);letter-spacing:0;margin-bottom:4px}
+.workspace-v3 .reference-dashboard .dashboard-heading h1{font-size:30px;font-weight:600;line-height:39px;letter-spacing:-1px}
+.workspace-v3 .reference-dashboard .dashboard-heading p{margin-top:5px;font-size:12px}
+.workspace-v3 .reference-dashboard .project-count{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:24px;margin-left:10px;padding:0 7px;border:1px solid var(--border);border-radius:7px;vertical-align:middle;font-size:12px;font-weight:500;background:var(--card);color:var(--muted);letter-spacing:0}
+.workspace-v3 .reference-dashboard .heading-actions{gap:8px}
+.workspace-v3 .reference-dashboard .heading-actions>.btn{min-height:37px;font-size:12px;padding:0 15px}
+.workspace-v3 .reference-dashboard .ref-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:0 0 21px;margin-bottom:22px;border-bottom:1px solid var(--border)}
+.workspace-v3 .reference-dashboard .ref-metric{min-width:0;padding:0 25px;border-right:1px solid var(--border)}
+.workspace-v3 .reference-dashboard .ref-metric:first-child{padding-left:0}
+.workspace-v3 .reference-dashboard .ref-metric:last-child{padding-right:0;border-right:0}
+.workspace-v3 .reference-dashboard .ref-metric-label{display:flex;align-items:center;gap:7px;font-size:11px;line-height:18px;color:var(--muted);margin-bottom:6px}
+.workspace-v3 .reference-dashboard .ref-metric-label svg{stroke-width:1.6}
+.workspace-v3 .reference-dashboard .ref-metric-value{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.workspace-v3 .reference-dashboard .ref-metric-value>strong{font-size:29px;font-weight:500;line-height:36px;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.workspace-v3 .reference-dashboard .ref-metric-chip{font-size:10px;line-height:17px;padding:1px 7px;border-radius:99px;white-space:nowrap;color:var(--muted);background:var(--soft)}
+.workspace-v3 .reference-dashboard .ref-metric-chip.lime{background:var(--lime-soft,#e1efb5);color:var(--lime-ink,#3f5127)}
+.workspace-v3 .reference-dashboard .ref-metric-chip.violet{background:var(--accent-soft);color:var(--accent-strong)}
+.workspace-v3 .reference-dashboard .ref-focus-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:18px;margin-bottom:30px}
+.workspace-v3 .reference-dashboard .ref-focus-card{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;margin:0;border-radius:13px;border:1px solid var(--border);background:var(--card);overflow:hidden}
+.workspace-v3 .reference-dashboard .ref-focus-header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px 0;font-size:11px;line-height:18px}
+.workspace-v3 .reference-dashboard .ref-focus-header>span:first-child{display:flex;align-items:center;gap:6px;font-weight:500}
+.workspace-v3 .reference-dashboard .ref-focus-date{color:var(--muted);font-size:10px;white-space:nowrap}
+.workspace-v3 .reference-dashboard .ref-focus-body{display:grid;grid-template-columns:minmax(160px,.8fr) minmax(0,1fr);align-items:center;gap:24px;padding:17px 20px 20px;flex:1}
+.workspace-v3 .reference-dashboard .ref-focus-art{width:100%;height:156px;position:relative;overflow:hidden;border-radius:9px;background:var(--soft);flex:none}
+.workspace-v3 .reference-dashboard .ref-focus-art>.poster{width:100%;height:100%;padding:15px 17px}
+.workspace-v3 .reference-dashboard .ref-focus-art .poster-type{font-size:24px;line-height:29px;letter-spacing:-1px}
+.workspace-v3 .reference-dashboard .ref-focus-art>span{position:absolute;right:7px;bottom:7px;padding:2px 6px;border-radius:4px;font-size:9px;line-height:13px;background:rgb(255 255 255 / 78%);color:#353238}
+.workspace-v3 .reference-dashboard .ref-focus-copy{min-width:0}
+.workspace-v3 .reference-dashboard .ref-focus-copy>.ref-focus-state{display:inline-flex;font-size:10px;line-height:17px;padding:1px 7px;border-radius:99px;background:var(--lime-soft,#e1efb5);color:var(--lime-ink,#3f5127);font-weight:500;margin-bottom:9px}
+.workspace-v3 .reference-dashboard .ref-focus-copy>.ref-focus-state.failed{color:var(--danger);background:var(--danger-soft)}
+.workspace-v3 .reference-dashboard .ref-focus-copy>.ref-focus-state.processing,.workspace-v3 .reference-dashboard .ref-focus-copy>.ref-focus-state.cancelled{background:var(--soft);color:var(--muted)}
+.workspace-v3 .reference-dashboard .ref-focus-copy h2{font-size:18px;line-height:27px;font-weight:600;letter-spacing:-.55px;margin:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.workspace-v3 .reference-dashboard .ref-focus-copy p{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:10px;line-height:18px;margin-top:8px;color:var(--muted)}
+.workspace-v3 .reference-dashboard .ref-focus-copy p>i{width:2px;height:2px;border-radius:50%;background:var(--muted)}
+.workspace-v3 .reference-dashboard .ref-focus-copy>.btn{margin-top:16px;min-height:32px;padding:0 12px;font-size:11px;border-radius:99px}
+.workspace-v3 .reference-dashboard .ref-focus-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 18px;border-top:1px solid var(--border);font-size:10px;line-height:17px;color:var(--muted)}
+.workspace-v3 .reference-dashboard .ref-focus-footer>span:first-child{display:flex;gap:6px;align-items:center}
+.workspace-v3 .reference-dashboard .ref-guide{display:flex;flex-direction:column;min-width:0;padding:17px 18px 15px;border:1px solid color-mix(in srgb,var(--accent) 12%,var(--border));border-radius:13px;background:var(--accent-soft)}
+.workspace-v3 .reference-dashboard .ref-guide-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;line-height:18px}
+.workspace-v3 .reference-dashboard .ref-guide-heading>span:first-child{display:flex;align-items:center;gap:6px;color:var(--accent-strong);font-weight:500}
+.workspace-v3 .reference-dashboard .ref-guide-tag{font-size:9px;border-radius:99px;padding:0 7px;background:var(--card);color:var(--accent-strong)}
+.workspace-v3 .reference-dashboard .ref-guide h2{font-size:18px;line-height:26px;letter-spacing:-.5px;font-weight:600;margin-top:12px}
+.workspace-v3 .reference-dashboard .ref-guide ol{display:grid;gap:10px;padding:0;margin:15px 0 18px;list-style:none;flex:1}
+.workspace-v3 .reference-dashboard .ref-guide li{display:flex;align-items:center;gap:9px}
+.workspace-v3 .reference-dashboard .ref-guide li>span{display:grid;place-items:center;flex:none;width:20px;height:20px;border-radius:50%;background:var(--card);color:var(--accent-strong);font-size:10px}
+.workspace-v3 .reference-dashboard .ref-guide li>p{font-size:11px;line-height:18px}
+.workspace-v3 .reference-dashboard .ref-guide-foot{display:flex;align-items:center;gap:10px;justify-content:space-between;padding-top:12px;border-top:1px solid color-mix(in srgb,var(--accent) 13%,transparent);flex-wrap:wrap}
+.workspace-v3 .reference-dashboard .ref-guide-foot>span{display:flex;align-items:center;gap:5px;font-size:9px;line-height:16px;color:var(--muted)}
+.workspace-v3 .reference-dashboard .ref-guide-action{display:inline-flex;align-items:center;gap:5px;border:0;background:none;padding:0;color:var(--accent-strong);font-size:10px;font-weight:600;line-height:18px}
+.workspace-v3 .reference-dashboard .ref-collection-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
+.workspace-v3 .reference-dashboard .ref-collection-heading h2{font-size:17px;line-height:25px;font-weight:600;letter-spacing:-.5px}
+.workspace-v3 .reference-dashboard .ref-collection-heading>span{font-size:11px;color:var(--muted)}
+.workspace-v3 .reference-dashboard .project-view-tabs{min-height:38px;margin-bottom:16px;gap:22px}
+.workspace-v3 .reference-dashboard .project-view-tabs>a{min-height:38px;font-size:11px}
+.workspace-v3 .reference-dashboard .collection-summary{font-size:10px}
+.workspace-v3 .reference-dashboard .project-toolbar{margin-bottom:16px}
+.workspace-v3 .reference-dashboard .project-grid{gap:16px}
+.workspace-v3 .reference-dashboard .project-cover{height:162px}
+.workspace-v3 .reference-dashboard .project-grid:not(.list-view) .project-cover{width:100%;aspect-ratio:auto}
+.workspace-v3 .reference-dashboard .project-card-body{padding:13px 14px 9px}
+.workspace-v3 .reference-dashboard .project-card-body h3{font-size:13px;line-height:21px;font-weight:600;letter-spacing:-.25px}
+.workspace-v3 .reference-dashboard .card-actions{padding:0 12px 10px 14px}
+.workspace-v3 .reference-dashboard .new-project-tile{min-height:276px;border-radius:12px}
+.workspace-v3 .reference-dashboard .project-grid.list-view .project-cover{height:82px}
+.workspace-v3 .reference-dashboard .project-grid.list-view .project-card-body{padding:10px 16px}
+.workspace-v3 .reference-dashboard .project-grid.list-view .card-actions{padding:0 14px}
+@media (min-width:1600px){.workspace-v3 .reference-dashboard .ref-focus-body{grid-template-columns:minmax(200px,.9fr) minmax(0,1.1fr)}.workspace-v3 .reference-dashboard .ref-focus-art{height:174px}.workspace-v3 .reference-dashboard .ref-guide{padding:19px 23px}}

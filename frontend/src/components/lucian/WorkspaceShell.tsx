@@ -1,7 +1,7 @@
 // Adapted from Lucian UX/UI #040 · MIT (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#040
 import { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowUpRight, BarChart3, ChevronDown, ChevronRight, CircleHelp, FolderOpen, Info, Library, ListVideo, LogOut, Moon, Search, Send, Settings2, Sun, Users, X } from 'lucide-react';
+import { ArrowUpRight, BarChart3, ChevronDown, ChevronRight, CircleHelp, Clapperboard, FolderOpen, Info, Library, ListVideo, LogOut, Moon, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Search, Send, Settings2, Sun, Users, X } from 'lucide-react';
 import { useWorkspace } from '../../store';
 import { Brand } from '../Brand';
 import { Modal } from '../Modal';
@@ -24,6 +24,7 @@ export function WorkspaceShell() {
   const [dismissedNotice, setDismissedNotice] = useState('');
   const [help, setHelp] = useState(false);
   const [account, setAccount] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const [more, setMore] = useState(MORE.some(item => location.pathname.startsWith(item.path)));
@@ -43,25 +44,26 @@ export function WorkspaceShell() {
     return () => { document.removeEventListener('pointerdown', pointer); document.removeEventListener('keydown', key); };
   }, [account]);
 
-  return <div className="ux app-shell workspace-v3">
+  return <div className={'ux app-shell workspace-v3 reference-workspace' + (expanded ? ' rail-expanded' : '')}>
     <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
     <aside className="app-sidebar">
-      <Link className="sidebar-brand" to="/projects" aria-label="호루박 홈"><Brand /></Link>
+      <Link className="sidebar-brand rail-brand" to="/projects" aria-label="호루박 홈" title="호루박 홈"><Clapperboard size={22} /><span className="rail-brand-name">호루박</span></Link>
+      <button className="rail-toggle" aria-label={expanded ? '메뉴 접기' : '메뉴 펼치기'} aria-expanded={expanded} aria-controls="workspace-navigation" title={expanded ? '메뉴 접기' : '메뉴 펼치기'} onClick={() => setExpanded(value => !value)}>{expanded ? <PanelLeftClose size={17} /> : <PanelLeftOpen size={17} />}</button>
       <div className="workspace-name"><span className="workspace-monogram" aria-hidden="true">{user?.name.slice(0, 1)}</span><span><b>개인 작업공간</b><small>{user?.guest ? '샘플 게스트' : user?.name}</small></span></div>
-      <nav className="sidebar-nav" aria-label="주 메뉴">
-        {PRIMARY.map(({ label, path, Icon }) => <Link key={path} to={path} aria-current={location.pathname.startsWith(path) ? 'page' : undefined}><Icon size={18} /><span>{label}</span></Link>)}
-        <button className="sidebar-more" onClick={() => setMore(value => !value)} aria-expanded={more} aria-controls="workspace-more"><span>더보기</span><ChevronDown size={14} className={more ? 'expanded' : ''} /></button>
-        {more && <div className="sidebar-extra" id="workspace-more">{MORE.map(({ label, path, Icon }) => <Link key={path} to={path} aria-current={location.pathname.startsWith(path) ? 'page' : undefined}><Icon size={18} /><span>{label}</span></Link>)}</div>}
+      <nav className="sidebar-nav" id="workspace-navigation" aria-label="주 메뉴">
+        {PRIMARY.map(({ label, path, Icon }) => <Link key={path} to={path} aria-label={label} title={label} data-label={label} aria-current={location.pathname.startsWith(path) ? 'page' : undefined}><Icon size={18} /><span className="sidebar-label">{label}</span></Link>)}
+        <button className="sidebar-more" onClick={() => setMore(value => !value)} aria-label="더보기" title="더보기" data-label="더보기" aria-expanded={more} aria-controls="workspace-more"><MoreHorizontal size={18} /><span className="sidebar-label">더보기</span><ChevronDown size={14} className={more ? 'expanded' : ''} /></button>
+        {more && <div className="sidebar-extra" id="workspace-more">{MORE.map(({ label, path, Icon }) => <Link key={path} to={path} aria-label={label} title={label} data-label={label} aria-current={location.pathname.startsWith(path) ? 'page' : undefined}><Icon size={18} /><span className="sidebar-label">{label}</span></Link>)}</div>}
       </nav>
       <div className="sidebar-bottom">
         <div className="workspace-demo-state"><span /><div><b>브라우저 데모</b><small>작업은 이 브라우저에 저장돼요</small></div></div>
-        <Link className="sidebar-help" to="/settings" aria-current={location.pathname === '/settings' ? 'page' : undefined}><Settings2 size={17} />설정</Link>
-        <button className="sidebar-help" onClick={() => setHelp(true)}><CircleHelp size={17} />사용 안내<ArrowUpRight size={13} /></button>
+        <Link className="sidebar-help" to="/settings" aria-label="설정" title="설정" data-label="설정" aria-current={location.pathname === '/settings' ? 'page' : undefined}><Settings2 size={17} /><span className="sidebar-label">설정</span></Link>
+        <button className="sidebar-help" onClick={() => setHelp(true)} aria-label="사용 안내" title="사용 안내" data-label="사용 안내"><CircleHelp size={17} /><span className="sidebar-label">사용 안내</span><ArrowUpRight size={13} /></button>
       </div>
     </aside>
     <div className="app-main">
       <header className="topbar">
-        <div className="breadcrumb"><span className="workspace-breadcrumb">작업공간</span><ChevronRight size={12} /><span>{pageTitle}</span></div>
+        <div className="topbar-location"><Link className="topbar-brand" to="/projects" aria-label="호루박 작업공간"><Brand /></Link><div className="breadcrumb"><span className="workspace-breadcrumb">작업공간</span><ChevronRight size={12} /><span>{pageTitle}</span></div></div>
         <div className="topbar-actions">
           <button className="command-trigger" onClick={openCommandPalette} title="빠른 실행 (Ctrl+Shift+K)" aria-label="빠른 실행 열기"><Search size={15} /><span>빠른 실행</span><kbd>Ctrl ⇧ K</kbd></button>
           <button className="icon-button theme-trigger" aria-label={theme === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환'} onClick={toggleTheme}>{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button>

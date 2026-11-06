@@ -1,19 +1,21 @@
 /* Horubak design tokens. Lucian-compatible aliases preserve the licensed interactions. */
 :root {
  color-scheme:light;
- --page:#f5f6f8;--card:#fff;--soft:#eef1f5;--text:#202735;--muted:#657184;--border:#e1e6ed;--input-border:#8996a8;
- --accent:#1b64da;--accent-strong:#1b64da;--accent-soft:#eaf1fe;--focus:#3182f6;--green:#22734f;--danger:#c03945;
- --danger-soft:#fff0f1;--warning:#846419;--warning-soft:#faf5e8;--menu-shadow:0 8px 32px rgb(18 28 45 / 12%);
+ --page:#f3f3f0;--card:#fff;--soft:#f7f7f5;--text:#202020;--muted:#72726f;--border:#e6e6e2;--input-border:#c5c4bf;
+ --accent:#7050df;--accent-strong:#6341d0;--accent-soft:#f0ecfb;--accent-ink:#fff;--focus:#7653df;--green:#465c26;--danger:#b4404b;
+ --lime-soft:#e1efb5;--lime-ink:#3f5127;--success-surface:var(--lime-soft);
+ --danger-soft:#fff0f0;--warning:#84651e;--warning-soft:#faf4df;--menu-shadow:0 6px 28px rgb(29 25 42 / 10%);
  --ease-out:cubic-bezier(.23,1,.32,1);
- --faint:#8a94a4;--raised:#fff;--surface-shadow:0 2px 8px rgb(27 45 75 / 3%),0 12px 32px rgb(27 45 75 / 3%);
+ --faint:#858580;--raised:#fff;--surface-shadow:0 2px 4px rgb(29 25 42 / 2%),0 8px 24px rgb(29 25 42 / 3%);
+ --font-ui:"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",Arial,sans-serif;
  --ux-page:var(--page);--ux-surface:var(--card);--ux-surface-2:var(--soft);--ux-surface-3:var(--border);
  --ux-ink:var(--text);--ux-ink-2:var(--muted);--ux-ink-3:var(--muted);--ux-line:var(--border);--ux-line-2:var(--input-border);
- --ux-accent:var(--accent);--ux-accent-2:var(--focus);--ux-accent-soft:var(--accent-soft);--ux-accent-ink:#fff;
+ --ux-accent:var(--accent);--ux-accent-2:var(--focus);--ux-accent-soft:var(--accent-soft);--ux-accent-ink:var(--accent-ink);
  --ux-mint:var(--green);--ux-warn:var(--warning);--ux-danger:var(--danger);--ux-ease:var(--ease-out);--ux-spring:var(--ease-out);
 }
 :root[data-theme="dark"] {
- color-scheme:dark;--page:#11151c;--card:#1a202a;--soft:#242c38;--text:#edf0f5;--muted:#a6b0c0;--border:#333e4d;--input-border:#65738a;
- --accent-strong:#6ca6ff;--accent-soft:#1c2c46;--green:#89d7b3;--danger:#ff9aa3;--danger-soft:#362028;--warning:#e3ca87;--warning-soft:#322d21;
- --menu-shadow:0 8px 32px rgb(0 0 0 / 30%);
- --faint:#8190a4;--raised:#242d3a;--surface-shadow:0 2px 12px rgb(0 0 0 / 10%);
+ color-scheme:dark;--page:#151518;--card:#202024;--soft:#29282e;--text:#f1eff6;--muted:#b1adb9;--border:#3b3842;--input-border:#686270;
+ --accent:#7854d8;--accent-strong:#c0aaff;--accent-ink:#fff;--accent-soft:#322847;--focus:#b99af9;--green:#d6ed9c;--danger:#ffadb5;--danger-soft:#3a252c;--warning:#e6cf91;--warning-soft:#393222;
+ --lime-soft:#303c25;--lime-ink:#d6ed9c;--menu-shadow:0 8px 30px rgb(0 0 0 / 25%);
+ --faint:#a6a0af;--raised:#2a282f;--surface-shadow:0 2px 12px rgb(0 0 0 / 12%);
 }

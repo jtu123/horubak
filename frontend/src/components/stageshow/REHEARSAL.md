@@ -1,5 +1,37 @@
 # Rehearsal: Horubak ProductionStory
 
+## Reference refresh — 2026-11-06
+
+The FleetFlow reference supplied by the user calls for warm white/gray, violet and lime.
+This update changes the Stage grays from cool to warm and its accent from blue to
+#7050df (light) / #bca4ff (dark). Static-card geometry, title/range content, kit parts,
+400×300 size and deliberate window bleed remain unchanged. No cursor or motion was added.
+Violet here follows the user's explicit product palette rather than marking generic AI.
+The previous captures and gate results below document the earlier blue version.
+
+### Current palette verification
+
+The root integration run filmed all four current-palette stills with --still --gate:
+- docs/screenshots/reference/stageshow-light1440.png
+- docs/screenshots/reference/stageshow-light1280.png
+- docs/screenshots/reference/stageshow-dark1440.png
+- docs/screenshots/reference/stageshow-reduced1440.png
+
+Each adjacent JSON report records mode:still, status:no-issues-detected, exitCode:0,
+no errors and complete coverage of one settled frame. The root reported that every
+run ended with rehearsal passed. These are fresh captures of the warm/violet palette,
+separate from the earlier blue captures.
+
+An independent Evidence Collector compared three PNGs of the updated composition
+and found no required visual correction, as reported to this author by the root.
+This author verified the four saved gate reports; the independent visual judgment
+belongs to that reviewer, not the illustration author.
+
+Static verification does not certify animation, cursor motion, loop seams or an
+OS-level reduced-motion setting. Mobile/390px/compact/Phone remain intentionally
+excluded by the user's desktop-only requirement. Actual AI, server processing and
+output are not supplied or certified by this illustration.
+
 ## Plan
 Medium: static supporting illustration on the new-video desktop form.
 Design size: 400×300. Desktop host widths: 1280 and 1440; workspace also checked at1920.
@@ -15,7 +47,7 @@ Kept the window/satellite proportions, left104/top24 window bleed, left24/bottom
 Changed finance rows to source scenes and saved clip, brand-blue light/dark, Korean text and existing Lucide film icons.
 LICENSE andNOTICE.md are preserved. No third-party brand marks, photos, fonts or Phone implementation were copied.
 
-## Captured
+## Earlier blue palette — Captured
 - Gold: .cache/stageshow-gold.png (original desktop composition).
 - Final: docs/screenshots/v3/stageshow-light1440.png
 - Final: docs/screenshots/v3/stageshow-light1280.png
@@ -23,7 +55,7 @@ LICENSE andNOTICE.md are preserved. No third-party brand marks, photos, fonts or
 - Final: docs/screenshots/v3/stageshow-reduced1440.png
 - Corresponding JSON reports are adjacent. Report stage coverage:1 settled still, complete.
 
-## Gate
+## Earlier blue palette — Gate
 All four final captures use film.mjs --still --gate.
 Final line:
 ```text
@@ -31,14 +63,14 @@ rehearsal passed (necessary, not sufficient: references/verify.md and the fresh 
 ```
 Each final capture reports no-issues-detected. Static captures do not judge motion.
 
-## Findings and fixes
+## Earlier blue palette — Findings and fixes
 - Initial row lacked a trailing filler, producing a lopsided row diagnostic. Matched the gold's trailing filler and normal/selected text hierarchy.
 - Initial list pitch left a short bottom clearance; restored gold's36px pitch.
 - Dark accent was too dim beside the app; raised it to#83b3ff for the illustration only.
 - Independent fresh-eye reviewer compared gold/light/dark: matching the selected scene title on the saved clip makes the source→result relation clearer. Applied “빛이 머무는 순간” to both and recaptured all four final stills.
 - The original gold had one nonblocking row-inset observation. The adapted final frames have no recorded findings.
 
-## Review
+## Earlier blue palette — Review
 Reviewer: separate frontend agent, read-only visual comparison (not the story author).
 Observed: no important Korean/time/status cropping, awkward wraps or dark contrast issue in the compared stills. Framing and relative window/card scale match the reference.
 Reviewer did not inspect live functional pages, mobile, motion or gate logs in that visual pass.
