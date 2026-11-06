@@ -5,7 +5,27 @@ import { formatTime, validateVideo } from '../lib';
 import { useWorkspace } from '../store';
 import type { EditState, Project } from '../types';
 import { getOutputProfile } from '../output-profile';
+import { getSportsSample } from '../sports-samples';
 import '../styles/output-profile.css';
+
+const sampleVideos = new Map<string, Promise<Blob>>();
+
+function loadSampleVideo(source: string): Promise<Blob> {
+  const existing = sampleVideos.get(source);
+  if (existing) return existing;
+
+  // The hosted site serves whole files. A local media URL allows seeking
+  // throughout the sample without depending on HTTP byte ranges.
+  const request = fetch(source).then(response => {
+    if (!response.ok) throw new Error('Sample video could not be loaded.');
+    return response.blob();
+  }).catch(error => {
+    sampleVideos.delete(source);
+    throw error;
+  });
+  sampleVideos.set(source, request);
+  return request;
+}
 
 export function SourceReconnect({ project }: { project: Project }) {
   const input = useRef<HTMLInputElement>(null);
@@ -42,10 +62,32 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
   const frame = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(false);
   const [muted, setMuted] = useState(false);
-  const url = videos[project.id];
-  const sample = project.source === 'sample';
+  const [sampleMedia, setSampleMedia] = useState<{ source: string; url: string | null }>();
+  const match = getSportsSample(project);
+  const sampleSource = match?.videoUrl;
+  const loadedSample = sampleMedia?.source === sampleSource ? sampleMedia : undefined;
+  const url = videos[project.id] ?? loadedSample?.url ?? undefined;
+  const stillSample = project.source === 'sample' && !match && !url;
+  const canMute = !!url && !match;
+  const mediaError = error || loadedSample?.url === null;
   const profile = getOutputProfile(edit.aspectRatio);
   const invalidBounds = ![edit.start, edit.end, project.duration].every(Number.isFinite) || edit.start < 0 || edit.end <= edit.start || edit.end > project.duration;
+  useEffect(() => {
+    if (!sampleSource) return;
+    let active = true;
+    let objectUrl: string | undefined;
+    void loadSampleVideo(sampleSource).then(blob => {
+      if (!active) return;
+      objectUrl = URL.createObjectURL(blob);
+      setSampleMedia({ source: sampleSource, url: objectUrl });
+    }, () => {
+      if (active) setSampleMedia({ source: sampleSource, url: null });
+    });
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [sampleSource]);
   useEffect(() => {
     const node = video.current;
     if (node && Math.abs(node.currentTime - time) > .35) node.currentTime = time;
@@ -57,27 +99,28 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
     else node.pause();
   }, [playing, url, onPlaying]);
   useEffect(() => {
-    if (!sample || !playing) return;
+    if (!stillSample || !playing) return;
     const timer = window.setInterval(() => onTime(time + .2 >= edit.end ? edit.start : time + .2), 200);
     return () => window.clearInterval(timer);
-  }, [sample, playing, time, edit.start, edit.end, onTime]);
+  }, [stillSample, playing, time, edit.start, edit.end, onTime]);
   useEffect(() => { setError(false); }, [url]);
   useEffect(() => { if (invalidBounds) onPlaying(false); }, [invalidBounds, onPlaying]);
   return <div className="preview-player">
     <div className="preview-stage"><div className={'portrait-frame output-frame' + (edit.layout === 'full' ? ' full-frame' : '')} data-aspect-ratio={profile.ratio} style={{ width: 'min(100%, calc(var(--output-frame-height) * ' + profile.width / profile.height + '))', height: 'auto', maxHeight: 'none', aspectRatio: profile.cssRatio }} ref={frame}>
       <div className="preview-source" style={{ transform: 'scale(' + edit.scale + ')' }}>
-        {url ? <video ref={video} src={url} muted={muted} playsInline preload="metadata" style={{ objectPosition: edit.cropX + '% ' + edit.cropY + '%' }} onLoadedMetadata={event => { event.currentTarget.currentTime = Math.min(Math.max(0, time), Math.max(0, event.currentTarget.duration - .05)); }} onTimeUpdate={event => {
+        {url ? <video ref={video} src={url} poster={match && (match.candidateThumbnails?.[edit.candidateId] ?? match.thumbnail)} muted={!!match || muted} playsInline preload="metadata" style={{ objectPosition: edit.cropX + '% ' + edit.cropY + '%' }} onLoadedMetadata={event => { event.currentTarget.currentTime = Math.min(Math.max(0, time), Math.max(0, event.currentTarget.duration - .05)); }} onTimeUpdate={event => {
           const value = event.currentTarget.currentTime;
           if (value >= edit.end && playing) { onPlaying(false); event.currentTarget.currentTime = edit.start; onTime(edit.start); }
           else onTime(value);
-        }} onError={() => { setError(true); onPlaying(false); }} /> : sample ? <div className="sample-visual" style={{ transform: 'translate(' + (50 - edit.cropX) * .5 + '%, ' + (50 - edit.cropY) * .5 + '%)' }}><Poster genre={project.genre} vertical /></div> : <div className="no-video"><FileVideo size={32} /><b>원본을 연결해 주세요</b><p>이 브라우저에서 영상을 재생합니다.</p></div>}
+        }} onEnded={() => { onPlaying(false); onTime(edit.start); }} onError={() => { setError(true); onPlaying(false); }} /> : match || stillSample ? <div className="sample-visual" style={stillSample ? { transform: 'translate(' + (50 - edit.cropX) * .5 + '%, ' + (50 - edit.cropY) * .5 + '%)' } : undefined}><Poster project={project} candidateId={edit.candidateId} vertical /></div> : <div className="no-video"><FileVideo size={32} /><b>원본을 연결해 주세요</b><p>이 브라우저에서 영상을 재생합니다.</p></div>}
       </div>
-      <span className="preview-watermark">{sample ? '샘플 이미지' : '원본 미리보기'}</span>
+      <span className="preview-watermark">{match ? '경기 샘플' : stillSample ? '샘플 이미지' : '원본 미리보기'}</span>
       {edit.subtitleVisible && edit.subtitle && <div className="subtitle-overlay" style={{ fontSize: edit.subtitleSize + 'px', color: edit.subtitleColor }}><span>{edit.subtitle}</span></div>}
       {edit.showSafeArea && <div className="preview-safe-area" aria-label="일반 안전영역 가이드"><span>일반 안전영역</span></div>}
-      {sample && <span className="sample-frame-tag">이미지·구간 조작 예시</span>}
-      {error && <div className="video-error" role="alert">영상을 재생할 수 없어요.<br />H.264/AAC MP4로 다시 연결해 주세요.</div>}
+      {stillSample && <span className="sample-frame-tag">이미지·구간 조작 예시</span>}
+      {match && !url && !mediaError && <span className="sample-frame-tag" role="status">경기 영상 불러오는 중…</span>}
+      {mediaError && <div className="video-error" role="alert">영상을 재생할 수 없어요.<br />{match ? '페이지를 새로고침해 주세요.' : 'H.264/AAC MP4로 다시 연결해 주세요.'}</div>}
     </div><span className="aspect-label">{profile.ratio} · 자막·구도 미리보기</span></div>
-    <div className="player-controls"><button className="icon-button" aria-label="구간 처음으로" onClick={() => { onTime(edit.start); if (video.current) video.current.currentTime = edit.start; }}><RotateCcw size={16} /></button><button className="play-button" aria-label={playing ? '일시 정지' : '미리보기 재생'} disabled={(!url && !sample) || error || invalidBounds} onClick={() => onPlaying(!playing)}>{playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}</button><span className="player-time">{formatTime(Math.max(0, time - edit.start))}<span> / {formatTime(Math.max(0, edit.end - edit.start))}</span></span><button className="icon-button" disabled={!url} aria-label={muted ? '음소거 해제' : '음소거'} aria-pressed={muted} onClick={() => setMuted(value => !value)}>{muted ? <VolumeX size={16} /> : <Volume2 size={16} />}</button><button className="icon-button" aria-label="미리보기 전체 화면" onClick={() => { if (document.fullscreenElement) void document.exitFullscreen(); else void frame.current?.requestFullscreen().catch(() => {}); }}><Maximize2 size={16} /></button></div>
+    <div className="player-controls"><button className="icon-button" aria-label="구간 처음으로" onClick={() => { onTime(edit.start); if (video.current) video.current.currentTime = edit.start; }}><RotateCcw size={16} /></button><button className="play-button" aria-label={playing ? '일시 정지' : '미리보기 재생'} disabled={(!url && !stillSample) || mediaError || invalidBounds} onClick={() => onPlaying(!playing)}>{playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}</button><span className="player-time">{formatTime(Math.max(0, time - edit.start))}<span> / {formatTime(Math.max(0, edit.end - edit.start))}</span></span><button className="icon-button" disabled={!canMute} aria-label={match ? '무음 경기 영상' : muted ? '음소거 해제' : '음소거'} aria-pressed={!!match || muted} onClick={() => setMuted(value => !value)}>{match || muted ? <VolumeX size={16} /> : <Volume2 size={16} />}</button><button className="icon-button" aria-label="미리보기 전체 화면" onClick={() => { if (document.fullscreenElement) void document.exitFullscreen(); else void frame.current?.requestFullscreen().catch(() => {}); }}><Maximize2 size={16} /></button></div>
   </div>;
 }

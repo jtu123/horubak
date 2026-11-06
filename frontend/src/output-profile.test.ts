@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getOutputProfile } from './output-profile';
 import { normalizeProject, updateProjectClip } from './workspace-model';
-import { seedProjects } from './data';
+import { legacySeedProjects } from './data';
 
 describe('output profiles', () => {
   it.each([
@@ -18,7 +18,7 @@ describe('output profiles', () => {
   });
 
   it('keeps a new ratio and guide independent between saved clips and across normalization', () => {
-    const initial = normalizeProject(seedProjects()[0])!;
+    const initial = normalizeProject(legacySeedProjects()[0])!;
     const first = initial.clips![0];
     const second = { ...first, id: 'another-clip', edit: { ...first.edit } };
     const project = { ...initial, clips: [first, second] };
@@ -30,7 +30,7 @@ describe('output profiles', () => {
   });
 
   it('recovers an invalid persisted ratio and guide without losing existing edit values', () => {
-    const legacy = seedProjects()[0];
+    const legacy = legacySeedProjects()[0];
     const project = normalizeProject({ ...legacy, edit: { ...legacy.edit, aspectRatio: '3:2', showSafeArea: 'yes' } })!;
     expect(project.edit).toMatchObject({ start: legacy.edit!.start, subtitle: legacy.edit!.subtitle, aspectRatio: '9:16', showSafeArea: false });
   });

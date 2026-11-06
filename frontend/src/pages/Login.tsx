@@ -1,45 +1,97 @@
-// Adapted from Lucian #062 · MIT (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#062
+// Lucian UX/UI Prompt #062 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#062
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Brand } from '../components/Brand';
 import { SignupForm } from '../components/lucian/SignupForm';
 import { ThemeToggle } from '../components/lucian/ThemeToggle';
 import { SITE_NAME } from '../site';
 import { useWorkspace } from '../store';
+import '../components/lucian/login-feedback.css';
+
+const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
 function LoginForm({ onLogin, onComplete }: { onLogin: (email: string, password: string) => Promise<void>; onComplete: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [capsLock, setCapsLock] = useState(false);
+  const [phase, setPhase] = useState<'idle' | 'pending' | 'success'>('idle');
+  const [error, setError] = useState<{ message: string } | null>(null);
   const alive = useRef(true);
+  const completion = useRef<number | undefined>(undefined);
   const passwordInput = useRef<HTMLInputElement>(null);
-  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
-  useEffect(() => { if (error) passwordInput.current?.focus(); }, [error]);
-  async function submit(event: FormEvent) {
-    event.preventDefault(); if (busy) return;
-    setError(''); setBusy(true);
-    try { await onLogin(email, password); if (alive.current) onComplete(); }
-    catch (reason) {
+  const busy = phase !== 'idle';
+  const status = phase === 'pending' ? '확인하는 중…' : phase === 'success' ? '로그인 성공' : '';
+
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; window.clearTimeout(completion.current); };
+  }, []);
+  useEffect(() => {
+    if (!error) return;
+    passwordInput.current?.focus({ preventScroll: true });
+    passwordInput.current?.select();
+  }, [error]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    const form = event.currentTarget;
+    setError(null);
+    setPhase('pending');
+    try {
+      await onLogin(email, password);
       if (!alive.current) return;
-      setError(reason instanceof Error ? reason.message : '브라우저 저장 공간을 확인해 주세요.');
-    } finally { if (alive.current) setBusy(false); }
+      if (window.matchMedia(REDUCED_MOTION).matches) {
+        onComplete();
+        return;
+      }
+      setPhase('success');
+      completion.current = window.setTimeout(onComplete, 650);
+    } catch (reason) {
+      if (!alive.current) return;
+      setError({ message: reason instanceof Error ? reason.message : '브라우저 저장 공간을 확인해 주세요.' });
+      setPhase('idle');
+      if (!window.matchMedia(REDUCED_MOTION).matches) {
+        form.classList.remove('shake');
+        void form.offsetWidth;
+        form.classList.add('shake');
+      }
+    }
   }
-  return <form className="login-card" aria-label="로그인 양식" aria-busy={busy} onSubmit={submit}>
-    <h1>로그인</h1>
-    <label className="field-label" htmlFor="login-email">이메일</label>
-    <input className="text-input" id="login-email" type="email" autoComplete="username" required maxLength={254} placeholder="name@example.com" value={email} disabled={busy} onChange={e => { setEmail(e.target.value); setError(''); }} />
-    <label className="field-label" htmlFor="login-password">비밀번호</label>
-    <div className="password-field">
-      <input ref={passwordInput} className="text-input" id="login-password" type={visible ? 'text' : 'password'} autoComplete="current-password" required maxLength={64} placeholder="비밀번호 입력" value={password} disabled={busy} aria-invalid={!!error} aria-describedby={error ? 'login-error' : undefined} onChange={e => { setPassword(e.target.value); setError(''); }} />
-      <button className="icon-button" type="button" aria-pressed={visible} aria-label={visible ? '비밀번호 숨기기' : '비밀번호 보기'} onClick={() => setVisible(v => !v)}>{visible ? <Eye size={18} /> : <EyeOff size={18} />}</button>
-    </div>
-    {error && <p className="field-error" id="login-error" role="alert">{error}</p>}
-    <button className="btn primary full" disabled={busy} type="submit">{busy ? '확인 중…' : '로그인'}</button>
-  </form>;
+
+  return <>
+    <form className="login-card u062" aria-label="로그인 양식" aria-busy={phase === 'pending'} onSubmit={submit} onAnimationEnd={event => {
+      if (event.target === event.currentTarget && event.animationName === 'u062-no') event.currentTarget.classList.remove('shake');
+    }}>
+      <h1>로그인</h1>
+      <label className="field-label" htmlFor="login-email">이메일</label>
+      <input className="text-input" id="login-email" type="email" autoComplete="username" required maxLength={254} placeholder="name@example.com" value={email} disabled={busy} onChange={e => { setEmail(e.target.value); setError(null); }} />
+      <div className="u062-password-label">
+        <label className="field-label" htmlFor="login-password">비밀번호</label>
+        <span className="u062-caps" role="status">{capsLock ? 'Caps Lock 켜짐' : ''}</span>
+      </div>
+      <div className="password-field">
+        <input ref={passwordInput} className="text-input" id="login-password" type={visible ? 'text' : 'password'} autoComplete="current-password" required maxLength={64} placeholder="비밀번호 입력" value={password} disabled={busy} aria-invalid={!!error} aria-describedby={error ? 'login-error' : undefined}
+          onChange={e => { setPassword(e.target.value); setError(null); }} onKeyUp={e => setCapsLock(e.getModifierState('CapsLock'))} onBlur={() => setCapsLock(false)} />
+        <button className="icon-button u062-eye" type="button" disabled={busy} aria-pressed={visible} aria-label={visible ? '비밀번호 숨기기' : '비밀번호 보기'} onClick={() => setVisible(v => !v)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <g className="u062-lid"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" /><circle cx="12" cy="12" r="3" /></g>
+            <path className="u062-slash" d="M4 4l16 16" />
+          </svg>
+        </button>
+      </div>
+      <div className={'u062-err' + (error ? ' bad' : '')}><span id="login-error" role="alert">{error?.message}</span></div>
+      <button className={'btn primary u062-go' + (phase === 'pending' ? ' busy' : phase === 'success' ? ' ok' : '')} disabled={busy} type="submit">
+        <span>{status || '로그인'}</span>
+        <i aria-hidden="true" />
+        <svg viewBox="0 0 26 26" aria-hidden="true"><path d="M6 13.5l4.5 4.5L20 8.5" /></svg>
+      </button>
+    </form>
+    <span className="sr-only" role="status">{status}</span>
+  </>;
 }
 export function Login() {
   const { login, signup, enterDemo } = useWorkspace();

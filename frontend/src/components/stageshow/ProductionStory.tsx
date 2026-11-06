@@ -1,21 +1,20 @@
 import { useState, type MouseEvent } from 'react';
 import { Bookmark, Check, Film, Layers3, Play } from 'lucide-react';
 import { Stage, Bar, Text, Window, Row } from './kit';
-import { CANDIDATES, SCENE_EVIDENCE } from '../../data';
+import { SPORTS_SAMPLES, type SportsSample } from '../../sports-samples';
 import { formatTime } from '../../lib';
 import { useWorkspace } from '../../store';
 import './production-story.css';
 
-const scenes = CANDIDATES.general;
-const featured = scenes[0];
 const waveform = [8, 14, 11, 18, 13, 22, 29, 24, 16, 23, 13, 10, 17, 22, 12, 8, 13, 9, 15, 12, 8, 11];
 
 // Adapted from Stageshow examples/static-card. The control plays one local
 // example state change using the supplied sample content.
-export function ProductionStory({ previewTheme }: { previewTheme?: 'light' | 'dark' } = {}) {
+export function ProductionStory({ previewTheme, sample = SPORTS_SAMPLES[1] }: { previewTheme?: 'light' | 'dark'; sample?: SportsSample } = {}) {
   const { theme } = useWorkspace();
   const sceneTheme = previewTheme ?? theme;
   const [preview, setPreview] = useState({ saved: false, instant: false });
+  const featured = sample.candidates[0];
   function togglePreview(event: MouseEvent<HTMLButtonElement>) {
     setPreview(current => ({ saved: !current.saved, instant: event.detail === 0 }));
   }
@@ -31,13 +30,13 @@ export function ProductionStory({ previewTheme }: { previewTheme?: 'light' | 'da
             </aside>
             <div className="hs-main">
               <div className="hs-list">
-                {scenes.map((scene, index) => <Row
+                {sample.evidence.map((scene, index) => <Row
                   key={scene.id}
                   pad={8}
                   selected={index === 0}
                   className="hs-row"
                   lead={<Film size={14} />}
-                  title={<Text>{SCENE_EVIDENCE[index].title}</Text>}
+                  title={<Text>{scene.title}</Text>}
                   meta={<Text>{formatTime(scene.start)}</Text>}
                 />)}
               </div>
@@ -52,7 +51,7 @@ export function ProductionStory({ previewTheme }: { previewTheme?: 'light' | 'da
               <span className="hs-clip-source"><Bookmark size={13} /><Text>선택한 구간</Text></span>
               <span className="hs-clip-saved"><Check size={13} /><Text>클립에 보관됨</Text></span>
             </div>
-            <Text className="hs-clip-title">{SCENE_EVIDENCE[0].title}</Text>
+            <Text className="hs-clip-title">{featured.title}</Text>
             <div className="hs-clip-details">
               <Text>{formatTime(featured.start) + ' – ' + formatTime(featured.end)}</Text>
               <Text>{String(featured.end - featured.start) + '초'}</Text>

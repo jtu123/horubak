@@ -24,7 +24,7 @@ export function Processing() {
     <Link className="back-link" to="/projects"><ArrowLeft size={16} /> 내 프로젝트</Link>
     <div className="processing-heading"><h1>{view.statusLabel}</h1><p>화면 흐름을 확인하는 데모입니다. 실제 AI 분석을 실행하지 않습니다.</p></div>
     <div className="processing-card">
-      <div className="processing-file"><div><Poster genre={project.genre} mini /></div><span><b>{project.title}</b><small>{getProjectLabel(project)} · {project.duration ? formatTime(project.duration) : '길이 확인 필요'} · {view.sourceLabel}</small></span></div>
+      <div className="processing-file"><div><Poster project={project} mini /></div><span><b>{project.title}</b><small>{getProjectLabel(project)} · {project.duration ? formatTime(project.duration) : '길이 확인 필요'} · {view.sourceLabel}</small></span></div>
       {failed && <p className="notice" role="alert"><CircleAlert size={16} /><span>화면 준비를 완료하지 못했어요. 다시 시작하거나 목록으로 돌아가세요.</span></p>}
       <div className="progress-heading"><span>{ready ? '화면 준비 완료' : running ? '데모 진행률' : '중단 시점'}</span><b>{progress}<small>%</small></b></div>
       <div className="progress-track" role={running || ready ? 'progressbar' : undefined} aria-label={running || ready ? '데모 화면 준비 진행률' : undefined} aria-valuenow={running || ready ? progress : undefined} aria-valuemin={running || ready ? 0 : undefined} aria-valuemax={running || ready ? 100 : undefined}><span style={{ width: progress + '%' }} /></div>

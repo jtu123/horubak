@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, ChevronRight, FileText, Film, Info, Keyboard, Layers3, MessageSquare, Plus, Redo2, ScanLine, ShieldCheck, SlidersHorizontal, Undo2 } from 'lucide-react';
 import { getProjectCandidates, getProjectEvidence, getProjectLabel, getProjectTranscript } from '../data';
+import { getSportsSample } from '../sports-samples';
 import { useWorkspace } from '../store';
 import { getActiveClip, getProjectClips } from '../workspace-model';
 import { describeProject } from '../project-presentation';
@@ -83,6 +84,7 @@ export function Editor() {
   const evidence = getProjectEvidence(project);
   const selected = candidates.find(item => item.id === edit.candidateId);
   const sample = project.source === 'sample';
+  const match = getSportsSample(project);
   const error = describeProject(project, edit, !!videos[project.id]).rangeIssue;
   const windowStart = Math.max(0, edit.start - 20);
   const windowEnd = Math.max(windowStart + 1, Math.min(project.duration || edit.end + 20, edit.end + 20));
@@ -91,7 +93,7 @@ export function Editor() {
   const switchClip = (nextId: string) => { selectClip(project.id, nextId); setParams({ clip: nextId }); };
   return <div className="editor-page v3-editor">
     <div className="v3-editor-heading"><div><Link to={'/projects/' + project.id + '?tab=clips'} className="back-link"><ArrowLeft size={15} />{project.title}</Link><div className="v3-editor-title"><h1>{clip.title}</h1><span className="v3-count">{formatTime(Math.max(0, edit.end - edit.start))}</span></div><div className="v3-editor-meta"><span>{getProjectLabel(project)}</span><span>·</span><span className={storageError ? 'v3-save-status is-error' : 'v3-save-status'}>{storageError ? '저장 실패' : '브라우저에 저장됨'}</span></div></div><div className="v3-editor-actions"><label className="v3-clip-switch"><Layers3 size={15} /><span className="sr-only">편집할 클립</span><select aria-label="편집할 클립" value={clip.id} onChange={event => switchClip(event.target.value)}>{clips.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><div className="v3-history-actions" role="group" aria-label="편집 이력"><button className="icon-button" aria-label="되돌리기" title="되돌리기 (Ctrl/⌘ Z)" disabled={!history.past.length} onClick={() => stepHistory('undo')}><Undo2 size={16} /></button><button className="icon-button" aria-label="다시 실행" title="다시 실행 (Ctrl/⌘ Shift Z)" disabled={!history.future.length} onClick={() => stepHistory('redo')}><Redo2 size={16} /></button></div><button className="icon-button v3-shortcut-help" aria-label="편집 단축키" title="편집 단축키" onClick={() => setShortcuts(true)}><Keyboard size={16} /></button><button className="btn primary" disabled={!!error} onClick={() => setExporting(true)}>결과 확인<ArrowRight size={15} /></button></div></div>
-    <div className="v3-demo-strip"><Info size={14} /><span>{sample ? '샘플 분석·이미지입니다. 실제 AI 분석과 MP4 출력은 연결 전입니다.' : '원본 미리보기 · 분석과 MP4 출력은 연결 전입니다.'}</span></div>
+    <div className="v3-demo-strip"><Info size={14} /><span>{match ? '경기 샘플 영상 · 미리 정한 후보 · MP4 출력 연결 전' : sample ? '샘플 분석·이미지입니다. 실제 AI 분석과 MP4 출력은 연결 전입니다.' : '원본 미리보기 · 분석과 MP4 출력은 연결 전입니다.'}</span></div>
     <div className="editor-layout">
       <aside className="candidate-panel editor-panel v3-editor-explorer">
         <PillTabs label="편집 탐색" value={leftTab} onChange={setLeftTab} options={[{ value: 'clips', label: '내 클립' }, { value: 'source', label: '원본 근거' }]} />

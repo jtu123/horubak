@@ -45,6 +45,7 @@ export interface Project {
   favorite: boolean;
   source: 'sample' | 'file' | 'url';
   sourceName: string;
+  sportsSampleId?: string;
   sourceUrl?: string;
   fileSize?: number;
   startedAt?: number;

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { seedProjects } from './data';
+import { refreshDefaultSamples, seedProjects } from './data';
 import { passwordDigest } from './lib';
 import { addProjectClip, getProjectClips, loadProjectCollection, normalizeProject, patchProject, selectProjectClip, updateProjectClip } from './workspace-model';
 import type { LoadedProjects } from './workspace-model';
@@ -10,7 +10,10 @@ function read<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
 }
 function loadProjects(id: string): LoadedProjects {
-  try { return loadProjectCollection(localStorage, `moment.projects.${id}.v1`, seedProjects); }
+  try {
+    const loaded = loadProjectCollection(localStorage, `moment.projects.${id}.v1`, seedProjects);
+    return loaded.writeAllowed && !loaded.notice ? { ...loaded, projects: refreshDefaultSamples(loaded.projects) } : loaded;
+  }
   catch { return { projects: seedProjects().map(p => normalizeProject(p)!), writeAllowed: false, notice: '브라우저 저장소를 사용할 수 없어요. 변경 내용은 이 창에서만 유지됩니다.' }; }
 }
 interface Workspace {

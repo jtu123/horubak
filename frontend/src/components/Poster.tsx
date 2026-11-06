@@ -1,4 +1,5 @@
-import type { Genre } from '../types';
+import type { Genre, Project } from '../types';
+import { getSportsSample } from '../sports-samples';
 import '../styles/reference-posters.css';
 
 /** Authored cover artwork for the labeled sample projects, not extracted video frames. */
@@ -37,7 +38,13 @@ function CoverArtwork({ genre }: { genre: Genre }) {
   </svg>;
 }
 
-export function Poster({ genre, vertical = false, mini = false }: { genre: Genre; vertical?: boolean; mini?: boolean }) {
+export function Poster({ project, candidateId, vertical = false, mini = false }: { project: Project; candidateId?: string; vertical?: boolean; mini?: boolean }) {
+  const match = getSportsSample(project);
+  if (match) {
+    const image = (candidateId && match.candidateThumbnails?.[candidateId]) || match.thumbnail;
+    return <div className="poster sports-poster"><img src={image} alt="" decoding="async" loading="lazy" /></div>;
+  }
+  const { genre } = project;
   return <div className={`poster reference-poster poster-${genre} ${vertical ? 'vertical' : ''} ${mini ? 'mini' : ''}`} aria-hidden="true">
     <span className="poster-edition">{genre === 'lecture' ? 'THINKING / 01' : genre === 'speech' ? 'PERSPECTIVE / 02' : genre === 'general' ? 'MOMENTS / 04' : 'CONVERSATIONS / 03'}</span>
     <div className="poster-type">{genre === 'lecture' ? <>답보다<br /><em>질문.</em></> : genre === 'speech' ? <>다음은,<br /><em>우리.</em></> : genre === 'general' ? <>장면의<br /><em>발견.</em></> : <>계속하는<br /><em>마음.</em></>}</div>

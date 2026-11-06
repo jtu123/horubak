@@ -165,6 +165,11 @@
   transition: scale 400ms var(--dashboard-motion);
 }
 
+/* Lucian #308: the covers pass between cards while the new layout settles. */
+.workspace-v3 .reference-dashboard .u308-shifting > .project-card { overflow: visible; }
+.workspace-v3 .reference-dashboard .u308-shifting .project-cover { transform-origin: 0 0; z-index: 1; }
+.workspace-v3 .reference-dashboard .u308-shifting:not(.list-view) .project-cover { border-radius: 11px 11px 0 0; }
+
 @media (hover: hover) and (pointer: fine) {
   .ref-text-action:hover { text-decoration-color: currentColor; }
   .ref-text-action:hover > svg,

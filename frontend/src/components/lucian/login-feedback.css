@@ -1,0 +1,96 @@
+/* Lucian UX/UI Prompt #062 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#062 */
+.u062.shake { animation: u062-no .5s cubic-bezier(.36,.07,.19,.97); }
+@keyframes u062-no {
+  15% { transform: translateX(-9px) rotate(-.6deg); }
+  30% { transform: translateX(8px) rotate(.5deg); }
+  45% { transform: translateX(-6px); }
+  60% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+
+.u062 .u062-password-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 20px 0 7px;
+}
+.u062 .u062-password-label .field-label { margin: 0; }
+.u062 .u062-caps { color: var(--ux-warn); font-size: 11.5px; font-weight: 800; }
+.u062 .u062-eye svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.u062 .u062-lid { transform-origin: 12px 12px; transition: transform .35s var(--ux-spring); }
+.u062 .u062-eye[aria-pressed="false"] .u062-lid { transform: scaleY(.5); }
+.u062 .u062-slash { stroke-dasharray: 24; transition: stroke-dashoffset .35s var(--ux-ease); }
+.u062 .u062-eye[aria-pressed="true"] .u062-slash { stroke-dashoffset: 24; }
+
+.u062 .u062-err { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ux-ease); }
+.u062 .u062-err.bad { grid-template-rows: 1fr; }
+.u062 .u062-err > span { overflow: hidden; min-height: 0; color: var(--ux-danger); font-size: 12.5px; font-weight: 650; }
+.u062 .u062-err > span::before { content: ''; display: block; height: 7px; }
+.u062 .password-field .text-input[aria-invalid="true"] {
+  border-color: var(--ux-danger);
+  background: color-mix(in srgb, var(--ux-danger) 6%, var(--ux-surface));
+}
+
+.u062 .btn.u062-go {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 54px;
+  margin-inline: auto;
+  border-radius: 17px;
+  overflow: hidden;
+  transition: width .45s var(--ux-spring), border-radius .45s var(--ux-spring), background-color .4s, transform .3s var(--ux-spring);
+}
+.u062 .u062-go:disabled { opacity: 1; }
+.u062 .u062-go.busy { cursor: wait; }
+.u062 .u062-go > span { transition: opacity .2s; }
+.u062 .u062-go > i {
+  position: absolute;
+  left: calc(50% - 11px);
+  top: calc(50% - 11px);
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0;
+}
+.u062 .u062-go > svg {
+  position: absolute;
+  left: calc(50% - 13px);
+  top: calc(50% - 13px);
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.u062 .u062-go path {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+  transition: stroke-dashoffset .4s var(--ux-ease) .1s;
+}
+.u062 .u062-go:is(.busy, .ok) { width: 54px; padding: 0; border-radius: 27px; }
+.u062 .u062-go:is(.busy, .ok) > span { opacity: 0; }
+.u062 .u062-go.busy > i { opacity: 1; animation: u062-spin .7s linear infinite; }
+.u062 .u062-go.ok { background: var(--ux-mint); border-color: transparent; color: var(--ux-accent-ink); }
+:root[data-theme="dark"] .u062 .u062-go.ok { color: var(--ink-panel); }
+.u062 .u062-go.ok path { stroke-dashoffset: 0; }
+@keyframes u062-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .u062 .u062-go.busy { width: 100%; border-radius: 17px; }
+  .u062 .u062-go.busy > span { opacity: 1; }
+  .u062 .u062-go.busy > i { opacity: 0; }
+}

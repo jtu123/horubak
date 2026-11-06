@@ -1,5 +1,7 @@
 import { GENRES } from './types';
 import type { Candidate, EditState, Genre, Project, Utterance, VisualEvidence } from './types';
+import { createSportsSample, getSportsSample, SPORTS_SAMPLES } from './sports-samples';
+import { normalizeProject } from './workspace-model';
 
 export const CANDIDATES: Record<Genre, Candidate[]> = {
   lecture: [
@@ -49,15 +51,17 @@ export function initialEdit(genre: Genre): EditState {
 }
 
 export function getProjectCandidates(project: Project): Candidate[] {
-  return project.source === 'sample' ? CANDIDATES[project.genre] ?? [] : [];
+  return project.source === 'sample' ? getSportsSample(project)?.candidates ?? CANDIDATES[project.genre] ?? [] : [];
 }
 export function getProjectTranscript(project: Project): Utterance[] {
   return project.source === 'sample' ? makeTranscript(project.genre) : [];
 }
 export function getProjectEvidence(project: Project): VisualEvidence[] {
-  return project.source === 'sample' && project.genre === 'general' ? SCENE_EVIDENCE : [];
+  return project.source === 'sample' && project.genre === 'general' ? getSportsSample(project)?.evidence ?? SCENE_EVIDENCE : [];
 }
 export function getProjectLabel(project: Project): string {
+  const match = getSportsSample(project);
+  if (match) return match.competition;
   if (project.genre !== 'general') return GENRES[project.genre];
   const labels = { speech: '음성', visual: '장면', music: '음악·소리', screen: '화면' };
   return project.contentProfile?.signals.length ? project.contentProfile.signals.map(signal => labels[signal]).join(' · ') : '영상';
@@ -72,11 +76,31 @@ export function createVisualSample(): Project {
   };
 }
 
-export function seedProjects(): Project[] {
+export function legacySeedProjects(): Project[] {
   const defs: Array<[string, string, Genre, Project['status'], number, string, boolean]> = [
     ['sample-lecture', '좋은 질문이 생각을 바꾸는 순간', 'lecture', 'ready', 1842, '질문의 힘_인문학 특강.mp4', true],
     ['sample-podcast', 'EP.12 창작을 계속하게 하는 것', 'podcast', 'completed', 2565, '작업실의 대화_EP12.mp4', false],
     ['sample-speech', '불확실한 시대, 우리가 선택할 것', 'speech', 'ready', 1534, '내일을 여는 연설.mp4', false],
   ];
   return [...defs.map(([id, title, genre, status, duration, sourceName, favorite], i): Project => ({ id, title, genre, status, duration, sourceName, favorite, source: 'sample', progress: 100, createdAt: `2026-10-${22 - i}T09:00:00+09:00`, updatedAt: `2026-10-${23 - i}T10:30:00+09:00`, edit: initialEdit(genre) })), createVisualSample()];
+}
+
+export function seedProjects(now = new Date().toISOString()): Project[] {
+  return SPORTS_SAMPLES.map(match => createSportsSample(match, now));
+}
+
+/** Replace only the old defaults that match their original saved values. */
+export function refreshDefaultSamples(projects: Project[]): Project[] {
+  const originals = legacySeedProjects().map(project => normalizeProject(project)!);
+  const replaced = projects.filter(project => {
+    const original = originals.find(item => item.id === project.id);
+    if (!original) return false;
+    const keys = Object.keys({ ...original, ...project }) as Array<keyof Project>;
+    return keys.every(key => JSON.stringify(project[key]) === JSON.stringify(original[key]));
+  });
+  if (!replaced.length) return projects;
+  const retained = projects.filter(project => !replaced.includes(project));
+  const lastSampleUpdate = replaced.map(project => project.updatedAt).sort().at(-1);
+  const newSamples = seedProjects(lastSampleUpdate).filter(sample => !retained.some(project => project.id === sample.id));
+  return [...newSamples.map(sample => normalizeProject(sample)!), ...retained];
 }
