@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
- "scripts": {
-  "dev": "tsx watch src/app.ts",
-  "build": "tsc",
-  "start": "node dist/app.js"
-},
+  "scripts": {
+    "dev": "tsx watch src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -29,4 +29,4 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }
-} 
+}
