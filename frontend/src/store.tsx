@@ -5,6 +5,7 @@ import { passwordDigest } from './lib';
 import { addProjectClip, getProjectClips, loadProjectCollection, normalizeProject, patchProject, selectProjectClip, updateProjectClip } from './workspace-model';
 import type { LoadedProjects } from './workspace-model';
 import type { Candidate, DemoAccount, DemoUser, EditState, Project, ToastMessage } from './types';
+import { fetchProjects } from './services/projectApi';
 
 function read<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
@@ -84,6 +85,29 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const old = urls.current.get(id); if (old) URL.revokeObjectURL(old);
     const url = URL.createObjectURL(file); urls.current.set(id, url); setVideos(v => ({ ...v, [id]: url }));
   };
+  useEffect(() => {
+  if (!user) return;
+
+  fetchProjects()
+    .then(serverProjects => {
+      console.log('MySQL 프로젝트 목록:', serverProjects);
+
+      setProjects(currentProjects => {
+        const existingIds = new Set(
+          currentProjects.map(project => project.id)
+        );
+
+        const newProjects = serverProjects.filter(
+          project => !existingIds.has(project.id)
+        );
+
+        return [...newProjects, ...currentProjects];
+      });
+    })
+    .catch(error => {
+      console.error('Spring Boot 연결 실패:', error);
+    });
+}, [user]);
   const login = async (email: string, password: string) => {
     const normalized = email.trim().toLowerCase();
     if (normalized === 'demo@moment.studio' && password === 'moment2026') { switchUser({ id: 'demo', name: '권준한', email: normalized, guest: false }); return; }

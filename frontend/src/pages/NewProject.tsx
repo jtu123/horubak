@@ -9,6 +9,7 @@ import { useWorkspace } from '../store';
 import { createSportsSample, SPORTS_SAMPLES } from '../sports-samples';
 import { formatTime, validateSourceUrl, validateVideo } from '../lib';
 import type { ContentSignal, Project } from '../types';
+import { createProject } from '../services/projectApi';
 
 const SIGNALS: Array<{ key: ContentSignal; label: string; Icon: typeof Image }> = [
   { key: 'visual', label: '장면·행동', Icon: Image }, { key: 'speech', label: '발화·대화', Icon: AudioLines },
@@ -68,6 +69,8 @@ export function NewProject() {
     if (!projectTitle.trim()) { setError('프로젝트 이름을 입력해 주세요.'); return; }
     setBusy(true);
     try {
+      let createdProjectId = '';
+      
       const now = new Date().toISOString();
       const sample = method === 'sample' ? createSportsSample(sampleMatch, now) : undefined;
       const duration = method === 'file' && file ? await readDuration(file) : sample?.duration ?? 0;
@@ -81,9 +84,25 @@ export function NewProject() {
         duration, favorite: false, status: 'ready', progress: 100, createdAt: now, updatedAt: now,
         contentProfile: { purpose, focus: focus.trim() || sample?.contentProfile?.focus, signals: signals.length ? signals : sample?.contentProfile?.signals ?? [] },
       };
-      addProject(project, method === 'file' ? file : undefined);
+     if (method === 'url') {
+  const savedProject = await createProject({
+    title: project.title,
+    genre: project.genre,
+    sourceUrl: url.trim(),
+  });
+  createdProjectId = savedProject.id;
+  addProject({
+    ...project,
+    id: savedProject.id,
+    createdAt: savedProject.createdAt,
+    updatedAt: savedProject.updatedAt,
+  });
+} else {
+  addProject(project, method === 'file' ? file : undefined);
+  createdProjectId = project.id;
+}
       notify(method === 'sample' ? '샘플 프로젝트를 만들었어요' : '프로젝트를 만들었어요', method === 'sample' ? '미리 준비한 장면 후보를 확인해 보세요.' : '원본 확인과 수동 클립 편집을 시작할 수 있어요.');
-      navigate('/projects/' + project.id);
+      navigate('/projects/' + createdProjectId);
     } catch { setError('프로젝트를 만들지 못했어요. 다시 시도해 주세요.'); }
     finally { setBusy(false); }
   }
