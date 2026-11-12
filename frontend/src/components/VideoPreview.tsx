@@ -106,8 +106,17 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
   useEffect(() => { setError(false); }, [url]);
   useEffect(() => { if (invalidBounds) onPlaying(false); }, [invalidBounds, onPlaying]);
   return <div className="preview-player">
-    <div className="preview-stage"><div className={'portrait-frame output-frame' + (edit.layout === 'full' ? ' full-frame' : '')} data-aspect-ratio={profile.ratio} style={{ width: 'min(100%, calc(var(--output-frame-height) * ' + profile.width / profile.height + '))', height: 'auto', maxHeight: 'none', aspectRatio: profile.cssRatio }} ref={frame}>
-      <div className="preview-source" style={{ transform: 'scale(' + edit.scale + ')' }}>
+    <div className="preview-stage"><div
+  className={
+    'portrait-frame output-frame layout-' + edit.layout
+  } data-aspect-ratio={profile.ratio} style={{ width: 'min(100%, calc(var(--output-frame-height) * ' + profile.width / profile.height + '))', height: 'auto', maxHeight: 'none', aspectRatio: profile.cssRatio }} ref={frame}>
+     <div
+  className={'preview-source layout-source-' + edit.layout}
+  style={{
+    transform: 'scale(' + edit.scale + ')',
+    transformOrigin: `${edit.cropX}% ${edit.cropY}%`,
+  }}
+>
         {url ? <video ref={video} src={url} poster={match && (match.candidateThumbnails?.[edit.candidateId] ?? match.thumbnail)} muted={!!match || muted} playsInline preload="metadata" style={{ objectPosition: edit.cropX + '% ' + edit.cropY + '%' }} onLoadedMetadata={event => { event.currentTarget.currentTime = Math.min(Math.max(0, time), Math.max(0, event.currentTarget.duration - .05)); }} onTimeUpdate={event => {
           const value = event.currentTarget.currentTime;
           if (value >= edit.end && playing) { onPlaying(false); event.currentTarget.currentTime = edit.start; onTime(edit.start); }

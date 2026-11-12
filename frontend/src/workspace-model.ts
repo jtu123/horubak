@@ -24,7 +24,15 @@ function normalizeEdit(value: unknown, duration: number, title: string): EditSta
     subtitleColor: text(value.subtitleColor, '#ffffff'),
     subtitleVisible: typeof value.subtitleVisible === 'boolean' ? value.subtitleVisible : true,
     cropX: finite(value.cropX, 50), cropY: finite(value.cropY, 50), scale: finite(value.scale, 1),
-    contextApplied: value.contextApplied === true, layout: value.layout === 'speaker' ? 'speaker' : 'full',
+    contextApplied: value.contextApplied === true, 
+layout:
+  value.layout === 'speaker'
+    ? 'speaker'
+    : value.layout === 'material'
+      ? 'material'
+      : value.layout === 'split'
+        ? 'split'
+        : 'full',
     ...(Object.hasOwn(value, 'aspectRatio') ? { aspectRatio: getOutputProfile(value.aspectRatio).ratio } : {}),
     ...(Object.hasOwn(value, 'showSafeArea') ? { showSafeArea: value.showSafeArea === true } : {}),
   };

@@ -30,7 +30,7 @@ export interface EditState {
   cropY: number;
   scale: number;
   contextApplied: boolean;
-  layout: 'speaker' | 'full';
+  layout: 'speaker' | 'material' | 'split' | 'full';
   aspectRatio?: AspectRatio;
   showSafeArea?: boolean;
 }
@@ -63,3 +63,4 @@ export interface DemoUser { id: string; name: string; email: string; guest: bool
 export interface DemoAccount { id: string; name: string; email: string; salt: string; passwordHash: string }
 export interface ToastMessage { id: number; title: string; description?: string; kind: 'success' | 'error' | 'info' }
 export const GENRES: Record<Genre, string> = { lecture: '강의', speech: '연설', podcast: '팟캐스트', general: '영상' };
+
