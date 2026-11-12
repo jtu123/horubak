@@ -1,6 +1,6 @@
 // Adapted from Lucian #046 · MIT (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#046
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { Clapperboard, FileVideo, FolderOpen, Library, ListVideo, Moon, Plus, Search, Settings2, Star, Sun } from 'lucide-react';
+import { Clapperboard, FileVideo, FolderOpen, Library, ListVideo, Moon, Plus, Search, Settings2, ShieldCheck, Star, Sun } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspace } from '../../store';
 import { searchText } from '../../project-search';
@@ -8,7 +8,7 @@ import './interface-046.css';
 const OPEN_EVENT = 'horubak:commands';
 export const openCommandPalette = () => window.dispatchEvent(new Event(OPEN_EVENT));
 export function CommandPalette() {
-  const { projects, theme, toggleTheme } = useWorkspace(); const navigate = useNavigate();
+  const { projects, theme, toggleTheme, user, serverAuth } = useWorkspace(); const navigate = useNavigate();
   const uid = useId(); const dialog = useRef<HTMLDialogElement>(null); const input = useRef<HTMLInputElement>(null);
   const selectedRow = useRef<HTMLLIElement>(null); const previous = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false); const [query, setQuery] = useState(''); const [active, setActive] = useState(0);
@@ -34,6 +34,7 @@ export function CommandPalette() {
     { id: 'library', group: '작업공간', name: '라이브러리', Icon: Library, action: () => navigate('/library') },
     { id: 'jobs', group: '작업공간', name: '작업센터', Icon: ListVideo, action: () => navigate('/jobs') },
     { id: 'settings', group: '작업공간', name: '설정', Icon: Settings2, action: () => navigate('/settings') },
+    ...(serverAuth && !user?.guest && user?.role === 'admin' ? [{ id: 'admin', group: '운영', name: '관리자', Icon: ShieldCheck, action: () => navigate('/admin') }] : []),
     { id: 'theme', group: '빠른 실행', name: (theme === 'light' ? '다크' : '라이트') + ' 모드로 전환', Icon: theme === 'light' ? Moon : Sun, action: toggleTheme },
   ];
   const results = commands.filter(command => searchText(command.name).includes(searchText(query)));

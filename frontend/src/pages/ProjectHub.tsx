@@ -26,7 +26,9 @@ export function ProjectHub() {
   const { id } = useParams();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const { projects, createClip, selectClip, duplicateClip, renameClip, deleteClip, updateProject, notify, storageError } = useWorkspace();
+  const { projects, createClip, selectClip, duplicateClip, renameClip, deleteClip, updateProject, notify, storageError: localStorageError, user, serverAuth, syncStatus } = useWorkspace();
+  const storageError = localStorageError || ['error', 'conflict'].includes(syncStatus);
+  const saveLabel = storageError ? '저장 실패' : serverAuth && !user?.guest ? syncStatus === 'saving' ? '서버 저장 중…' : '서버에 저장됨' : '브라우저에 저장됨';
   const project = projects.find(p => p.id === id);
   const requested = params.get('tab');
   const tab: HubTab = HUB_TABS.some(t => t.value === requested) ? requested as HubTab : 'candidates';
@@ -100,7 +102,7 @@ export function ProjectHub() {
           <a className="text-link" href={SPORTS_SAMPLE_CREDITS} target="_blank" rel="noreferrer">영상·썸네일 출처<ArrowUpRight size={14} /></a>
         </div>}
       </div>
-      <div className="v3-hub-heading-actions"><span className={'v3-save-status' + (storageError ? ' is-error' : '')}>{storageError ? '저장 실패' : '브라우저에 저장됨'}</span><button className="btn primary" disabled={!editable} onClick={() => adopt()} title={!editable ? '30초 이상의 원본과 편집 준비 상태가 필요합니다.' : undefined}><Plus size={16} />직접 클립 만들기</button></div>
+      <div className="v3-hub-heading-actions"><span className={'v3-save-status' + (storageError ? ' is-error' : '')}>{saveLabel}</span><button className="btn primary" disabled={!editable} onClick={() => adopt()} title={!editable ? '30초 이상의 원본과 편집 준비 상태가 필요합니다.' : undefined}><Plus size={16} />직접 클립 만들기</button></div>
     </div>
     <div className="v3-hub-summary"><div><Film size={17} /><span>원본 1개</span></div><div><Layers3 size={17} /><span>내 클립 <b>{clips.length}</b></span></div><div><Info size={16} /><span>{match ? '실제 경기 영상 · 미리 정한 후보 구간' : sample ? '후보·근거는 제작 흐름을 위한 샘플입니다.' : '분석 연결 전 · 원본을 보며 직접 편집할 수 있어요.'}</span></div></div>
     <PillTabs label="프로젝트 탐색" value={tab} options={HUB_TABS} onChange={value => { const next = new URLSearchParams(params); next.set('tab', value); setParams(next); }} panelId="project-hub-panel" />
@@ -136,7 +138,7 @@ export function ProjectHub() {
           {sample && !transcript.length && <div className="v3-inline-note"><Info size={14} />{match ? '표시 시간은 샘플 영상 기준입니다.' : '음성 없는 영상의 장면 근거 예시입니다.'}</div>}
         </section>
       </div>}
-      {tab === 'jobs' && <><div className="v3-section-heading"><div><h2>작업·출력</h2><p>편집 저장과 영상 출력은 별도의 단계입니다.</p></div></div><div className="v3-project-job"><div className="v3-job-icon"><Layers3 size={21} /></div><div><h3>브라우저 편집</h3><p>{clips.length}개 클립 · {storageError ? '저장 실패' : '이 브라우저에 저장'}</p></div><button className="btn secondary" onClick={() => setParams({ tab: 'clips' })}>클립 보기<ArrowRight size={14} /></button></div><div className="v3-project-job"><div className="v3-job-icon"><ScanLine size={21} /></div><div><h3>{sample ? '샘플 분석 자료' : '실제 영상 분석'}</h3><p>{sample ? '제작 흐름 확인용 · 실제 AI 분석 결과가 아닙니다.' : '분석 API 연결 전입니다.'}</p></div><span className="tiny-tag">{sample ? '샘플' : '미연결'}</span></div><div className="v3-project-job"><div className="v3-job-icon"><Film size={21} /></div><div><h3>MP4 영상 출력</h3><p>렌더 서버 연결 후 클립별 결과와 실패 이력을 표시합니다.</p></div><span className="tiny-tag">미연결</span></div></>}
+      {tab === 'jobs' && <><div className="v3-section-heading"><div><h2>작업·출력</h2><p>편집 저장과 영상 출력은 별도의 단계입니다.</p></div></div><div className="v3-project-job"><div className="v3-job-icon"><Layers3 size={21} /></div><div><h3>클립 편집 정보</h3><p>{clips.length}개 클립 · {saveLabel}</p></div><button className="btn secondary" onClick={() => setParams({ tab: 'clips' })}>클립 보기<ArrowRight size={14} /></button></div><div className="v3-project-job"><div className="v3-job-icon"><ScanLine size={21} /></div><div><h3>{sample ? '샘플 분석 자료' : '실제 영상 분석'}</h3><p>{sample ? '제작 흐름 확인용 · 실제 AI 분석 결과가 아닙니다.' : '분석 API 연결 전입니다.'}</p></div><span className="tiny-tag">{sample ? '샘플' : '미연결'}</span></div><div className="v3-project-job"><div className="v3-job-icon"><Film size={21} /></div><div><h3>MP4 영상 출력</h3><p>렌더 서버 연결 후 클립별 결과와 실패 이력을 표시합니다.</p></div><span className="tiny-tag">미연결</span></div></>}
     </div>
     {preview && <Modal title="후보 살펴보기" onClose={() => { setPreview(null); setPlaying(false); }}><div className="v3-candidate-modal"><VideoPreview project={project} edit={{ ...initialEdit(project.genre), candidateId: preview.id, start: preview.start, end: preview.end, subtitle: preview.title }} time={time} playing={playing} onTime={onTime} onPlaying={onPlaying} /><h3>{preview.title}</h3><p>{preview.reason}</p>{preview.warning && <div className="v3-inline-note"><Info size={14} />{preview.warning.title}</div>}<div className="modal-actions"><button className="btn secondary" onClick={() => setPreview(null)}>닫기</button><button className="btn primary" disabled={!editable} onClick={() => adopt(preview)}>클립 만들기<ArrowRight size={15} /></button></div></div></Modal>}
     {rename && <Modal title="클립 이름 변경" onClose={() => setRename(null)}><form onSubmit={event => { event.preventDefault(); if (!name.trim()) return; renameClip(project.id, rename.id, name.trim()); setRename(null); notify('클립 이름을 변경했어요'); }}><label className="field-label" htmlFor="clip-name">클립 이름</label><input className="text-input" id="clip-name" maxLength={160} value={name} onChange={event => setName(event.target.value)} autoFocus required /><div className="modal-actions"><button type="button" className="btn secondary" onClick={() => setRename(null)}>취소</button><button className="btn primary" disabled={!name.trim()}>저장</button></div></form></Modal>}

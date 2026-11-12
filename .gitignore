@@ -1,10 +1,16 @@
 node_modules/
 dist/
 .cache/
+.wrangler/
 .env
 .env.*
 !.env.example
+*.p8
 *.log
 *.tsbuildinfo
 playwright-report/
 test-results/
+backend/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

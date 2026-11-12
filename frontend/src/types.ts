@@ -59,7 +59,7 @@ export interface Project {
   dismissedCandidateIds?: string[];
 }
 export interface Clip { id: string; title: string; edit: EditState; createdAt: string; updatedAt: string }
-export interface DemoUser { id: string; name: string; email: string; guest: boolean }
+export interface DemoUser { id: string; name: string; email: string; guest: boolean; role?: 'user' | 'admin' }
 export interface DemoAccount { id: string; name: string; email: string; salt: string; passwordHash: string }
 export interface ToastMessage { id: number; title: string; description?: string; kind: 'success' | 'error' | 'info' }
 export const GENRES: Record<Genre, string> = { lecture: '강의', speech: '연설', podcast: '팟캐스트', general: '영상' };

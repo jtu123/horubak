@@ -1,4 +1,4 @@
-/** Team integration boundary. No HTTP service is configured in the UI demo. */
+/** Team integration boundary. Real auth/workspace HTTP adapters live in api.ts; AI/render gateways remain unconnected. */
 import type { Candidate, DemoUser, EditState, Genre, Project, Utterance } from '../types';
 
 export interface ApiError { code: string; message: string; requestId?: string }

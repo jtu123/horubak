@@ -1,7 +1,7 @@
 // Adapted from Lucian UX/UI #040 · MIT (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#040
 import { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowUpRight, BarChart3, ChevronDown, ChevronRight, CircleHelp, Clapperboard, FolderOpen, Info, Library, ListVideo, LogOut, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Search, Send, Settings2, Users, X } from 'lucide-react';
+import { ArrowUpRight, BarChart3, ChevronDown, ChevronRight, CircleHelp, Clapperboard, FolderOpen, Info, Library, ListVideo, LogOut, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Search, Send, Settings2, ShieldCheck, Users, X } from 'lucide-react';
 import { useWorkspace } from '../../store';
 import { Brand } from '../Brand';
 import { Modal } from '../Modal';
@@ -21,7 +21,12 @@ const MORE = [
 ];
 
 export function WorkspaceShell() {
-  const { user, logout, storageError, storageNotice } = useWorkspace();
+  const { user, logout, storageError, storageNotice, serverAuth, syncStatus, syncError, retrySave, reloadWorkspace, notify } = useWorkspace();
+  const serverUser = serverAuth && !user?.guest;
+  const administrator = serverUser && user?.role === 'admin';
+  const [signingOut, setSigningOut] = useState(false);
+  const [recovery, setRecovery] = useState(false);
+  const [reloading, setReloading] = useState(false);
   const [dismissedNotice, setDismissedNotice] = useState('');
   const [help, setHelp] = useState(false);
   const [account, setAccount] = useState(false);
@@ -32,7 +37,14 @@ export function WorkspaceShell() {
   const accountRoot = useRef<HTMLDivElement>(null);
   const accountButton = useRef<HTMLButtonElement>(null);
   const activeItem = [...PRIMARY, ...MORE, { label: '설정', path: '/settings' }].find(item => location.pathname.startsWith(item.path));
-  const pageTitle = location.pathname.endsWith('/new') ? '새 영상' : location.pathname.includes('/processing') ? '처리 현황' : location.pathname.includes('/editor') ? '클립 편집' : location.pathname.includes('/results') ? '편집 결과' : activeItem?.label ?? '프로젝트';
+  const pageTitle = location.pathname === '/admin' ? '관리자' : location.pathname.endsWith('/new') ? '새 영상' : location.pathname.includes('/processing') ? '처리 현황' : location.pathname.includes('/editor') ? '클립 편집' : location.pathname.includes('/results') ? '편집 결과' : activeItem?.label ?? '프로젝트';
+  const signOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try { await logout(); navigate('/login'); }
+    catch (error) { notify('로그아웃을 완료하지 못했어요', error instanceof Error ? error.message : '서버 연결과 저장 상태를 확인해 주세요.', 'error'); }
+    finally { setSigningOut(false); }
+  };
 
   useEffect(() => { setAccount(false); if (MORE.some(item => location.pathname.startsWith(item.path))) setMore(true); }, [location.pathname, location.search]);
   useEffect(() => {
@@ -57,7 +69,8 @@ export function WorkspaceShell() {
         {more && <div className="sidebar-extra" id="workspace-more">{MORE.map(({ label, path, Icon }) => <Link key={path} to={path} aria-label={label} title={label} data-label={label} aria-current={location.pathname.startsWith(path) ? 'page' : undefined}><Icon size={18} /><span className="sidebar-label">{label}</span></Link>)}</div>}
       </nav>
       <div className="sidebar-bottom">
-        <div className="workspace-demo-state"><span /><div><b>브라우저 데모</b><small>작업은 이 브라우저에 저장돼요</small></div></div>
+        <div className="workspace-demo-state"><span /><div><b>{serverUser ? '서버 작업공간' : '브라우저 데모'}</b><small>{serverUser ? '편집 정보가 서버에 저장돼요' : '작업은 이 브라우저에 저장돼요'}</small></div></div>
+        {administrator && <Link className="sidebar-help" to="/admin" aria-label="관리자" title="관리자" data-label="관리자" aria-current={location.pathname === '/admin' ? 'page' : undefined}><ShieldCheck size={17} /><span className="sidebar-label">관리자</span></Link>}
         <Link className="sidebar-help" to="/settings" aria-label="설정" title="설정" data-label="설정" aria-current={location.pathname === '/settings' ? 'page' : undefined}><Settings2 size={17} /><span className="sidebar-label">설정</span></Link>
         <button className="sidebar-help" onClick={() => setHelp(true)} aria-label="사용 안내" title="사용 안내" data-label="사용 안내"><CircleHelp size={17} /><span className="sidebar-label">사용 안내</span><ArrowUpRight size={13} /></button>
       </div>
@@ -66,6 +79,7 @@ export function WorkspaceShell() {
       <header className="topbar">
         <div className="topbar-location"><Link className="topbar-brand" to="/projects" aria-label="호루박 작업공간"><Brand /></Link><div className="breadcrumb"><span className="workspace-breadcrumb">작업공간</span><ChevronRight size={12} /><span>{pageTitle}</span></div></div>
         <div className="topbar-actions">
+          {serverUser && <span className="workspace-sync-state" data-state={syncStatus} role="status">{syncStatus === 'saving' ? '저장 중…' : syncStatus === 'error' ? '저장 실패' : syncStatus === 'conflict' ? '변경 확인 필요' : '서버 저장됨'}</span>}
           <button className="command-trigger" onClick={openCommandPalette} title="빠른 실행 (Ctrl+Shift+K)" aria-label="빠른 실행 열기"><Search size={15} /><span>빠른 실행</span><kbd>Ctrl ⇧ K</kbd></button>
           <ThemeToggle />
           <div className="account-wrap" ref={accountRoot}>
@@ -75,14 +89,16 @@ export function WorkspaceShell() {
               const index = controls.indexOf(document.activeElement as HTMLButtonElement);
               if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); controls[(index + (event.key === 'ArrowDown' ? 1 : -1) + controls.length) % controls.length]?.focus(); }
               if (event.key === 'Tab') setAccount(false);
-            }}><div className="account-info"><b>{user?.name}</b><small>{user?.guest ? '샘플 게스트' : user?.email}</small></div><button role="menuitem" onClick={() => { accountButton.current?.focus(); setAccount(false); navigate('/settings'); }}><Settings2 size={16} />설정</button><button role="menuitem" onClick={() => { accountButton.current?.focus(); setAccount(false); setHelp(true); }}><CircleHelp size={16} />사용 안내</button><button role="menuitem" onClick={() => { logout(); navigate('/login'); }}><LogOut size={16} />로그아웃</button></div>}
+            }}><div className="account-info"><b>{user?.name}</b><small>{user?.guest ? '샘플 게스트' : user?.email}</small></div><button role="menuitem" onClick={() => { accountButton.current?.focus(); setAccount(false); navigate('/settings'); }}><Settings2 size={16} />설정</button><button role="menuitem" onClick={() => { accountButton.current?.focus(); setAccount(false); setHelp(true); }}><CircleHelp size={16} />사용 안내</button><button role="menuitem" disabled={signingOut} onClick={() => { void signOut(); }}><LogOut size={16} />{signingOut ? '로그아웃 중…' : '로그아웃'}</button></div>}
           </div>
         </div>
       </header>
       {storageError && <div className="storage-error" role="alert">브라우저 저장 공간을 사용할 수 없어요. 변경 내용은 이 창에서만 유지됩니다.</div>}
+      {serverUser && syncError && <div className="workspace-sync" role="alert"><span>{syncError}</span>{syncStatus !== 'conflict' && <button className="btn secondary" onClick={retrySave}>저장 재시도</button>}<button className="btn secondary" onClick={() => setRecovery(true)}>서버 내용 불러오기</button><Link className="text-link" to="/settings">편집 정보 백업</Link></div>}
       {storageNotice && storageNotice !== dismissedNotice && <div className="storage-recovery-note" role="status"><Info size={15} /><span>{storageNotice}</span><button className="icon-button" aria-label="저장 안내 닫기" onClick={() => setDismissedNotice(storageNotice)}><X size={15} /></button></div>}
       <main id="main-content" className="page-content" tabIndex={-1}><Outlet /></main>
     </div>
-    {help && <Modal title="원본에서 클립까지" onClose={() => setHelp(false)}><div className="guide-steps">{['분야 제한 없이 영상 등록', '영상·소리·발화 근거로 후보 확인', '여러 클립으로 저장하고 각각 편집'].map((text, index) => <div key={text}><span>{index + 1}</span>{text}</div>)}</div><div className="notice"><CircleHelp size={16} /><span>샘플과 로컬 원본으로 편집 흐름을 확인하는 데모입니다. 실제 인증·AI 분석·서버 저장·영상 출력은 연결 전입니다.</span></div><button className="btn primary full" style={{ marginTop: 20 }} onClick={() => setHelp(false)}>확인</button></Modal>}
+    {help && <Modal title="원본에서 클립까지" onClose={() => setHelp(false)}><div className="guide-steps">{['분야 제한 없이 영상 등록', '영상·소리·발화 근거로 후보 확인', '여러 클립으로 저장하고 각각 편집'].map((text, index) => <div key={text}><span>{index + 1}</span>{text}</div>)}</div><div className="notice"><CircleHelp size={16} /><span>{serverUser ? '계정과 편집 정보는 서버에 저장됩니다. 원본 영상 업로드·AI 분석·영상 출력은 연결 전입니다.' : '샘플과 로컬 원본으로 편집 흐름을 확인하는 데모입니다. 샘플 작업은 이 브라우저에 저장됩니다.'}</span></div><button className="btn primary full" style={{ marginTop: 20 }} onClick={() => setHelp(false)}>확인</button></Modal>}
+    {recovery && <Modal title="서버 내용 불러오기" onClose={() => { if (!reloading) setRecovery(false); }}><div className="admin-change"><p>아직 저장되지 않은 변경은 서버 내용으로 바뀝니다. 필요한 편집 정보는 설정에서 먼저 백업해 주세요.</p><button className="btn primary" disabled={reloading} onClick={async () => { setReloading(true); try { await reloadWorkspace(); setRecovery(false); notify('서버 내용을 불러왔어요'); } catch (error) { notify('불러오지 못했어요', error instanceof Error ? error.message : '', 'error'); } finally { setReloading(false); } }}>{reloading ? '불러오는 중…' : '서버 내용으로 교체'}</button></div></Modal>}
   </div>;
 }

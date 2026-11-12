@@ -74,8 +74,14 @@ h1{font-size:36px;line-height:1.17;font-weight:800;letter-spacing:-.045em}h2{fon
 .login-card .field-label{margin-top:20px;font-size:12px;font-weight:650}.login-card .text-input{min-height:46px;background:var(--card);border-color:var(--input-border);font-size:13px;border-radius:10px}
 .password-field .icon-button{top:6px;right:6px}.login-card .btn{min-height:44px;margin-top:27px;font-size:13px}
 .login-switch{font-size:12px;margin-top:21px}.login-divider{font-size:11px;gap:14px;margin:24px 0 18px}
-.demo-enter{min-height:43px;border-radius:99px;font-size:12px;background:var(--card);transition:background-color 140ms ease,transform 140ms var(--ease-out)}
-.demo-enter:active{transform:scale(.98)}
+.social-login{display:flex;align-items:center;justify-content:center;gap:18px}
+.social-login-button{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;transition:transform 140ms var(--ease-out)}
+.social-login-button img{display:block;width:100%;height:100%;border-radius:inherit}
+.social-login-apple{border:1px solid #747775;background:#fff}
+.social-login-button:focus-visible{outline:2px solid var(--accent-strong);outline-offset:4px}
+.social-login-button:disabled{cursor:wait}
+.social-login-button:active:not(:disabled){transform:scale(.96)}
+.social-login-error{margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.5;text-align:center}
 .login-disclaimer{font-size:11px;line-height:19px;padding:0 8px;margin:14px 0 6px}.login-footer{font-size:11px;padding:20px;color:var(--muted)}
 .signup-form .signup-ack{font-size:11px;line-height:19px}.signup-errors{border-radius:10px;font-size:11px;line-height:19px}
 
@@ -196,14 +202,15 @@ h1{font-size:36px;line-height:1.17;font-weight:800;letter-spacing:-.045em}h2{fon
 .u038-menu{border-radius:12px;padding:6px}.u038-mi{height:36px;font-size:12px;border-radius:8px}.u038-mi svg{width:16px;height:16px}
 @media(hover:hover) and (pointer:fine){
  .btn.primary:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover);filter:none}
- .btn.secondary:hover:not(:disabled),.icon-button:hover:not(:disabled),.demo-enter:hover{background:var(--soft)}
+ .btn.secondary:hover:not(:disabled),.icon-button:hover:not(:disabled){background:var(--soft)}
+ .social-login-button:hover:not(:disabled){transform:translateY(-2px)}
  .reference-workspace .sidebar-nav a:hover,.reference-workspace .sidebar-help:hover,.reference-workspace .sidebar-more:hover{background:var(--soft);color:var(--text)}
  .reference-workspace .sidebar-nav [data-label]:hover::after,.reference-workspace .sidebar-help[data-label]:hover::after{opacity:1;visibility:visible}
  .v3-hub-candidate:hover,.v3-clip-row:hover{border-color:var(--input-border);box-shadow:none}
 }
 @media(prefers-reduced-motion:reduce){
- .btn,.icon-button,.demo-enter,.modal[open],.u070-t{transition:none}
- .btn:active:not(:disabled),.icon-button:active:not(:disabled),.demo-enter:active{transform:none}
+ .btn,.icon-button,.social-login-button,.modal[open],.u070-t{transition:none}
+ .btn:active:not(:disabled),.icon-button:active:not(:disabled),.social-login-button:is(:hover,:active):not(:disabled){transform:none}
  .u070-t.enter{translate:none;opacity:1}
  .modal::backdrop,.command-dialog::backdrop{backdrop-filter:none}
 }
