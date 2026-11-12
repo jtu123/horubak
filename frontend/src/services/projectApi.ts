@@ -118,3 +118,56 @@ export async function deleteProjectApi(id: string): Promise<void> {
     throw new Error('프로젝트 삭제에 실패했습니다.');
   }
 }
+
+
+export async function createFileProject(input: {
+  title: string;
+  genre: Genre;
+  sourceName: string;
+  duration: number;
+}): Promise<Project> {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      title: input.title,
+      genre: input.genre,
+      source: 'file',
+      sourceName: input.sourceName,
+      sourceUrl: null,
+      duration: input.duration,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('프로젝트 DB 저장 실패');
+  }
+
+  return toProject(await response.json());
+}
+
+export async function uploadProjectVideo(
+  projectId: string,
+  file: File
+): Promise<void> {
+  const formData = new FormData();
+
+  formData.append('projectId', projectId);
+  formData.append('file', file);
+
+  const response = await fetch(
+    'http://localhost:8080/api/videos/upload',
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('영상 업로드 실패');
+  }
+}
+
+

@@ -5,7 +5,7 @@ import com.capstone.momentbackend.project.dto.CreateProjectRequest;
 import com.capstone.momentbackend.project.dto.ProjectResponse;
 import com.capstone.momentbackend.project.entity.Project;
 import com.capstone.momentbackend.project.repository.ProjectRepository;
-
+import com.capstone.momentbackend.video.VideoMetadataDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -119,4 +119,77 @@ public class ProjectService {
 
         projectRepository.delete(project);
     }
+
+    @Transactional
+    public void attachVideo(UUID projectId, String fileName) {
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "프로젝트를 찾을 수 없습니다."
+                ));
+
+        project.setVideoFileName(fileName);
+
+        projectRepository.save(project);
+    }
+
+
+    @Transactional(readOnly = true)
+    public String getVideoFileName(UUID projectId) {
+
+        // 1. 프로젝트 ID로 MySQL 조회
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "프로젝트를 찾을 수 없습니다."
+                ));
+
+        // 2. 프로젝트에 연결된 영상 파일명 가져오기
+        String fileName = project.getVideoFileName();
+
+        // 3. 영상이 등록되지 않았다면 오류 반환
+        if (fileName == null || fileName.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "등록된 영상이 없습니다."
+            );
+        }
+
+        return fileName;
+    }
+
+
+    @Transactional
+    public void saveVideoMetadata(
+            UUID projectId,
+            VideoMetadataDto metadata
+    ) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "프로젝트를 찾을 수 없습니다."
+                ));
+
+        project.updateVideoMetadata(metadata);
+    }
+
+
+    @Transactional
+    public void attachVideoWithMetadata(
+            UUID projectId,
+            String fileName,
+            VideoMetadataDto metadata
+    ) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "프로젝트를 찾을 수 없습니다."
+                ));
+
+        project.setVideoFileName(fileName);
+        project.updateVideoMetadata(metadata);
+    }
+
+
 }

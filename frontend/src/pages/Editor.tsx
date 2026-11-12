@@ -36,6 +36,56 @@ export function Editor() {
   const [histories, setHistories] = useState<EditHistories>({});
   const [review, setReview] = useState<Candidate | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [clipGenerating, setClipGenerating] = useState(false);
+  const [generatedClipUrl, setGeneratedClipUrl] = useState<string | null>(null);
+
+useEffect(() => {
+  if (!project?.id) {
+    setGeneratedClipUrl(null);
+    return;
+  }
+
+  let cancelled = false;
+
+  const loadSavedClip = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/videos/projects/${project.id}/clips`
+      );
+
+      if (!response.ok) {
+        throw new Error(`클립 조회 실패 (HTTP ${response.status})`);
+      }
+
+      const savedClips: { clipFileName: string }[] =
+        await response.json();
+
+      if (cancelled) return;
+
+      if (savedClips.length > 0) {
+        const latestClip = savedClips[0];
+
+        setGeneratedClipUrl(
+          `http://localhost:8080/api/videos/clips/${encodeURIComponent(latestClip.clipFileName)}`
+        );
+      } else {
+        setGeneratedClipUrl(null);
+      }
+    } catch (error) {
+      if (cancelled) return;
+
+      console.error('저장된 MP4 조회 실패:', error);
+      setGeneratedClipUrl(null);
+    }
+  };
+
+  void loadSavedClip();
+
+  return () => {
+    cancelled = true;
+  };
+}, [project?.id]);
+
   const [shortcuts, setShortcuts] = useState(false);
   const onPlaying = useCallback((value: boolean) => setPlaying(value), []);
   const onTime = useCallback((value: number) => setTime(value), []);
@@ -76,7 +126,7 @@ export function Editor() {
     return () => window.removeEventListener('keydown', handleKey);
   }, [stepHistory, project, clip]);
   if (!project) return <div className="empty-state"><h1>프로젝트를 찾을 수 없어요</h1><Link to="/projects" className="btn primary">프로젝트 목록</Link></div>;
-  if (!clip) return <div className="v3-hub-empty"><Layers3 size={32} /><h1>편집할 클립을 만들어주세요</h1><p>원본에서 구간을 지정하거나 추천 후보를 채택할 수 있어요.</p><div className="v3-empty-actions"><Link className="btn secondary" to={'/projects/' + project.id}>프로젝트로</Link><button className="btn primary" disabled={project.duration < 30 || !['ready', 'completed'].includes(project.status)} onClick={() => { const next = createClip(project.id); if (next) setParams({ clip: next }); }}><Plus size={16} />직접 클립 만들기</button></div></div>;
+  if (!clip) return <div className="v3-hub-empty"><Layers3 size={32} /><h1>편집할 클립을 만들어주세요</h1><p>원본에서 구간을 지정하거나 추천 후보를 채택할 수 있어요.</p><div className="v3-empty-actions"><Link className="btn secondary" to={'/projects/' + project.id}>프로젝트로</Link><button className="btn primary" disabled={!['ready', 'completed'].includes(project.status)} onClick={() => { const next = createClip(project.id); if (next) setParams({ clip: next }); }}><Plus size={16} />직접 클립 만들기</button></div></div>;
   const edit = clip.edit;
   const output = getOutputProfile(edit.aspectRatio);
   const candidates = getProjectCandidates(project);
@@ -91,6 +141,64 @@ export function Editor() {
   const span = windowEnd - windowStart;
   const seek = (value: number) => { setTime(value); setPlaying(false); };
   const switchClip = (nextId: string) => { selectClip(project.id, nextId); setParams({ clip: nextId }); };
+  
+const generateMp4Clip = async () => {
+  if (!project || !clip) return;
+
+  const start = clip.edit.start;
+  const duration = clip.edit.end - clip.edit.start;
+
+  // 잘못된 영상 구간인지 검사
+  if (
+    !Number.isFinite(start) ||
+    !Number.isFinite(duration) ||
+    start < 0 ||
+    duration <= 0 ||
+    start + duration > project.duration
+  ) {
+    notify('영상 구간 오류', '시작 시간과 종료 시간을 확인해 주세요.', 'error');
+    return;
+  }
+
+  setClipGenerating(true);
+  setGeneratedClipUrl(null);
+
+  try {
+    // Spring Boot 클립 생성 API 호출
+    const url = new URL(
+      `http://localhost:8080/api/videos/projects/${project.id}/clips`
+    );
+
+    url.searchParams.set('start', String(start));
+    url.searchParams.set('duration', String(duration));
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      throw new Error(`클립 생성 실패 (HTTP ${response.status})`);
+    }
+
+    const result: { clipFileName: string } = await response.json();
+
+    // 생성된 MP4 재생 주소 저장
+    const clipUrl =
+      `http://localhost:8080/api/videos/clips/${encodeURIComponent(result.clipFileName)}`;
+
+    setGeneratedClipUrl(clipUrl);
+
+    notify('클립 생성 완료', 'MP4 영상이 생성되었습니다.');
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : '알 수 없는 오류';
+
+    notify('클립 생성 실패', message, 'error');
+  } finally {
+    setClipGenerating(false);
+  }
+};
+
   return <div className="editor-page v3-editor">
     <div className="v3-editor-heading"><div><Link to={'/projects/' + project.id + '?tab=clips'} className="back-link"><ArrowLeft size={15} />{project.title}</Link><div className="v3-editor-title"><h1>{clip.title}</h1><span className="v3-count">{formatTime(Math.max(0, edit.end - edit.start))}</span></div><div className="v3-editor-meta"><span>{getProjectLabel(project)}</span><span>·</span><span className={storageError ? 'v3-save-status is-error' : 'v3-save-status'}>{storageError ? '저장 실패' : '브라우저에 저장됨'}</span></div></div><div className="v3-editor-actions"><label className="v3-clip-switch"><Layers3 size={15} /><span className="sr-only">편집할 클립</span><select aria-label="편집할 클립" value={clip.id} onChange={event => switchClip(event.target.value)}>{clips.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><div className="v3-history-actions" role="group" aria-label="편집 이력"><button className="icon-button" aria-label="되돌리기" title="되돌리기 (Ctrl/⌘ Z)" disabled={!history.past.length} onClick={() => stepHistory('undo')}><Undo2 size={16} /></button><button className="icon-button" aria-label="다시 실행" title="다시 실행 (Ctrl/⌘ Shift Z)" disabled={!history.future.length} onClick={() => stepHistory('redo')}><Redo2 size={16} /></button></div><button className="icon-button v3-shortcut-help" aria-label="편집 단축키" title="편집 단축키" onClick={() => setShortcuts(true)}><Keyboard size={16} /></button><button className="btn primary" disabled={!!error} onClick={() => setExporting(true)}>결과 확인<ArrowRight size={15} /></button></div></div>
     <div className="v3-demo-strip"><Info size={14} /><span>{match ? '경기 샘플 영상 · 미리 정한 후보 · MP4 출력 연결 전' : sample ? '샘플 분석·이미지입니다. 실제 AI 분석과 MP4 출력은 연결 전입니다.' : '원본 미리보기 · 분석과 MP4 출력은 연결 전입니다.'}</span></div>
@@ -102,6 +210,40 @@ export function Editor() {
       <div className="editor-center">
         <section className="preview-panel"><div className="preview-toolbar"><span>클립 미리보기</span><span>{output.ratio}<ChevronRight size={12} />{output.label}</span></div><VideoPreview project={project} edit={edit} time={time} playing={playing} onTime={onTime} onPlaying={onPlaying} /><SourceReconnect project={project} />{selected && <div className="v3-reason"><div><span>{selected.evidenceKind === 'scene' ? <ScanLine size={14} /> : <FileText size={14} />}선정 이유</span><button className="text-link" onClick={() => { setLeftTab('source'); seek(selected.start); }}>원본 근거<ArrowRight size={13} /></button></div><p>{selected.reason}</p>{selected.warning && <button className="v3-context-open" onClick={() => { setReview(selected); setPlaying(false); }}><ShieldCheck size={15} /><span>{edit.contextApplied ? '맥락 보정 적용됨' : selected.warning.title}</span><ChevronRight size={14} /></button>}</div>}</section>
         <section className="timeline editor-panel v3-timeline"><div className="timeline-heading"><h2>원본 구간</h2><span>{formatTime(edit.start)} — {formatTime(edit.end)}<b>{Math.max(0, edit.end - edit.start).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}초</b></span></div><div className="timeline-ruler">{Array.from({ length: 5 }, (_, index) => <span key={index}>{formatTime(windowStart + span * index / 4)}</span>)}</div><div className="v3-interval-track"><div className="v3-interval-selection" style={{ left: Math.max(0, (edit.start - windowStart) / span * 100) + '%', width: Math.max(0, Math.min(100, (edit.end - edit.start) / span * 100)) + '%' }}><span>선택 구간</span></div><div className="v3-playhead" style={{ left: Math.max(0, Math.min(100, (time - windowStart) / span * 100)) + '%' }} /><input type="range" aria-label="원본 영상 탐색" min={windowStart} max={windowEnd} step={.1} value={Math.min(windowEnd, Math.max(windowStart, time))} onChange={event => seek(Number(event.target.value))} /></div><div className="range-inputs"><label>시작<input aria-label="클립 시작 초" type="number" min={0} max={Math.max(0, edit.end - 1)} value={edit.start} step={1} onChange={event => { const start = Number(event.target.value); commit({ start, contextApplied: false }); seek(start); }} /><span>초</span></label><span>—</span><label>종료<input aria-label="클립 종료 초" type="number" min={edit.start + 1} max={project.duration} value={edit.end} step={1} onChange={event => commit({ end: Number(event.target.value), contextApplied: false })} /><span>초</span></label><span className={'range-validation' + (error ? ' invalid' : '')}>{error ? <><Info size={13} />{error}</> : <><Check size={13} />30~60초 기본 프로필</>}</span></div></section>
+        <section className="editor-panel" style={{ padding: 20, marginTop: 16 }}>
+  <h2>MP4 하이라이트 생성</h2>
+
+  <p>
+    선택 구간: {formatTime(edit.start)} ~ {formatTime(edit.end)}
+  </p>
+
+  <button
+    className="btn primary"
+    disabled={clipGenerating || !Number.isFinite(edit.start) || !Number.isFinite(edit.end) || edit.start < 0 || edit.end <= edit.start || edit.end > project.duration}
+    onClick={generateMp4Clip}
+  >
+    {clipGenerating ? '영상 생성 중...' : 'MP4 생성하기'}
+  </button>
+
+  {generatedClipUrl && (
+    <div style={{ marginTop: 20 }}>
+      <h3>생성된 하이라이트</h3>
+
+      <video
+        key={generatedClipUrl}
+        src={generatedClipUrl}
+        controls
+        playsInline
+        style={{
+          width: '100%',
+          maxWidth: 640,
+          borderRadius: 12,
+          background: '#000',
+        }}
+      />
+    </div>
+  )}
+</section>      
       </div>
       <aside className="inspector-panel editor-panel v3-inspector"><div className="inspector-heading"><SlidersHorizontal size={16} /><h2>클립 설정</h2></div><PillTabs label="클립 설정" value={rightTab} onChange={setRightTab} options={[{ value: 'subtitles', label: '자막' }, { value: 'crop', label: '구도' }, { value: 'ai', label: 'AI 검토' }]} /><div className="inspector-body">
         {rightTab === 'subtitles' && <><div className="control-title"><h3>자막 표시</h3><button className={'toggle' + (edit.subtitleVisible ? ' on' : '')} role="switch" aria-checked={edit.subtitleVisible} aria-label="자막 표시" onClick={() => commit({ subtitleVisible: !edit.subtitleVisible })}><span /></button></div><label className="field-label" htmlFor="subtitle">미리보기 문구</label><textarea id="subtitle" className="text-input subtitle-text" maxLength={120} value={edit.subtitle} onChange={event => commit({ subtitle: event.target.value })} /><label className="range-label" htmlFor="subtitle-size">글자 크기<b>{edit.subtitleSize}px</b></label><input id="subtitle-size" type="range" min={16} max={38} value={edit.subtitleSize} onChange={event => commit({ subtitleSize: Number(event.target.value) })} /><span className="field-label v3-control-label">강조 색상</span><div className="color-swatches">{['#ffffff', '#ffe18b', '#a7edcf', '#b8caff', '#ffb3a5'].map(color => <button key={color} aria-label={'자막 색상 ' + color} aria-pressed={color === edit.subtitleColor} style={{ background: color }} onClick={() => commit({ subtitleColor: color })}>{color === edit.subtitleColor && <Check size={15} />}</button>)}</div><div className="settings-note"><Info size={14} />현재는 단일 문구 미리보기입니다. 시간별 자막 편집·합성은 연결 전입니다.</div></>}

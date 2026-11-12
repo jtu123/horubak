@@ -65,8 +65,21 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
   const [sampleMedia, setSampleMedia] = useState<{ source: string; url: string | null }>();
   const match = getSportsSample(project);
   const sampleSource = match?.videoUrl;
-  const loadedSample = sampleMedia?.source === sampleSource ? sampleMedia : undefined;
-  const url = videos[project.id] ?? loadedSample?.url ?? undefined;
+  const loadedSample =
+  sampleMedia?.source === sampleSource
+    ? sampleMedia
+    : undefined;
+// Spring Boot에 저장된 영상 조회 주소
+  const serverVideoUrl =
+  project.source === 'file'
+    ? `http://localhost:8080/api/videos/projects/${project.id}`
+    : undefined;
+// 영상 주소 우선순위
+  const url =
+  videos[project.id] ??
+  loadedSample?.url ??
+  serverVideoUrl;
+
   const stillSample = project.source === 'sample' && !match && !url;
   const canMute = !!url && !match;
   const mediaError = error || loadedSample?.url === null;
@@ -119,7 +132,18 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
       {edit.showSafeArea && <div className="preview-safe-area" aria-label="일반 안전영역 가이드"><span>일반 안전영역</span></div>}
       {stillSample && <span className="sample-frame-tag">이미지·구간 조작 예시</span>}
       {match && !url && !mediaError && <span className="sample-frame-tag" role="status">경기 영상 불러오는 중…</span>}
-      {mediaError && <div className="video-error" role="alert">영상을 재생할 수 없어요.<br />{match ? '페이지를 새로고침해 주세요.' : 'H.264/AAC MP4로 다시 연결해 주세요.'}</div>}
+      
+      {mediaError && (
+          <div className="video-error" role="alert">
+            영상을 재생할 수 없어요.
+            <p>
+              {match
+                ? '샘플 영상을 다시 불러와 주세요.'
+                : '서버 영상 등록 상태 또는 MP4 인코딩을 확인해 주세요.'}
+            </p>
+          </div>
+      )}
+  
     </div><span className="aspect-label">{profile.ratio} · 자막·구도 미리보기</span></div>
     <div className="player-controls"><button className="icon-button" aria-label="구간 처음으로" onClick={() => { onTime(edit.start); if (video.current) video.current.currentTime = edit.start; }}><RotateCcw size={16} /></button><button className="play-button" aria-label={playing ? '일시 정지' : '미리보기 재생'} disabled={(!url && !stillSample) || mediaError || invalidBounds} onClick={() => onPlaying(!playing)}>{playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}</button><span className="player-time">{formatTime(Math.max(0, time - edit.start))}<span> / {formatTime(Math.max(0, edit.end - edit.start))}</span></span><button className="icon-button" disabled={!canMute} aria-label={match ? '무음 경기 영상' : muted ? '음소거 해제' : '음소거'} aria-pressed={!!match || muted} onClick={() => setMuted(value => !value)}>{match || muted ? <VolumeX size={16} /> : <Volume2 size={16} />}</button><button className="icon-button" aria-label="미리보기 전체 화면" onClick={() => { if (document.fullscreenElement) void document.exitFullscreen(); else void frame.current?.requestFullscreen().catch(() => {}); }}><Maximize2 size={16} /></button></div>
   </div>;

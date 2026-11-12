@@ -58,7 +58,7 @@ export function ProjectHub() {
   const filtered = !!filters.query.trim() || filters.kind !== 'all' || filters.length !== 'all';
   const sample = project.source === 'sample';
   const match = getSportsSample(project);
-  const editable = ['ready', 'completed'].includes(project.status) && project.duration >= 30;
+  const editable = ['ready', 'completed'].includes(project.status) && project.duration > 0;
   const sourceEdit: EditState = { ...initialEdit(project.genre), start: 0, end: project.duration, subtitleVisible: false, layout: 'full', cropX: 50, cropY: 50, scale: 1, aspectRatio: match ? '16:9' : undefined };
   const openClip = (clip: Clip) => { selectClip(project.id, clip.id); navigate('/projects/' + project.id + '/editor?clip=' + encodeURIComponent(clip.id)); };
   const adopt = (candidate?: Candidate) => {

@@ -5,10 +5,26 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a81b7064-e402-450e-a168-e0ac482246eb" name="변경" comment="">
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoClipService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoMetadataDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoMetadataService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/entity/VideoClip.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/repository/VideoClipRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/controller/ProjectController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/controller/ProjectController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/entity/Project.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/entity/Project.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/service/ProjectService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/service/ProjectService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/entity/Project.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/entity/Project.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/service/ProjectService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/service/ProjectService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/components/VideoPreview.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/components/VideoPreview.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Editor.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Editor.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/NewProject.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/NewProject.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/ProjectHub.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/ProjectHub.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/services/projectApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/services/projectApi.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -104,7 +120,8 @@
       <updated>1794312976807</updated>
       <workItem from="1794312978094" duration="6215000" />
       <workItem from="1794355160659" duration="3569000" />
-      <workItem from="1794477249837" duration="1037000" />
+      <workItem from="1794477249837" duration="9201000" />
+      <workItem from="1794496956861" duration="4303000" />
     </task>
     <servers />
   </component>

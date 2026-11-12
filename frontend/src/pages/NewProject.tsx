@@ -9,7 +9,7 @@ import { useWorkspace } from '../store';
 import { createSportsSample, SPORTS_SAMPLES } from '../sports-samples';
 import { formatTime, validateSourceUrl, validateVideo } from '../lib';
 import type { ContentSignal, Project } from '../types';
-import { createProject } from '../services/projectApi';
+import {createProject,createFileProject,uploadProjectVideo,deleteProjectApi,} from '../services/projectApi';
 
 const SIGNALS: Array<{ key: ContentSignal; label: string; Icon: typeof Image }> = [
   { key: 'visual', label: '장면·행동', Icon: Image }, { key: 'speech', label: '발화·대화', Icon: AudioLines },
@@ -84,28 +84,69 @@ export function NewProject() {
         duration, favorite: false, status: 'ready', progress: 100, createdAt: now, updatedAt: now,
         contentProfile: { purpose, focus: focus.trim() || sample?.contentProfile?.focus, signals: signals.length ? signals : sample?.contentProfile?.signals ?? [] },
       };
-     if (method === 'url') {
+    
+if (method === 'url') {
   const savedProject = await createProject({
     title: project.title,
     genre: project.genre,
     sourceUrl: url.trim(),
   });
+
   createdProjectId = savedProject.id;
+
   addProject({
     ...project,
     id: savedProject.id,
     createdAt: savedProject.createdAt,
     updatedAt: savedProject.updatedAt,
   });
+
+} else if (method === 'file' && file) {
+
+  // 1. MySQL에 프로젝트 생성
+  const savedProject = await createFileProject({
+    title: project.title,
+    genre: project.genre,
+    sourceName: file.name,
+    duration,
+  });
+
+  createdProjectId = savedProject.id;
+
+  // 2. Spring Boot 서버에 MP4 업로드
+  try {
+    await uploadProjectVideo(savedProject.id, file);
+  } catch (uploadError) {
+    // 업로드 실패 시 방금 만든 프로젝트 정리
+    try {
+      await deleteProjectApi(savedProject.id);
+    } catch (cleanupError) {
+      console.error('프로젝트 정리 실패:', cleanupError);
+    }
+    throw uploadError;
+  }
+
+  // 3. 업로드 성공 후 React 상태에 등록
+  addProject({
+    ...project,
+    id: savedProject.id,
+    createdAt: savedProject.createdAt,
+    updatedAt: savedProject.updatedAt,
+  }, file);
+
 } else {
-  addProject(project, method === 'file' ? file : undefined);
+  // 샘플 프로젝트는 기존 방식 유지
+  addProject(project);
   createdProjectId = project.id;
 }
+
       notify(method === 'sample' ? '샘플 프로젝트를 만들었어요' : '프로젝트를 만들었어요', method === 'sample' ? '미리 준비한 장면 후보를 확인해 보세요.' : '원본 확인과 수동 클립 편집을 시작할 수 있어요.');
       navigate('/projects/' + createdProjectId);
     } catch { setError('프로젝트를 만들지 못했어요. 다시 시도해 주세요.'); }
     finally { setBusy(false); }
   }
+  
+  
 
   return <div className="new-project new-project-v3">
     <Link to="/projects" className="back-link"><ArrowLeft size={15} />프로젝트</Link>
@@ -138,3 +179,4 @@ export function NewProject() {
     </div>
   </div>;
 }
+
