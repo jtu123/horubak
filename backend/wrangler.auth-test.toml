@@ -1,0 +1,16 @@
+name = "horubak-auth-test"
+main = "cloudflare/auth-worker.ts"
+compatibility_date = "2026-11-10"
+workers_dev = false
+preview_urls = false
+
+[vars]
+APP_ORIGIN = "https://horubak.pages.dev"
+
+[[durable_objects.bindings]]
+name = "AUTH_STORE"
+class_name = "HorubakAuthStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["HorubakAuthStore"]

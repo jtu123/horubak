@@ -1,0 +1,7 @@
+name = "horubak"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-11-10"
+
+[[services]]
+binding = "HORUBAK_AUTH"
+service = "horubak-auth-test"
