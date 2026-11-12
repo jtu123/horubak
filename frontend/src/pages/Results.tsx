@@ -8,6 +8,7 @@ import { buildSrt, downloadText, formatTime } from '../lib';
 import { describeProject } from '../project-presentation';
 import { VideoPreview } from '../components/VideoPreview';
 import { getOutputProfile } from '../output-profile';
+import { apiFetch } from '../api';
 import '../styles/editor-v3.css';
 
 export function Results() {
@@ -20,6 +21,7 @@ export function Results() {
   const [time, setTime] = useState(clip?.edit.start ?? 0);
   const [playing, setPlaying] = useState(false);
   const [savedClipUrl, setSavedClipUrl] = useState<string | null>(null);
+  const [playableMp4Url, setPlayableMp4Url] = useState<string | null>(null);
   const [loadingMp4, setLoadingMp4] = useState(true);
   const onTime = useCallback((value: number) => setTime(value), []);
   const onPlaying = useCallback((value: boolean) => setPlaying(value), []);
@@ -38,10 +40,9 @@ useEffect(() => {
 
   const loadSavedMp4 = async () => {
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/videos/projects/${project.id}/clips`
-      );
-
+      const response = await apiFetch(
+  `/api/videos/projects/${project.id}/clips`
+);
       if (!response.ok) {
         throw new Error(`MP4 조회 실패 (HTTP ${response.status})`);
       }
@@ -76,6 +77,54 @@ useEffect(() => {
   };
 }, [project?.id]);
 
+
+useEffect(() => {
+  if (!savedClipUrl) {
+    setPlayableMp4Url(null);
+    return;
+  }
+
+  let cancelled = false;
+  let objectUrl: string | null = null;
+
+  setPlayableMp4Url(null);
+
+  const loadPlayableMp4 = async () => {
+    try {
+      const url = new URL(savedClipUrl);
+
+      const response = await apiFetch(url.pathname);
+
+      if (!response.ok) {
+        throw new Error(`MP4 재생 실패 (HTTP ${response.status})`);
+      }
+
+      const blob = await response.blob();
+
+      if (cancelled) return;
+
+      objectUrl = URL.createObjectURL(blob);
+      setPlayableMp4Url(objectUrl);
+
+    } catch (error) {
+      if (!cancelled) {
+        console.error('MP4 재생 실패:', error);
+      }
+    }
+  };
+
+  void loadPlayableMp4();
+
+  return () => {
+    cancelled = true;
+
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+}, [savedClipUrl]);
+
+
   useEffect(() => { setPlaying(false); setTime(clip?.edit.start ?? 0); }, [id, clip?.id]);
   useEffect(() => { if (project && clip && project.activeClipId !== clip.id) selectClip(project.id, clip.id); }, [project?.id, project?.activeClipId, clip?.id, selectClip]);
   if (!project) return <div className="empty-state"><h1>프로젝트를 찾을 수 없어요</h1><Link className="btn primary" to="/projects">프로젝트 목록</Link></div>;
@@ -102,7 +151,9 @@ const downloadMp4 = async () => {
   if (!savedClipUrl) return;
 
   try {
-    const response = await fetch(savedClipUrl);
+    const url = new URL(savedClipUrl);
+
+const response = await apiFetch(url.pathname);
 
     if (!response.ok) {
       throw new Error(`다운로드 실패 (HTTP ${response.status})`);
@@ -136,7 +187,7 @@ const downloadMp4 = async () => {
   <p>저장된 MP4를 불러오는 중...</p>
 ) : savedClipUrl ? (
   <video
-    src={savedClipUrl}
+  src={playableMp4Url ?? undefined}
     controls
     playsInline
     style={{

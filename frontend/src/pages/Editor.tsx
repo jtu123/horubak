@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, ChevronRight, FileText, Film, Info, Keyboard, Layers3, MessageSquare, Plus, Redo2, ScanLine, ShieldCheck, SlidersHorizontal, Undo2 } from 'lucide-react';
 import { getProjectCandidates, getProjectEvidence, getProjectLabel, getProjectTranscript } from '../data';
@@ -15,6 +15,7 @@ import { OutputControls } from '../components/OutputControls';
 import { getOutputProfile } from '../output-profile';
 import { EMPTY_EDIT_HISTORY, rememberEdit, stepEditHistory } from '../edit-history';
 import type { EditHistories } from '../edit-history';
+import { apiFetch } from '../api';
 import '../styles/editor-v3.css';
 import '../styles/editor-history.css';
 
@@ -38,6 +39,61 @@ export function Editor() {
   const [exporting, setExporting] = useState(false);
   const [clipGenerating, setClipGenerating] = useState(false);
   const [generatedClipUrl, setGeneratedClipUrl] = useState<string | null>(null);
+  const generatedBlobUrlRef = useRef<string | null>(null);
+
+
+useEffect(() => {
+  if (!generatedClipUrl) return;
+  if (generatedClipUrl.startsWith('blob:')) return;
+
+  let cancelled = false;
+
+  const loadVideo = async () => {
+    try {
+      const url = new URL(generatedClipUrl);
+      const response = await apiFetch(url.pathname);
+
+      if (!response.ok) {
+        throw new Error(`영상 조회 실패 (HTTP ${response.status})`);
+      }
+
+      const blob = await response.blob();
+
+      if (cancelled) return;
+
+      const objectUrl = URL.createObjectURL(blob);
+
+if (generatedBlobUrlRef.current) {
+  URL.revokeObjectURL(generatedBlobUrlRef.current);
+}
+
+generatedBlobUrlRef.current = objectUrl;
+setGeneratedClipUrl(objectUrl);
+
+    } catch (error) {
+      if (!cancelled) {
+        console.error('MP4 영상 불러오기 실패:', error);
+      }
+    }
+  };
+
+  void loadVideo();
+
+  return () => {
+    cancelled = true;
+  };
+}, [generatedClipUrl]);
+
+useEffect(() => {
+  return () => {
+    if (generatedBlobUrlRef.current) {
+      URL.revokeObjectURL(generatedBlobUrlRef.current);
+      generatedBlobUrlRef.current = null;
+    }
+  };
+}, []);
+
+
 
 useEffect(() => {
   if (!project?.id) {
@@ -49,9 +105,9 @@ useEffect(() => {
 
   const loadSavedClip = async () => {
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/videos/projects/${project.id}/clips`
-      );
+        const response = await apiFetch(
+    `/api/videos/projects/${project.id}/clips`
+  );
 
       if (!response.ok) {
         throw new Error(`클립 조회 실패 (HTTP ${response.status})`);
@@ -172,9 +228,12 @@ const generateMp4Clip = async () => {
     url.searchParams.set('start', String(start));
     url.searchParams.set('duration', String(duration));
 
-    const response = await fetch(url.toString(), {
-      method: 'POST',
-    });
+    const response = await apiFetch(
+  `/api/videos/projects/${project.id}/clips?${url.searchParams.toString()}`,
+  {
+    method: 'POST',
+  }
+);
 
     if (!response.ok) {
       throw new Error(`클립 생성 실패 (HTTP ${response.status})`);
@@ -200,7 +259,7 @@ const generateMp4Clip = async () => {
 };
 
   return <div className="editor-page v3-editor">
-    <div className="v3-editor-heading"><div><Link to={'/projects/' + project.id + '?tab=clips'} className="back-link"><ArrowLeft size={15} />{project.title}</Link><div className="v3-editor-title"><h1>{clip.title}</h1><span className="v3-count">{formatTime(Math.max(0, edit.end - edit.start))}</span></div><div className="v3-editor-meta"><span>{getProjectLabel(project)}</span><span>·</span><span className={storageError ? 'v3-save-status is-error' : 'v3-save-status'}>{storageError ? '저장 실패' : '브라우저에 저장됨'}</span></div></div><div className="v3-editor-actions"><label className="v3-clip-switch"><Layers3 size={15} /><span className="sr-only">편집할 클립</span><select aria-label="편집할 클립" value={clip.id} onChange={event => switchClip(event.target.value)}>{clips.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><div className="v3-history-actions" role="group" aria-label="편집 이력"><button className="icon-button" aria-label="되돌리기" title="되돌리기 (Ctrl/⌘ Z)" disabled={!history.past.length} onClick={() => stepHistory('undo')}><Undo2 size={16} /></button><button className="icon-button" aria-label="다시 실행" title="다시 실행 (Ctrl/⌘ Shift Z)" disabled={!history.future.length} onClick={() => stepHistory('redo')}><Redo2 size={16} /></button></div><button className="icon-button v3-shortcut-help" aria-label="편집 단축키" title="편집 단축키" onClick={() => setShortcuts(true)}><Keyboard size={16} /></button><button className="btn primary" disabled={!!error} onClick={() => setExporting(true)}>결과 확인<ArrowRight size={15} /></button></div></div>
+    <div className="v3-editor-heading"><div><Link to={'/projects/' + project.id + '?tab=clips'} className="back-link"><ArrowLeft size={15} />{project.title}</Link><div className="v3-editor-title"><h1>{clip.title}</h1><span className="v3-count">{formatTime(Math.max(0, edit.end - edit.start))}</span></div><div className="v3-editor-meta"><span>{getProjectLabel(project)}</span><span>·</span><span className={storageError ? 'v3-save-status is-error' : 'v3-save-status'}>{storageError ? '저장 실패' : '브라우저에 저장됨'}</span></div></div><div className="v3-editor-actions"><label className="v3-clip-switch"><Layers3 size={15} /><span className="sr-only">편집할 클립</span><select aria-label="편집할 클립" value={clip.id} onChange={event => switchClip(event.target.value)}>{clips.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><div className="v3-history-actions" role="group" aria-label="편집 이력"><button className="icon-button" aria-label="되돌리기" title="되돌리기 (Ctrl/⌘ Z)" disabled={!history.past.length} onClick={() => stepHistory('undo')}><Undo2 size={16} /></button><button className="icon-button" aria-label="다시 실행" title="다시 실행 (Ctrl/⌘ Shift Z)" disabled={!history.future.length} onClick={() => stepHistory('redo')}><Redo2 size={16} /></button></div><button className="icon-button v3-shortcut-help" aria-label="편집 단축키" title="편집 단축키" onClick={() => setShortcuts(true)}><Keyboard size={16} /></button><button className="btn primary" disabled={false} onClick={() => setExporting(true)}>결과 확인<ArrowRight size={15} /></button></div></div>
     <div className="v3-demo-strip"><Info size={14} /><span>{match ? '경기 샘플 영상 · 미리 정한 후보 · MP4 출력 연결 전' : sample ? '샘플 분석·이미지입니다. 실제 AI 분석과 MP4 출력은 연결 전입니다.' : '원본 미리보기 · 분석과 MP4 출력은 연결 전입니다.'}</span></div>
     <div className="editor-layout">
       <aside className="candidate-panel editor-panel v3-editor-explorer">

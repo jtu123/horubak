@@ -1,7 +1,7 @@
-
 import type { Genre, Project } from '../types';
+import { apiFetch } from '../api';
 
-const API_URL = 'http://localhost:8080/api/projects';
+const API_URL = '/api/projects';
 
 // Spring Boot에서 반환하는 프로젝트 형식
 interface ProjectResponse {
@@ -42,7 +42,7 @@ function toProject(data: ProjectResponse): Project {
 
 // 전체 프로젝트 조회
 export async function fetchProjects(): Promise<Project[]> {
-  const response = await fetch(API_URL);
+  const response = await apiFetch(API_URL);
 
   if (!response.ok) {
     throw new Error('프로젝트 목록을 불러오지 못했습니다.');
@@ -60,7 +60,7 @@ export async function createProject(input: {
   sourceUrl: string;
 }): Promise<Project> {
 
-  const response = await fetch(API_URL, {
+  const response = await apiFetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ export async function renameProject(
   title: string
 ): Promise<Project> {
 
-  const response = await fetch(`${API_URL}/${id}`, {
+  const response = await apiFetch(`${API_URL}/${id}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -110,7 +110,7 @@ export async function renameProject(
 }
 
 export async function deleteProjectApi(id: string): Promise<void> {
-  const response = await fetch(`${API_URL}/${id}`, {
+  const response = await apiFetch(`${API_URL}/${id}`, {
     method: 'DELETE',
   });
 
@@ -126,7 +126,7 @@ export async function createFileProject(input: {
   sourceName: string;
   duration: number;
 }): Promise<Project> {
-  const response = await fetch(API_URL, {
+  const response = await apiFetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -157,8 +157,8 @@ export async function uploadProjectVideo(
   formData.append('projectId', projectId);
   formData.append('file', file);
 
-  const response = await fetch(
-    'http://localhost:8080/api/videos/upload',
+  const response = await apiFetch(
+    '/api/videos/upload',
     {
       method: 'POST',
       body: formData,

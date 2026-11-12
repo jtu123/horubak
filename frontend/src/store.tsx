@@ -6,6 +6,8 @@ import { addProjectClip, getProjectClips, loadProjectCollection, normalizeProjec
 import type { LoadedProjects } from './workspace-model';
 import type { Candidate, DemoAccount, DemoUser, EditState, Project, ToastMessage } from './types';
 import { fetchProjects, renameProject, deleteProjectApi } from './services/projectApi';
+import { apiFetch } from './api';
+
 
 function read<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
@@ -108,13 +110,45 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       console.error('Spring Boot 연결 실패:', error);
     });
 }, [user]);
-  const login = async (email: string, password: string) => {
-    const normalized = email.trim().toLowerCase();
-    if (normalized === 'demo@moment.studio' && password === 'moment2026') { switchUser({ id: 'demo', name: '권준한', email: normalized, guest: false }); return; }
-    const account = read<DemoAccount[]>('moment.accounts.v1', []).find(a => a.email === normalized);
-    if (!account || await passwordDigest(password, account.salt) !== account.passwordHash) throw new Error('이메일 또는 비밀번호를 확인해 주세요.');
-    switchUser({ id: account.id, name: account.name, email: account.email, guest: false });
-  };
+  
+const login = async (email: string, password: string) => {
+  const response = await fetch(
+    'http://localhost:8080/api/auth/login',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        password,
+      }),
+    }
+  );
+
+  // 2. 로그인 실패 처리
+  if (!response.ok) {
+    throw new Error('이메일 또는 비밀번호를 확인해 주세요.');
+  }
+
+  const data: {
+    id: string;
+    email: string;
+    nickname: string;
+    accessToken: string;
+    tokenType: string;
+  } = await response.json();
+
+  sessionStorage.setItem('moment.accessToken', data.accessToken);
+
+  switchUser({
+    id: data.id,
+    name: data.nickname,
+    email: data.email,
+    guest: false,
+  });
+};
+
   const signup = async (name: string, email: string, password: string) => {
     const normalized = email.trim().toLowerCase();
     const accounts = read<DemoAccount[]>('moment.accounts.v1', []);
@@ -191,7 +225,21 @@ const updateProject = (id: string, patch: Partial<Project>) => {
   const deleteClip: Workspace['deleteClip'] = (projectId, clipId) => setProjects(old => old.map(p => p.id === projectId ? normalizeProject({ ...p, clips: getProjectClips(p).filter(clip => clip.id !== clipId), updatedAt: new Date().toISOString() })! : p));
   return <Context.Provider value={{ user, projects, theme, toasts, storageError, storageNotice, login, signup, updateProject, videos, attachVideo, createClip, selectClip, updateClip, renameClip, duplicateClip, deleteClip,
     enterDemo: () => switchUser({ id: 'guest', name: '크리에이터', email: 'guest@moment.local', guest: true }),
-    logout: () => { disconnectVideos(); setUser(null); try { localStorage.removeItem('moment.session.v1'); } catch { setStorageError(true); } },
+    
+logout: () => {
+  disconnectVideos();
+  setUser(null);
+
+  // JWT 삭제
+  sessionStorage.removeItem('moment.accessToken');
+
+  try {
+    localStorage.removeItem('moment.session.v1');
+  } catch {
+    setStorageError(true);
+  }
+},
+
     addProject: (project, file) => { setProjects(old => old.some(p => p.id === project.id) ? old : [normalizeProject(project)!, ...old]); if (file) attachVideo(project.id, file); },
     
 deleteProject: async id => {

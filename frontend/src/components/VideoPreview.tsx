@@ -6,6 +6,7 @@ import { useWorkspace } from '../store';
 import type { EditState, Project } from '../types';
 import { getOutputProfile } from '../output-profile';
 import { getSportsSample } from '../sports-samples';
+import { apiFetch } from '../api';
 import '../styles/output-profile.css';
 
 const sampleVideos = new Map<string, Promise<Blob>>();
@@ -62,6 +63,10 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
   const frame = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [serverMedia, setServerMedia] = useState<{
+  projectId: string;
+  url: string;
+} | null>(null);
   const [sampleMedia, setSampleMedia] = useState<{ source: string; url: string | null }>();
   const match = getSportsSample(project);
   const sampleSource = match?.videoUrl;
@@ -70,10 +75,61 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
     ? sampleMedia
     : undefined;
 // Spring Boot에 저장된 영상 조회 주소
-  const serverVideoUrl =
-  project.source === 'file'
-    ? `http://localhost:8080/api/videos/projects/${project.id}`
+  
+// Spring Boot에서 JWT 인증으로 원본 영상 불러오기
+useEffect(() => {
+  if (project.source !== 'file' || videos[project.id]) {
+    setServerMedia(null);
+    return;
+  }
+
+  let cancelled = false;
+  let objectUrl: string | null = null;
+
+  const loadServerVideo = async () => {
+    try {
+      const response = await apiFetch(
+        `/api/videos/projects/${project.id}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`원본 영상 조회 실패: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+
+      if (cancelled) return;
+
+      objectUrl = URL.createObjectURL(blob);
+
+      setServerMedia({
+        projectId: project.id,
+        url: objectUrl,
+      });
+    } catch (error) {
+      if (!cancelled) {
+        console.error('원본 영상 불러오기 실패:', error);
+        setError(true);
+      }
+    }
+  };
+
+  void loadServerVideo();
+
+  return () => {
+    cancelled = true;
+
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+}, [project.id, project.source, videos[project.id]]);
+
+const serverVideoUrl =
+  serverMedia?.projectId === project.id
+    ? serverMedia.url
     : undefined;
+
 // 영상 주소 우선순위
   const url =
   videos[project.id] ??
