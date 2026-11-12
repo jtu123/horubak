@@ -9,6 +9,7 @@ import com.capstone.momentbackend.project.repository.ProjectRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -83,5 +84,39 @@ public class ProjectService {
         return projects.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    public ProjectResponse updateProjectTitle(UUID projectId, String newTitle) {
+
+        if (newTitle == null || newTitle.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "프로젝트 이름은 비워둘 수 없습니다."
+            );
+        }
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "프로젝트를 찾을 수 없습니다."
+                ));
+
+        project.changeTitle(newTitle.trim());
+
+        Project savedProject = projectRepository.save(project);
+
+        return toResponse(savedProject);
+    }
+
+    @Transactional
+    public void deleteProject(UUID projectId) {
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "프로젝트를 찾을 수 없습니다."
+                ));
+
+        projectRepository.delete(project);
     }
 }

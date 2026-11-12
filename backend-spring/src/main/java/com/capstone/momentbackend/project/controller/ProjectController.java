@@ -6,6 +6,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 import java.util.List;
+import java.util.Map;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequestMapping("/api/projects")
@@ -19,5 +22,23 @@ public class ProjectController {
     @GetMapping
     public List<ProjectResponse> getAllProjects() {
         return projectService.getAllProjects();
+    }
+    @PatchMapping("/{projectId}")
+    public ProjectResponse updateProjectTitle(
+            @PathVariable("projectId") UUID projectId,
+            @RequestBody Map<String, String> request
+    ) {
+        return projectService.updateProjectTitle(
+                projectId,
+                request.get("title")
+        );
+    }
+    @DeleteMapping("/{projectId}")
+    public ResponseEntity<Void> deleteProject(
+            @PathVariable("projectId") UUID projectId
+    ) {
+        projectService.deleteProject(projectId);
+
+        return ResponseEntity.noContent().build();
     }
 }

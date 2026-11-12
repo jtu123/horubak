@@ -5,10 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a81b7064-e402-450e-a168-e0ac482246eb" name="변경" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/entity/Project.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/repository/ProjectRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../backend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/controller/ProjectController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/controller/ProjectController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/entity/Project.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/entity/Project.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/service/ProjectService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/project/service/ProjectService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -102,7 +102,9 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1794312976807</updated>
-      <workItem from="1794312978094" duration="5597000" />
+      <workItem from="1794312978094" duration="6215000" />
+      <workItem from="1794355160659" duration="3569000" />
+      <workItem from="1794477249837" duration="1037000" />
     </task>
     <servers />
   </component>

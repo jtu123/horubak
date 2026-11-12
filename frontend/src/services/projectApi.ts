@@ -83,3 +83,38 @@ export async function createProject(input: {
 
   return toProject(data);
 }
+
+
+export async function renameProject(
+  id: string,
+  title: string
+): Promise<Project> {
+
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      title: title,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('프로젝트 이름 변경에 실패했습니다.');
+  }
+
+  const data: ProjectResponse = await response.json();
+
+  return toProject(data);
+}
+
+export async function deleteProjectApi(id: string): Promise<void> {
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('프로젝트 삭제에 실패했습니다.');
+  }
+}

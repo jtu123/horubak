@@ -5,7 +5,7 @@ import { passwordDigest } from './lib';
 import { addProjectClip, getProjectClips, loadProjectCollection, normalizeProject, patchProject, selectProjectClip, updateProjectClip } from './workspace-model';
 import type { LoadedProjects } from './workspace-model';
 import type { Candidate, DemoAccount, DemoUser, EditState, Project, ToastMessage } from './types';
-import { fetchProjects } from './services/projectApi';
+import { fetchProjects, renameProject, deleteProjectApi } from './services/projectApi';
 
 function read<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
@@ -124,7 +124,53 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('moment.accounts.v1', JSON.stringify([...accounts, account]));
     switchUser({ id: account.id, name: account.name, email: account.email, guest: false });
   };
-  const updateProject = (id: string, patch: Partial<Project>) => setProjects(old => old.map(p => p.id === id ? patchProject(p, patch) : p));
+  
+const updateProject = (id: string, patch: Partial<Project>) => {
+  const currentProject = projects.find(p => p.id === id);
+
+  if (!currentProject) return;
+
+  if (patch.title !== undefined && patch.title !== currentProject.title) {
+    const newTitle = patch.title.trim();
+
+    if (!newTitle) {
+      notify('프로젝트 이름은 비워둘 수 없습니다.', undefined, 'error');
+      return;
+    }
+
+    // MySQL에 저장된 프로젝트인지 확인
+    fetchProjects()
+      .then(serverProjects => {
+        const existsInServer = serverProjects.some(p => p.id === id);
+
+        if (existsInServer) {
+          return renameProject(id, newTitle);
+        }
+
+        return null;
+      })
+      .then(() => {
+        setProjects(old =>
+          old.map(p =>
+            p.id === id ? patchProject(p, patch) : p
+          )
+        );
+      })
+      .catch(error => {
+        console.error('프로젝트 이름 변경 실패:', error);
+        notify('프로젝트 이름 변경에 실패했습니다.', undefined, 'error');
+      });
+
+    return;
+  }
+
+  setProjects(old =>
+    old.map(p =>
+      p.id === id ? patchProject(p, patch) : p
+    )
+  );
+};
+
   const createClip: Workspace['createClip'] = (projectId, candidate) => {
     const id = crypto.randomUUID();
     setProjects(old => old.map(p => p.id === projectId ? addProjectClip(p, id, candidate) : p));
@@ -147,7 +193,41 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     enterDemo: () => switchUser({ id: 'guest', name: '크리에이터', email: 'guest@moment.local', guest: true }),
     logout: () => { disconnectVideos(); setUser(null); try { localStorage.removeItem('moment.session.v1'); } catch { setStorageError(true); } },
     addProject: (project, file) => { setProjects(old => old.some(p => p.id === project.id) ? old : [normalizeProject(project)!, ...old]); if (file) attachVideo(project.id, file); },
-    deleteProject: id => { const url = urls.current.get(id); if (url) URL.revokeObjectURL(url); urls.current.delete(id); setVideos(v => { const next = { ...v }; delete next[id]; return next; }); setProjects(old => old.filter(p => p.id !== id)); },
+    
+deleteProject: async id => {
+  try {
+    // MySQL에 저장된 프로젝트인지 확인
+    const serverProjects = await fetchProjects();
+    const existsInServer = serverProjects.some(p => p.id === id);
+
+    // MySQL에 존재한다면 서버에서도 삭제
+    if (existsInServer) {
+      await deleteProjectApi(id);
+    }
+
+    // 서버 삭제가 성공한 뒤 React에서도 제거
+    const url = urls.current.get(id);
+
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+
+    urls.current.delete(id);
+
+    setVideos(v => {
+      const next = { ...v };
+      delete next[id];
+      return next;
+    });
+
+    setProjects(old => old.filter(p => p.id !== id));
+
+    notify('프로젝트가 삭제되었습니다.');
+  } catch (error) {
+    console.error('프로젝트 삭제 실패:', error);
+    notify('프로젝트 삭제에 실패했습니다.', undefined, 'error');
+  }
+},
     toggleTheme: () => setTheme(t => t === 'light' ? 'dark' : 'light'), notify, dismissToast: id => setToasts(old => old.filter(t => t.id !== id)),
   }}>{children}</Context.Provider>;
 }

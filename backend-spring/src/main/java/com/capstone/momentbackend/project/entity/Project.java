@@ -52,6 +52,10 @@ public class Project {
         this.createdAt = LocalDateTime.now();
     }
 
+    public void changeTitle(String newTitle) {
+        this.title = newTitle;
+    }
+
     public UUID getId() { return id; }
     public String getTitle() { return title; }
     public String getGenre() { return genre; }
