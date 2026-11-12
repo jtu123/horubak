@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import appleLogo from '../assets/social-login/apple.png?no-inline';
 import googleLogo from '../assets/social-login/google.svg?no-inline';
 import naverLogo from '../assets/social-login/naver.png?no-inline';
@@ -29,16 +30,12 @@ const SOCIAL_ERRORS = new Map([
   ['failed', '소셜 로그인에 실패했어요. 다시 시도해 주세요.'],
 ]);
 
-function SocialLogin({ serverAuth, callbackError }: { serverAuth: boolean; callbackError: string | null }) {
+function SocialLogin({ callbackError }: { callbackError: string | null }) {
   const [pending, setPending] = useState<SocialProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
   const message = error ?? SOCIAL_ERRORS.get(callbackError ?? '');
 
   async function start(provider: SocialProvider) {
-    if (!serverAuth) {
-      setError('이 데모에서는 소셜 로그인을 사용할 수 없어요.');
-      return;
-    }
     setPending(provider);
     setError('');
     try {
@@ -146,7 +143,7 @@ function LoginForm({ onLogin, onComplete }: { onLogin: (email: string, password:
   </>;
 }
 export function Login() {
-  const { login, signup, authError, serverAuth } = useWorkspace();
+  const { login, signup, enterDemo, authError, serverAuth } = useWorkspace();
   const navigate = useNavigate(); const [params] = useSearchParams();
   const registering = params.get('mode') === 'signup';
   useEffect(() => {
@@ -160,7 +157,10 @@ export function Login() {
       {authError && <p className="field-error" role="status">{authError}</p>}
       {registering ? <SignupForm onCreate={signup} onComplete={complete} /> : <LoginForm onLogin={login} onComplete={complete} />}
       <p className="login-switch">{registering ? '이미 프로필이 있나요?' : '처음 오셨나요?'} <Link to={registering ? '/login' : '/login?mode=signup'}>{registering ? '로그인' : '회원가입'}</Link></p>
-      <SocialLogin key={registering ? 'signup' : 'login'} serverAuth={serverAuth} callbackError={params.get('social')} />
+      {serverAuth ? <SocialLogin key={registering ? 'signup' : 'login'} callbackError={params.get('social')} /> : <>
+        <div className="login-divider" aria-hidden="true">또는</div>
+        <button type="button" className="demo-enter" onClick={() => { enterDemo(); complete(); }}>샘플로 시작<ArrowRight size={16} /></button>
+      </>}
       <p className="login-disclaimer">{serverAuth ? import.meta.env.VITE_AUTH_TEST === 'true'
         ? '테스트 배포입니다. 계정과 편집 정보는 임시 저장소에 저장됩니다.'
         : '계정과 편집 정보는 서버에 저장됩니다.'

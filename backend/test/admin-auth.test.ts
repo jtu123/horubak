@@ -73,14 +73,23 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
       assert.equal((await admin.send('/api/admin/overview')).response.status, 200);
     });
     await t.test('사용자별 프로젝트 격리·저장 버전·요청 검증', async () => {
-      assert.equal((await member.send('/api/workspace', 'PUT', { version: 0, projects: [project] })).response.status, 200);
-      const saved = await member.send('/api/workspace'); assert.equal(saved.data.projects[0].title, project.title); assert.equal(saved.data.version, 1);
+      const sourceUrl = 'https://example.com/video.mp4?key=' + 'x'.repeat(2800);
+      const draft = { ...project, sourceName: sourceUrl, sourceUrl, clips: [{ id: 'draft', title: '초안', edit: { start: 95, end: 40, subtitle: '' } }] };
+      const request = { ownerId: memberId, version: 0, projects: [draft] };
+      const switchedAccount = await admin.send('/api/workspace', 'PUT', request);
+      assert.equal(switchedAccount.response.status, 409);
+      assert.equal(switchedAccount.data.code, 'WORKSPACE_ACCOUNT_CHANGED');
+      assert.deepEqual((await admin.send('/api/workspace')).data, { ownerId: adminId, version: 0, projects: [] });
+      assert.equal((await member.send('/api/workspace', 'PUT', { version: 0, projects: [] })).response.status, 400);
+      assert.equal((await member.send('/api/workspace', 'PUT', request)).response.status, 200);
+      const saved = await member.send('/api/workspace');
+      assert.deepEqual(saved.data, { ownerId: memberId, version: 1, projects: [draft] });
       assert.equal((await admin.send('/api/projects/' + project.id)).response.status, 404);
       assert.equal((await member.send('/api/projects/' + project.id)).response.status, 200);
       assert.deepEqual((await admin.send('/api/workspace')).data.projects, []);
-      assert.equal((await member.send('/api/workspace', 'PUT', { version: 0, projects: [] })).response.status, 409);
-      assert.equal((await member.send('/api/workspace', 'PUT', { version: 1, projects: [{ ...project, status: 'made-up' }] })).response.status, 400);
-      assert.equal((await member.send('/api/workspace', 'PUT', { version: 1, projects: [{ ...project, sourceUrl: 'javascript:alert(1)' }] })).response.status, 400);
+      assert.equal((await member.send('/api/workspace', 'PUT', { ownerId: memberId, version: 0, projects: [] })).response.status, 409);
+      assert.equal((await member.send('/api/workspace', 'PUT', { ownerId: memberId, version: 1, projects: [{ ...project, status: 'made-up' }] })).response.status, 400);
+      assert.equal((await member.send('/api/workspace', 'PUT', { ownerId: memberId, version: 1, projects: [{ ...project, sourceUrl: 'javascript:alert(1)' }] })).response.status, 400);
       assert.equal((await member.send('/api/admin/users/' + adminId, 'PATCH', { role: 'user', reason: '권한 위조 시도' })).response.status, 403);
     });
     await t.test('관리자 회원 검색·페이지·비밀정보 제외·자기 보호', async () => {
@@ -98,8 +107,8 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
       assert.equal((await admin.send(path, 'PATCH', { archived: true, reason: '운영 검증을 위한 보관' })).response.status, 200);
       assert.equal((await member.send('/api/workspace')).data.projects.length, 0);
       assert.equal((await member.send('/api/projects/' + project.id)).response.status, 404);
-      assert.equal((await member.send('/api/workspace', 'PUT', { version: 1, projects: [project] })).response.status, 409);
-      assert.equal((await member.send('/api/workspace', 'PUT', { version: 2, projects: [project] })).response.status, 409);
+      assert.equal((await member.send('/api/workspace', 'PUT', { ownerId: memberId, version: 1, projects: [project] })).response.status, 409);
+      assert.equal((await member.send('/api/workspace', 'PUT', { ownerId: memberId, version: 2, projects: [project] })).response.status, 409);
       assert.equal((await admin.send('/api/admin/projects?archived=true')).data.total, 1);
       assert.equal((await admin.send(path, 'PATCH', { archived: false, reason: '운영 검증 후 원상 복원' })).response.status, 200);
       assert.equal((await member.send('/api/workspace')).data.projects.length, 1);
@@ -162,5 +171,10 @@ test('로그인 호출 제한과 운영용 Secure 쿠키', async () => {
       const attempt = await fetch(base + '/api/auth/login', { method: 'POST', headers, body: JSON.stringify({ email: 'unknown@example.com', password }) });
       assert.equal(attempt.status, expected);
     }
+    assert.equal((await fetch(base + '/api/auth/csrf')).status, 200);
+    assert.equal((await fetch(base + '/api/auth/csrf')).status, 429);
+    const existing = await fetch(base + '/api/auth/csrf', { headers: { Cookie: headers.Cookie } });
+    assert.equal(existing.status, 200);
+    assert.equal((await existing.json() as { csrfToken: string }).csrfToken, data.csrfToken);
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); db.close(); }
 });

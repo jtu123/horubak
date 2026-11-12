@@ -18,14 +18,56 @@ function loadProjects(id: string): LoadedProjects {
   }
   catch { return { projects: seedProjects().map(p => normalizeProject(p)!), writeAllowed: false, notice: '브라우저 저장소를 사용할 수 없어요. 변경 내용은 이 창에서만 유지됩니다.' }; }
 }
+
+export function createWorkspaceSaveQueue({ ownerId, projects, version: initialVersion }: ServerWorkspace, save = workspaceApi.save) {
+  let version = initialVersion;
+  let savedSnapshot: string | undefined = JSON.stringify(projects);
+  let tail = Promise.resolve();
+  let pending = 0;
+  let failure: Error | undefined;
+  let closed = false;
+
+  return {
+    needsSave: (next: Project[]) => pending > 0 || JSON.stringify(next) !== savedSnapshot,
+    isBlocked: () => failure !== undefined,
+    retry: () => { failure = undefined; },
+    close: () => { closed = true; },
+    wait: () => tail,
+    enqueue(next: Project[]) {
+      const snapshot = JSON.stringify(next);
+      pending++;
+      const operation = tail.then(async () => {
+        if (closed) return false;
+        if (failure) throw failure;
+        if (snapshot === savedSnapshot) return true;
+        try {
+          const result = await save(next, version, ownerId);
+          if (closed) return false;
+          version = result.version;
+          savedSnapshot = snapshot;
+          return true;
+        } catch (error) {
+          savedSnapshot = undefined;
+          failure = error instanceof Error ? error : new Error('서버에 저장하지 못했어요.');
+          throw failure;
+        }
+      }).finally(() => { pending--; });
+      tail = operation.then(() => {}, () => {});
+      return operation;
+    },
+  };
+}
+
+type SaveQueue = ReturnType<typeof createWorkspaceSaveQueue>;
 interface Workspace {
   user: DemoUser | null; projects: Project[]; theme: 'light' | 'dark'; toasts: ToastMessage[]; storageError: boolean; storageNotice?: string;
   authLoading: boolean; authError: string; serverAuth: boolean;
   syncStatus: 'idle' | 'saving' | 'saved' | 'error' | 'conflict'; syncError: string;
   retrySave: () => void; reloadWorkspace: () => Promise<void>;
+  enterDemo: () => void;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: (options?: { discardUnsaved?: boolean }) => Promise<void>;
   updateProject: (id: string, patch: Partial<Project>) => void;
   addProject: (project: Project, file?: File) => void;
   deleteProject: (id: string) => void;
@@ -59,17 +101,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [videos, setVideos] = useState<Record<string, string>>({});
   const urls = useRef(new Map<string, string>());
   const toastSeq = useRef(0);
-  const identity = useRef(0);
-  const serverVersion = useRef(0);
-  const savedSnapshot = useRef('');
-  const saveBlocked = useRef(false);
-  const saveChain = useRef<Promise<void>>(Promise.resolve());
-  const currentUser = useRef(user); currentUser.current = user;
+  const sessionRevision = useRef(0);
+  const renderSession = sessionRevision.current;
+  const saveQueue = useRef<SaveQueue | null>(null);
+  const signingOut = useRef(false);
+  const reloadingWorkspace = useRef(false);
   const currentProjects = useRef(projects); currentProjects.current = projects;
   const notify: Workspace['notify'] = (title, description, kind = 'success') => setToasts(old => [{ id: ++toastSeq.current, title, description, kind }, ...old].slice(0, 4));
   const disconnectVideos = () => { urls.current.forEach(url => URL.revokeObjectURL(url)); urls.current.clear(); setVideos({}); };
+  const replaceSaveQueue = (next: SaveQueue | null) => {
+    sessionRevision.current++;
+    saveQueue.current?.close();
+    saveQueue.current = next;
+  };
   const switchUser = (next: DemoUser) => {
-    identity.current++; saveBlocked.current = false; setSyncStatus('idle'); setSyncError(''); setAuthError('');
+    replaceSaveQueue(null); setSyncStatus('idle'); setSyncError(''); setAuthError('');
     const loaded = loadProjects(next.id);
     saveAllowed.current = loaded.writeAllowed;
     setStorageError(!loaded.writeAllowed); setStorageNotice(loaded.notice);
@@ -77,53 +123,99 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setProjects(loaded.projects); setUser(next);
     try { localStorage.setItem('moment.session.v1', JSON.stringify(next)); } catch { setStorageError(true); }
   };
-  const adoptServer = (next: DemoUser, workspace: ServerWorkspace) => {
-    const normalized = workspace.projects.map(project => normalizeProject(project));
-    if (normalized.some(project => !project)) throw new Error('서버 프로젝트 형식을 확인하지 못했어요.');
-    identity.current++; saveBlocked.current = false;
-    serverVersion.current = workspace.version; savedSnapshot.current = JSON.stringify(normalized);
-    disconnectVideos(); setProjects(normalized as Project[]); setUser(next); setAuthError('');
-    setStorageError(false); setStorageNotice(undefined); setSyncStatus('saved'); setSyncError('');
+  const setServerSession = (next: DemoUser, workspace?: ServerWorkspace, error = '') => {
+    replaceSaveQueue(workspace ? createWorkspaceSaveQueue(workspace) : null);
+    disconnectVideos(); setProjects(workspace?.projects ?? []); setUser(next); setAuthError(error);
+    setStorageError(false); setStorageNotice(undefined); setSyncStatus(workspace ? 'saved' : 'idle'); setSyncError('');
     try { localStorage.removeItem('moment.session.v1'); } catch { /* Server sessions do not depend on browser storage. */ }
+  };
+  const adoptServer = (next: DemoUser, workspace: ServerWorkspace) => {
+    if (workspace.ownerId !== next.id) throw new ApiError(409, 'WORKSPACE_ACCOUNT_CHANGED', '로그인한 계정이 바뀌었어요. 작업공간을 다시 불러와 주세요.');
+    const projects = workspace.projects.map(project => {
+      const normalized = normalizeProject(project);
+      if (!normalized) throw new Error('서버 프로젝트 형식을 확인하지 못했어요.');
+      return normalized;
+    });
+    setServerSession(next, { ...workspace, projects });
+  };
+  const loadServerSession = async (next: DemoUser, active = () => true) => {
+    const revision = sessionRevision.current;
+    const isCurrent = () => active() && revision === sessionRevision.current && !signingOut.current;
+    try {
+      const workspace = await workspaceApi.load();
+      if (isCurrent()) adoptServer(next, workspace);
+    } catch (error) {
+      if (isCurrent()) {
+        const message = error instanceof Error && error.message ? error.message : '작업공간을 불러오지 못했어요.';
+        setServerSession(next, undefined, message);
+      }
+    }
   };
   useEffect(() => {
     if (!SERVER_AUTH) return;
     let cancelled = false;
     (async () => {
-      try { const result = await authApi.me(); const workspace = await workspaceApi.load(); if (!cancelled) adoptServer(result.user, workspace); }
+      try { const result = await authApi.me(); if (!cancelled) await loadServerSession(result.user, () => !cancelled); }
       catch (error) { if (!cancelled && !(error instanceof ApiError && error.status === 401)) setAuthError(error instanceof Error ? error.message : '서버 연결을 확인해 주세요.'); }
       finally { if (!cancelled) setAuthLoading(false); }
     })();
     return () => { cancelled = true; };
   }, []);
-  const queueSave = (payload: Project[]) => {
-    const generation = identity.current; const snapshot = JSON.stringify(payload);
-    const next = saveChain.current.catch(() => {}).then(async () => {
-      if (generation !== identity.current || snapshot === savedSnapshot.current) return;
-      if (saveBlocked.current) throw new Error('서버 저장 상태를 확인해 주세요.');
-      try {
-        const result = await workspaceApi.save(payload, serverVersion.current);
-        if (generation !== identity.current) return;
-        serverVersion.current = result.version; savedSnapshot.current = snapshot;
-        if (snapshot === JSON.stringify(currentProjects.current)) setSyncStatus('saved');
-        setSyncError('');
-      } catch (error) {
-        if (generation === identity.current) {
-          saveBlocked.current = true;
-          setSyncStatus(error instanceof ApiError && error.status === 409 ? 'conflict' : 'error');
-          setSyncError(error instanceof Error ? error.message : '서버에 저장하지 못했어요.');
-        }
-        throw error;
+  const saveWorkspace = async (queue: SaveQueue, payload: Project[]) => {
+    try {
+      const saved = await queue.enqueue(payload);
+      if (!saved || saveQueue.current !== queue) return;
+      if (!queue.needsSave(currentProjects.current)) setSyncStatus('saved');
+      setSyncError('');
+    } catch (error) {
+      if (saveQueue.current === queue) {
+        setSyncStatus(error instanceof ApiError && error.status === 409 ? 'conflict' : 'error');
+        setSyncError(error instanceof Error ? error.message : '서버에 저장하지 못했어요.');
       }
-    });
-    saveChain.current = next;
-    return next;
+      throw error;
+    }
   };
   const reloadWorkspace = async () => {
     if (!SERVER_AUTH || !user || user.guest) return;
-    await saveChain.current.catch(() => {});
-    const [me, workspace] = await Promise.all([authApi.me(), workspaceApi.load()]);
-    adoptServer(me.user, workspace);
+    if (reloadingWorkspace.current || signingOut.current) throw new Error('작업공간 상태가 바뀌는 중이에요.');
+    const revision = sessionRevision.current;
+    reloadingWorkspace.current = true;
+    try {
+      await saveQueue.current?.wait();
+      const [me, workspace] = await Promise.all([authApi.me(), workspaceApi.load()]);
+      if (revision === sessionRevision.current) adoptServer(me.user, workspace);
+    } finally {
+      reloadingWorkspace.current = false;
+      setSaveAttempt(value => value + 1);
+    }
+  };
+  const logout: Workspace['logout'] = async ({ discardUnsaved = false } = {}) => {
+    if (signingOut.current) throw new Error('로그아웃 중이에요.');
+    if (reloadingWorkspace.current) throw new Error('작업공간을 불러오는 중이에요.');
+    signingOut.current = true;
+    try {
+      if (SERVER_AUTH && user && !user.guest) {
+        const queue = saveQueue.current;
+        if (queue) {
+          if (discardUnsaved) {
+            if (!queue.isBlocked()) throw new Error('저장 상태가 바뀌었어요. 다시 로그아웃해 주세요.');
+            await queue.wait();
+          } else {
+            await saveWorkspace(queue, currentProjects.current);
+            if (queue.needsSave(currentProjects.current)) throw new Error('저장할 변경이 생겼어요. 저장한 뒤 다시 로그아웃해 주세요.');
+          }
+        }
+        await authApi.logout();
+      }
+      replaceSaveQueue(null); disconnectVideos(); setUser(null); setProjects([]);
+      setAuthError(''); setSyncStatus('idle'); setSyncError('');
+      try { localStorage.removeItem('moment.session.v1'); } catch { setStorageError(true); }
+    } catch (error) {
+      setSaveAttempt(value => value + 1);
+      throw error;
+    } finally {
+      signingOut.current = false;
+    }
   };
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -132,9 +224,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
     if (SERVER_AUTH && !user.guest) {
-      if (saveBlocked.current || JSON.stringify(projects) === savedSnapshot.current) return;
+      const queue = saveQueue.current;
+      if (!queue || signingOut.current || reloadingWorkspace.current || queue.isBlocked()) return;
+      if (!queue.needsSave(projects)) { setSyncStatus('saved'); return; }
       setSyncStatus('saving');
-      const timer = window.setTimeout(() => { queueSave(projects).catch(() => {}); }, 500);
+      const timer = window.setTimeout(() => {
+        if (!signingOut.current && !reloadingWorkspace.current && saveQueue.current === queue) void saveWorkspace(queue, projects).catch(() => {});
+      }, 500);
       return () => window.clearTimeout(timer);
     }
     if (!saveAllowed.current) { setStorageError(true); return; }
@@ -142,18 +238,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [projects, user, saveAttempt]);
   useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => {
-      if (SERVER_AUTH && currentUser.current && !currentUser.current.guest && JSON.stringify(currentProjects.current) !== savedSnapshot.current) { event.preventDefault(); event.returnValue = ''; }
+      if (saveQueue.current?.needsSave(currentProjects.current)) { event.preventDefault(); event.returnValue = ''; }
     };
     window.addEventListener('beforeunload', guard); return () => window.removeEventListener('beforeunload', guard);
   }, []);
   const processing = projects.some(p => p.status === 'processing');
   useEffect(() => {
     if (!processing) return;
-    const timer = window.setInterval(() => setProjects(old => old.map(p => {
-      if (p.status !== 'processing') return p;
-      const progress = Math.min(100, Math.floor((Date.now() - (p.startedAt ?? Date.now())) / 160));
-      return { ...p, progress, status: progress === 100 ? 'ready' : 'processing' };
-    })), 400);
+    const timer = window.setInterval(() => {
+      if (signingOut.current) return;
+      setProjects(old => old.map(p => {
+        if (p.status !== 'processing') return p;
+        const progress = Math.min(100, Math.floor((Date.now() - (p.startedAt ?? Date.now())) / 160));
+        return { ...p, progress, status: progress === 100 ? 'ready' : 'processing' };
+      }));
+    }, 400);
     return () => window.clearInterval(timer);
   }, [processing]);
   useEffect(() => { const ownedUrls = urls.current; return () => { ownedUrls.forEach(url => URL.revokeObjectURL(url)); ownedUrls.clear(); }; }, []);
@@ -162,7 +261,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const url = URL.createObjectURL(file); urls.current.set(id, url); setVideos(v => ({ ...v, [id]: url }));
   };
   const login = async (email: string, password: string) => {
-    if (SERVER_AUTH) { const result = await authApi.login(email, password); adoptServer(result.user, await workspaceApi.load()); return; }
+    if (SERVER_AUTH) { const result = await authApi.login(email, password); return loadServerSession(result.user); }
     const normalized = email.trim().toLowerCase();
     if (normalized === 'demo@moment.studio' && password === 'moment2026') { switchUser({ id: 'demo', name: '권준한', email: normalized, guest: false }); return; }
     const account = read<DemoAccount[]>('moment.accounts.v1', []).find(a => a.email === normalized);
@@ -170,7 +269,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     switchUser({ id: account.id, name: account.name, email: account.email, guest: false });
   };
   const signup = async (name: string, email: string, password: string) => {
-    if (SERVER_AUTH) { const result = await authApi.signup(name, email, password); adoptServer(result.user, await workspaceApi.load()); return; }
+    if (SERVER_AUTH) { const result = await authApi.signup(name, email, password); return loadServerSession(result.user); }
     const normalized = email.trim().toLowerCase();
     const accounts = read<DemoAccount[]>('moment.accounts.v1', []);
     if (normalized === 'demo@moment.studio' || accounts.some(a => a.email === normalized)) throw new Error('이미 등록된 데모 이메일이에요. 로그인해 주세요.');
@@ -198,15 +297,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return id;
   };
   const deleteClip: Workspace['deleteClip'] = (projectId, clipId) => setProjects(old => old.map(p => p.id === projectId ? normalizeProject({ ...p, clips: getProjectClips(p).filter(clip => clip.id !== clipId), updatedAt: new Date().toISOString() })! : p));
+  const addProject: Workspace['addProject'] = (project, file) => {
+    // Reading video metadata can finish after the originating session has changed.
+    if (signingOut.current || renderSession !== sessionRevision.current) throw new Error('로그인 상태를 다시 확인해 주세요.');
+    setProjects(old => old.some(p => p.id === project.id) ? old : [normalizeProject(project)!, ...old]);
+    if (file) attachVideo(project.id, file);
+  };
   return <Context.Provider value={{ user, projects, theme, toasts, storageError, storageNotice, authLoading, authError, serverAuth: SERVER_AUTH, syncStatus, syncError,
-    retrySave: () => { saveBlocked.current = false; setSaveAttempt(value => value + 1); }, reloadWorkspace,
-    login, signup, updateProject, videos, attachVideo, createClip, selectClip, updateClip, renameClip, duplicateClip, deleteClip,
-    logout: async () => {
-      if (SERVER_AUTH && user && !user.guest) { await queueSave(currentProjects.current); await authApi.logout(); }
-      identity.current++; disconnectVideos(); setUser(null); setProjects([]); setSyncStatus('idle');
-      try { localStorage.removeItem('moment.session.v1'); } catch { setStorageError(true); }
-    },
-    addProject: (project, file) => { setProjects(old => old.some(p => p.id === project.id) ? old : [normalizeProject(project)!, ...old]); if (file) attachVideo(project.id, file); },
+    retrySave: () => { if (!signingOut.current) { saveQueue.current?.retry(); setSaveAttempt(value => value + 1); } }, reloadWorkspace,
+    enterDemo: () => switchUser({ id: 'guest', name: '크리에이터', email: 'guest@moment.local', guest: true }),
+    login, signup, logout, updateProject, videos, attachVideo, createClip, selectClip, updateClip, renameClip, duplicateClip, deleteClip,
+    addProject,
     deleteProject: id => { const url = urls.current.get(id); if (url) URL.revokeObjectURL(url); urls.current.delete(id); setVideos(v => { const next = { ...v }; delete next[id]; return next; }); setProjects(old => old.filter(p => p.id !== id)); },
     toggleTheme: () => setTheme(t => t === 'light' ? 'dark' : 'light'), notify, dismissToast: id => setToasts(old => old.filter(t => t.id !== id)),
   }}>{children}</Context.Provider>;

@@ -10,16 +10,24 @@ import '../styles/admin.css';
 
 const SECTIONS = [{ id: 'overview', label: '운영 현황', Icon: ShieldCheck }, { id: 'users', label: '회원', Icon: Users }, { id: 'projects', label: '프로젝트', Icon: FolderOpen }, { id: 'activity', label: '작업 이력', Icon: History }];
 function date(value: string | null) { return value ? new Intl.DateTimeFormat('ko-KR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : '—'; }
-function useResource<T>(path: string, revision: number) {
-  const [state, setState] = useState<{ data?: T; error?: string; busy: boolean }>({ busy: true });
+type Resource<T> = { data?: T; error?: string; busy: boolean };
+function useResource<T>(path: string, revision: number): Resource<T> {
+  const key = `${revision}:${path}`;
+  const [state, setState] = useState<Resource<T> & { key: string }>({ key, busy: true });
   useEffect(() => {
-    const controller = new AbortController(); setState({ busy: true });
-    request<T>(path, { signal: controller.signal }).then(data => setState({ data, busy: false })).catch(error => {
-      if (!controller.signal.aborted) setState({ busy: false, error: error instanceof ApiError && [401, 403].includes(error.status) ? '권한 또는 로그인 상태가 변경됐습니다. 다시 로그인해 주세요.' : error.message });
+    const controller = new AbortController();
+    setState({ key, busy: true });
+    request<T>(path, { signal: controller.signal }).then(data => {
+      if (!controller.signal.aborted) setState({ key, data, busy: false });
+    }).catch(error => {
+      if (controller.signal.aborted) return;
+      const message = error instanceof ApiError && [401, 403].includes(error.status)
+        ? '권한 또는 로그인 상태가 변경됐습니다. 다시 로그인해 주세요.' : error.message;
+      setState({ key, error: message, busy: false });
     });
     return () => controller.abort();
-  }, [path, revision]);
-  return state;
+  }, [key, path]);
+  return state.key === key ? state : { busy: true };
 }
 type Action = { kind: 'role'; member: Member } | { kind: 'status'; member: Member } | { kind: 'archive'; project: AdminProject };
 function ChangeDialog({ action, onClose, onChanged }: { action: Action; onClose: () => void; onChanged: () => void }) {

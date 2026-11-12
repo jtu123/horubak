@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSrt, formatTime, rangeError, validateSourceUrl, validateVideo } from './lib';
+import { buildSrt, formatTime, MAX_SOURCE_URL_LENGTH, rangeError, validateSourceUrl, validateVideo } from './lib';
 import { CANDIDATES, SCENE_EVIDENCE, makeTranscript } from './data';
 import type { Genre } from './types';
 
@@ -13,6 +13,11 @@ describe('input boundaries', () => {
   it('accepts HTTPS but does not treat arbitrary strings or embedded credentials as media URLs', () => {
     expect(validateSourceUrl('https://example.com/video.mp4')).toBeUndefined();
     for (const url of ['javascript:alert(1)', 'http://example.com', 'not a url', 'https://user:secret@example.com/video']) expect(validateSourceUrl(url)).toBeTruthy();
+  });
+  it('validates the same URL length the project form accepts', () => {
+    const url = 'https://example.com/video.mp4?key='.padEnd(MAX_SOURCE_URL_LENGTH, 'x');
+    expect(validateSourceUrl(url)).toBeUndefined();
+    expect(validateSourceUrl(url + 'x')).toMatch(/4,096/);
   });
   it('enforces original-video bounds and the 30–60 second output range', () => {
     expect(rangeError(10, 40, 100)).toBeUndefined();

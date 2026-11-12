@@ -65,7 +65,7 @@ export function Editor() {
     const handleKey = (event: KeyboardEvent) => {
       const target = event.target;
       if (event.defaultPrevented || event.isComposing || event.altKey || !(event.ctrlKey || event.metaKey)
-        || document.querySelector('dialog[open]')
+        || document.querySelector('dialog[open], #main-content[inert]')
         || target instanceof Element && target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])')) return;
       const key = event.key.toLowerCase();
       const direction = key === 'z' ? event.shiftKey ? 'redo' : 'undo' : key === 'y' && event.ctrlKey && !event.shiftKey ? 'redo' : null;

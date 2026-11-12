@@ -71,8 +71,8 @@ pnpm dev
 | POST /api/auth/login | `{ email, password }` → `{ user, csrfToken }`, 세션·CSRF 교체 |
 | GET /api/auth/me | 서버에서 확인한 `{ user, csrfToken }` |
 | POST /api/auth/logout | 서버 세션 폐기·쿠키 삭제 |
-| GET /api/workspace | 소유자의 `{ projects, version }`, 보관 프로젝트 제외 |
-| PUT /api/workspace | `{ projects, version }` 저장 → `{ version }`, 충돌 시 409 |
+| GET /api/workspace | 현재 세션의 `{ ownerId, projects, version }`, 보관 프로젝트 제외 |
+| PUT /api/workspace | `{ ownerId, projects, version }` 저장 → `{ version }`, 계정 또는 버전이 바뀌면 409 |
 | GET /api/projects/:id | 소유자만 프로젝트 조회, 다른 소유자의 ID는 404 |
 | GET /api/admin/overview | 실제 DB의 회원·프로젝트 수와 연결 상태 |
 | GET /api/admin/users | q·status·page·size 검색, 비밀번호/세션 정보 제외 |
@@ -90,6 +90,8 @@ pnpm dev
 임시 프런트는 `VITE_AUTH_MODE=server`와 `VITE_AUTH_TEST=true`로 빌드해 `horubak` Pages 프로젝트에 직접 업로드한다. Git에 푸시 없이 적용한 테스트 배포다. 필요 시 Pages 배포 내역에서 이전 배포 `54aac94d-2795-43be-b99c-e8a5d528cf19`로 되돌릴 수 있다. 테스트 종료 후에는 팀 서버에 맞춰 `/api/*` 연결을 교체한다.
 
 임시 Worker를 다시 배포할 때는 `backend`에서 `wrangler deploy --config wrangler.auth-test.toml`로 설정을 선택한다. 임시 Pages 빌드를 직접 배포하는 별도 작업 폴더에서는 `frontend/wrangler.auth-test.toml`을 `wrangler.toml`로 복사해 사용한다. 기본 Git 빌드가 테스트 Worker 바인딩을 선택하지 않도록 두 설정은 테스트용 이름으로 보관한다.
+
+작업공간 응답과 저장 요청의 `ownerId` 계약은 프런트와 Worker에 함께 적용한다. 이전 화면이 열린 탭은 배포 후 새로고침해야 새 저장 계약을 사용한다.
 
 기존 chatgpt.site 배포는 정적 프론트엔드다. 실제 회원/관리자 기능을 외부에 제공하려면 별도의 **실행 중인 Node 서버와 영속 디스크**가 필요하다. 해당 정적 배포에 브라우저 저장소를 사용한 가짜 관리자 기능을 추가하지 않는다.
 

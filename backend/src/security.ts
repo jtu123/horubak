@@ -59,19 +59,25 @@ export function createSecurity(db: Database, options: SecurityOptions) {
     if (!current || !csrf || !/^[a-f0-9]{64}$/.test(csrf) || !timingSafeEqual(Buffer.from(csrf), Buffer.from(current.csrf))) throw new HttpError(403, 'CSRF_REJECTED', '페이지를 새로고침한 뒤 다시 시도해 주세요.');
     next();
   }
-  function rate(req: Request, email: string) {
+  function limitRates(buckets: ReadonlyArray<readonly [string, number]>) {
     const now = Date.now(); db.prepare('DELETE FROM rate_limits WHERE reset_at<=?').run(now);
-    for (const [bucket, limit] of [[`ip:${req.ip}`, options.rateLimit ?? 30], [`email:${email}`, options.rateLimit ?? 10]] as const) {
+    for (const [bucket, limit] of buckets) {
       const key = hashToken(bucket);
       const row = db.prepare('SELECT attempts FROM rate_limits WHERE key=?').get(key) as { attempts: number } | undefined;
       if (row && row.attempts >= limit) throw new HttpError(429, 'RATE_LIMITED', '시도가 너무 많습니다. 15분 후 다시 시도해 주세요.');
       db.prepare('INSERT INTO rate_limits VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET attempts=attempts+1').run(key, now + 15 * 60 * 1000);
     }
   }
+  function rate(req: Request, email: string) {
+    limitRates([[`ip:${req.ip}`, options.rateLimit ?? 30], [`email:${email}`, options.rateLimit ?? 10]]);
+  }
+  function rateAnonymousSession(req: Request) {
+    limitRates([[`anonymous-session:${req.ip}`, options.rateLimit ?? 60]]);
+  }
   function logout(req: Request, res: Response) {
     const current = session(req);
     if (current) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(current.token_hash);
     res.clearCookie(cookieName, { httpOnly: true, secure: options.secureCookies, sameSite: 'lax', path: '/' });
   }
-  return { session, issue, user, admin, mutation, rate, logout };
+  return { session, issue, user, admin, mutation, rate, rateAnonymousSession, logout };
 }

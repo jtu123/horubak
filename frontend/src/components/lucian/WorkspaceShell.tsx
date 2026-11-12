@@ -25,7 +25,7 @@ export function WorkspaceShell() {
   const serverUser = serverAuth && !user?.guest;
   const administrator = serverUser && user?.role === 'admin';
   const [signingOut, setSigningOut] = useState(false);
-  const [recovery, setRecovery] = useState(false);
+  const [recovery, setRecovery] = useState<'reload' | 'discard' | null>(null);
   const [reloading, setReloading] = useState(false);
   const [dismissedNotice, setDismissedNotice] = useState('');
   const [help, setHelp] = useState(false);
@@ -38,10 +38,10 @@ export function WorkspaceShell() {
   const accountButton = useRef<HTMLButtonElement>(null);
   const activeItem = [...PRIMARY, ...MORE, { label: '설정', path: '/settings' }].find(item => location.pathname.startsWith(item.path));
   const pageTitle = location.pathname === '/admin' ? '관리자' : location.pathname.endsWith('/new') ? '새 영상' : location.pathname.includes('/processing') ? '처리 현황' : location.pathname.includes('/editor') ? '클립 편집' : location.pathname.includes('/results') ? '편집 결과' : activeItem?.label ?? '프로젝트';
-  const signOut = async () => {
+  const signOut = async (discardUnsaved = false) => {
     if (signingOut) return;
     setSigningOut(true);
-    try { await logout(); navigate('/login'); }
+    try { await logout({ discardUnsaved }); navigate('/login'); }
     catch (error) { notify('로그아웃을 완료하지 못했어요', error instanceof Error ? error.message : '서버 연결과 저장 상태를 확인해 주세요.', 'error'); }
     finally { setSigningOut(false); }
   };
@@ -94,11 +94,19 @@ export function WorkspaceShell() {
         </div>
       </header>
       {storageError && <div className="storage-error" role="alert">브라우저 저장 공간을 사용할 수 없어요. 변경 내용은 이 창에서만 유지됩니다.</div>}
-      {serverUser && syncError && <div className="workspace-sync" role="alert"><span>{syncError}</span>{syncStatus !== 'conflict' && <button className="btn secondary" onClick={retrySave}>저장 재시도</button>}<button className="btn secondary" onClick={() => setRecovery(true)}>서버 내용 불러오기</button><Link className="text-link" to="/settings">편집 정보 백업</Link></div>}
+      {serverUser && syncError && <div className="workspace-sync" role="alert"><span>{syncError}</span>{syncStatus !== 'conflict' && <button className="btn secondary" disabled={signingOut} onClick={retrySave}>저장 재시도</button>}<button className="btn secondary" disabled={signingOut} onClick={() => setRecovery('reload')}>서버 내용 불러오기</button><Link className="text-link" to="/settings">편집 정보 백업</Link><button className="btn secondary" disabled={signingOut || syncStatus === 'saving'} onClick={() => setRecovery('discard')}>저장하지 않고 로그아웃</button></div>}
       {storageNotice && storageNotice !== dismissedNotice && <div className="storage-recovery-note" role="status"><Info size={15} /><span>{storageNotice}</span><button className="icon-button" aria-label="저장 안내 닫기" onClick={() => setDismissedNotice(storageNotice)}><X size={15} /></button></div>}
-      <main id="main-content" className="page-content" tabIndex={-1}><Outlet /></main>
+      <main id="main-content" className="page-content" tabIndex={-1} inert={signingOut}><Outlet /></main>
     </div>
     {help && <Modal title="원본에서 클립까지" onClose={() => setHelp(false)}><div className="guide-steps">{['분야 제한 없이 영상 등록', '영상·소리·발화 근거로 후보 확인', '여러 클립으로 저장하고 각각 편집'].map((text, index) => <div key={text}><span>{index + 1}</span>{text}</div>)}</div><div className="notice"><CircleHelp size={16} /><span>{serverUser ? '계정과 편집 정보는 서버에 저장됩니다. 원본 영상 업로드·AI 분석·영상 출력은 연결 전입니다.' : '샘플과 로컬 원본으로 편집 흐름을 확인하는 데모입니다. 샘플 작업은 이 브라우저에 저장됩니다.'}</span></div><button className="btn primary full" style={{ marginTop: 20 }} onClick={() => setHelp(false)}>확인</button></Modal>}
-    {recovery && <Modal title="서버 내용 불러오기" onClose={() => { if (!reloading) setRecovery(false); }}><div className="admin-change"><p>아직 저장되지 않은 변경은 서버 내용으로 바뀝니다. 필요한 편집 정보는 설정에서 먼저 백업해 주세요.</p><button className="btn primary" disabled={reloading} onClick={async () => { setReloading(true); try { await reloadWorkspace(); setRecovery(false); notify('서버 내용을 불러왔어요'); } catch (error) { notify('불러오지 못했어요', error instanceof Error ? error.message : '', 'error'); } finally { setReloading(false); } }}>{reloading ? '불러오는 중…' : '서버 내용으로 교체'}</button></div></Modal>}
+    {recovery === 'reload' && <Modal title="서버 내용 불러오기" onClose={() => { if (!reloading) setRecovery(null); }}><div className="admin-change"><p>아직 저장되지 않은 변경은 서버 내용으로 바뀝니다. 필요한 편집 정보는 설정에서 먼저 백업해 주세요.</p><button className="btn primary" disabled={reloading} onClick={async () => { setReloading(true); try { await reloadWorkspace(); setRecovery(null); notify('서버 내용을 불러왔어요'); } catch (error) { notify('불러오지 못했어요', error instanceof Error ? error.message : '', 'error'); } finally { setReloading(false); } }}>{reloading ? '불러오는 중…' : '서버 내용으로 교체'}</button></div></Modal>}
+    {recovery === 'discard' && <Modal title="저장하지 않고 로그아웃할까요?" onClose={() => { if (!signingOut) setRecovery(null); }}>
+      <p>서버에 저장하지 못한 변경 내용은 사라집니다. 필요한 편집 정보는 먼저 백업해 주세요.</p>
+      <div className="modal-actions">
+        {!signingOut && <Link className="btn secondary" to="/settings" onClick={() => setRecovery(null)}>편집 정보 백업</Link>}
+        <button className="btn secondary" disabled={signingOut} onClick={() => setRecovery(null)}>취소</button>
+        <button className="btn danger" disabled={signingOut} onClick={() => { void signOut(true); }}>{signingOut ? '로그아웃 중…' : '저장하지 않고 로그아웃'}</button>
+      </div>
+    </Modal>}
   </div>;
 }

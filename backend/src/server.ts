@@ -27,7 +27,9 @@ export async function createApp(db: Database, options: ServerOptions) {
   app.use('/api', express.json({ limit: '4mb' }), security.mutation);
   app.get('/api/health', (_req, res) => res.json({ success: true, database: 'connected' }));
   app.get('/api/auth/csrf', (req, res) => {
-    const csrfToken = security.session(req)?.csrf ?? security.issue(req, res, null);
+    const session = security.session(req);
+    if (!session) security.rateAnonymousSession(req);
+    const csrfToken = session?.csrf ?? security.issue(req, res, null);
     res.json({ csrfToken, headerName: 'X-CSRF-Token' });
   });
   app.get('/api/auth/me', (req, res) => res.json({ user: publicUser(security.user(req)), csrfToken: security.session(req)!.csrf }));
@@ -62,11 +64,12 @@ export async function createApp(db: Database, options: ServerOptions) {
   app.get('/api/workspace', (req, res) => {
     const owner = security.user(req);
     const rows = db.prepare("SELECT document FROM projects WHERE owner_id=? AND archived_at IS NULL ORDER BY json_extract(document,'$.updatedAt') DESC").all(owner.id) as { document: string }[];
-    res.json({ version: owner.workspace_version, projects: rows.map(row => JSON.parse(row.document)) });
+    res.json({ ownerId: owner.id, version: owner.workspace_version, projects: rows.map(row => JSON.parse(row.document)) });
   });
   app.put('/api/workspace', (req, res) => {
     const owner = security.user(req); const body = validate.object(req.body);
-    if (!Number.isSafeInteger(body.version) || !Array.isArray(body.projects) || body.projects.length > 100) throw new HttpError(400, 'INVALID_WORKSPACE', '저장 형식을 확인해 주세요.');
+    if (typeof body.ownerId !== 'string' || !Number.isSafeInteger(body.version) || !Array.isArray(body.projects) || body.projects.length > 100) throw new HttpError(400, 'INVALID_WORKSPACE', '저장 형식을 확인해 주세요.');
+    if (body.ownerId !== owner.id) throw new HttpError(409, 'WORKSPACE_ACCOUNT_CHANGED', '다른 계정으로 로그인했어요. 편집 정보를 백업하고 서버 내용을 다시 불러와 주세요.');
     const documents = body.projects.map(validate.project); const ids = documents.map(doc => doc.id as string);
     if (new Set(ids).size !== ids.length) throw new HttpError(400, 'DUPLICATE_PROJECT', '중복된 프로젝트가 있습니다.');
     const version = transaction(db, () => {

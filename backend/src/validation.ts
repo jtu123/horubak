@@ -1,5 +1,8 @@
 import { HttpError } from './security.js';
 
+const MAX_SOURCE_URL_LENGTH = 4096;
+const MAX_VIDEO_SECONDS = 7 * 86400;
+
 export function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new HttpError(400, 'INVALID_INPUT', '입력 형식을 확인해 주세요.');
   return value as Record<string, unknown>;
@@ -22,17 +25,20 @@ function choice(value: unknown, options: string[]) { return typeof value === 'st
 export function project(value: unknown) {
   const doc = object(value);
   if (typeof doc.id !== 'string' || !/^[\w-]{1,100}$/.test(doc.id)) throw new HttpError(400, 'INVALID_PROJECT', '프로젝트 ID를 확인해 주세요.');
-  text(doc.title, 200, '프로젝트 제목'); text(doc.sourceName, 500, '원본 이름');
-  if (!choice(doc.status, ['ready', 'processing', 'completed', 'cancelled', 'failed']) || !choice(doc.genre, ['lecture', 'speech', 'podcast', 'general']) || !choice(doc.source, ['sample', 'file', 'url']) || !number(doc.duration, 7 * 86400) || !number(doc.progress, 100) || typeof doc.favorite !== 'boolean') throw new HttpError(400, 'INVALID_PROJECT', '프로젝트 형식을 확인해 주세요.');
+  text(doc.title, 200, '프로젝트 제목'); text(doc.sourceName, doc.source === 'url' ? MAX_SOURCE_URL_LENGTH : 500, '원본 이름');
+  if (!choice(doc.status, ['ready', 'processing', 'completed', 'cancelled', 'failed']) || !choice(doc.genre, ['lecture', 'speech', 'podcast', 'general']) || !choice(doc.source, ['sample', 'file', 'url']) || !number(doc.duration, MAX_VIDEO_SECONDS) || !number(doc.progress, 100) || typeof doc.favorite !== 'boolean') throw new HttpError(400, 'INVALID_PROJECT', '프로젝트 형식을 확인해 주세요.');
   for (const date of [doc.createdAt, doc.updatedAt]) if (typeof date !== 'string' || date.length > 35 || !Number.isFinite(Date.parse(date))) throw new HttpError(400, 'INVALID_PROJECT', '프로젝트 날짜를 확인해 주세요.');
   if (doc.sourceUrl !== undefined) {
     let address: URL;
-    try { address = new URL(text(doc.sourceUrl, 2048, '원본 URL')); } catch { throw new HttpError(400, 'INVALID_PROJECT', '원본 URL을 확인해 주세요.'); }
+    try { address = new URL(text(doc.sourceUrl, MAX_SOURCE_URL_LENGTH, '원본 URL')); } catch { throw new HttpError(400, 'INVALID_PROJECT', '원본 URL을 확인해 주세요.'); }
     if (!['https:', 'http:'].includes(address.protocol) || address.username || address.password) throw new HttpError(400, 'INVALID_PROJECT', '원본 URL을 확인해 주세요.');
   }
   function edit(value: unknown) {
     const item = object(value);
-    if (!number(item.start, doc.duration as number) || !number(item.end, doc.duration as number) || (item.end as number) < (item.start as number)) throw new HttpError(400, 'INVALID_PROJECT', '편집 구간을 확인해 주세요.');
+    // Draft edits can temporarily fall outside the source range while the editor inputs change.
+    for (const time of [item.start, item.end]) {
+      if (typeof time !== 'number' || !Number.isFinite(time) || Math.abs(time) > MAX_VIDEO_SECONDS) throw new HttpError(400, 'INVALID_PROJECT', '편집 구간을 확인해 주세요.');
+    }
     text(item.subtitle, 10000, '자막', 0);
   }
   if (doc.edit) edit(doc.edit);

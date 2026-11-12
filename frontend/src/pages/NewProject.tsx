@@ -7,7 +7,7 @@ import { PillTabs } from '../components/lucian/PillTabs';
 import { ProductionStory } from '../components/stageshow/ProductionStory';
 import { useWorkspace } from '../store';
 import { createSportsSample, SPORTS_SAMPLES } from '../sports-samples';
-import { formatTime, validateSourceUrl, validateVideo } from '../lib';
+import { formatTime, MAX_SOURCE_URL_LENGTH, validateSourceUrl, validateVideo } from '../lib';
 import type { ContentSignal, Project } from '../types';
 
 const SIGNALS: Array<{ key: ContentSignal; label: string; Icon: typeof Image }> = [
@@ -95,7 +95,7 @@ export function NewProject() {
       <form className="registration-card" onSubmit={submit}>
         <section className="form-section"><div className="form-section-title"><span>01</span><h2>원본 영상</h2></div>
           <PillTabs label="영상 등록 방식" value={method} onChange={chooseMethod} options={[{ value: 'file', label: '파일 업로드' }, { value: 'url', label: '영상 URL' }, { value: 'sample', label: '샘플' }]} />
-          {method === 'file' ? <><UploadZone file={file} onFile={selectFile} onRemove={() => setFile(undefined)} /><p className="form-hint"><Info size={13} />파일은 서버 전송 없이 이 창에서 미리 봅니다.</p></> : method === 'url' ? <div className="url-entry"><label className="field-label" htmlFor="source-url">영상 주소</label><div className="input-with-icon"><Link2 size={17} /><input id="source-url" type="url" placeholder="https://..." maxLength={4096} value={url} onChange={event => { setUrl(event.target.value); setError(''); }} /></div><p className="form-hint">주소만 저장합니다. 원본 가져오기는 연결 전입니다.</p></div> : <div className="sports-sample-field">
+          {method === 'file' ? <><UploadZone file={file} onFile={selectFile} onRemove={() => setFile(undefined)} /><p className="form-hint"><Info size={13} />파일은 서버 전송 없이 이 창에서 미리 봅니다.</p></> : method === 'url' ? <div className="url-entry"><label className="field-label" htmlFor="source-url">영상 주소</label><div className="input-with-icon"><Link2 size={17} /><input id="source-url" type="url" placeholder="https://..." maxLength={MAX_SOURCE_URL_LENGTH} value={url} onChange={event => { setUrl(event.target.value); setError(''); }} /></div><p className="form-hint">주소만 저장합니다. 원본 가져오기는 연결 전입니다.</p></div> : <div className="sports-sample-field">
             <img src={sampleMatch.thumbnail} alt="" />
             <div><label className="field-label" htmlFor="sample-match">경기 선택</label>
               <select id="sample-match" className="text-input" value={sampleMatch.id} onChange={event => {

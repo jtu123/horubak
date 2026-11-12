@@ -34,7 +34,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   if (typeof body.csrfToken === 'string') csrf = body.csrfToken;
   return body as T;
 }
-export interface ServerWorkspace { projects: Project[]; version: number }
+export interface ServerWorkspace { ownerId: string; projects: Project[]; version: number }
 export type SocialProvider = 'naver' | 'google' | 'apple';
 export const authApi = {
   me: () => request<{ user: DemoUser }>('/api/auth/me'),
@@ -45,7 +45,7 @@ export const authApi = {
 };
 export const workspaceApi = {
   load: () => request<ServerWorkspace>('/api/workspace'),
-  save: (projects: Project[], version: number) => request<{ version: number }>('/api/workspace', { method: 'PUT', body: JSON.stringify({ projects, version }) }),
+  save: (projects: Project[], version: number, ownerId: string) => request<{ version: number }>('/api/workspace', { method: 'PUT', body: JSON.stringify({ projects, version, ownerId }) }),
 };
 export interface AdminOverview { users: number; activeUsers: number; admins: number; projects: number; archivedProjects: number; database: string; analysis: string; rendering: string }
 export interface Member { id: string; name: string; email: string; role: 'user' | 'admin'; status: 'active' | 'suspended'; createdAt: string; lastLoginAt: string | null; projectCount: number }

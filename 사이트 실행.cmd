@@ -15,6 +15,7 @@ echo 사이트에 필요한 패키지를 설치합니다...
 "%MOMENT_NODE%" "%MOMENT_PNPM%" install --store-dir "%~dp0.cache\pnpm-store"
 if errorlevel 1 goto failed
 :start_site
+set "VITE_AUTH_MODE=demo"
 echo.
 echo 호루박 사이트: http://127.0.0.1:5173/
 echo 브라우저에서 주소를 열고 '샘플로 시작'를 누르세요.
