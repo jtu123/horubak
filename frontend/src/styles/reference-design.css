@@ -66,17 +66,17 @@ h1{font-size:36px;line-height:1.17;font-weight:800;letter-spacing:-.045em}h2{fon
 .u070-t.side{translate:calc(80px * var(--dir,1)) 0}
 
 /* Quiet centered login: intentional whitespace, clear fields and a single primary action. */
-.login-page{background:linear-gradient(180deg,var(--page) 0 74%,var(--ink-panel) 74%)}
+.login-page{background:var(--page)}
 .login-header{height:74px;padding:20px 36px;border-bottom:1px solid var(--border)}
 .login-body{padding:34px 32px 28px}.login-form-area{width:448px;max-width:100%;padding:13px;border:1px solid var(--border);border-radius:22px;background:var(--card);box-shadow:var(--surface-shadow)}
 .login-card{padding:29px 29px 24px;border:0;border-radius:13px;background:var(--soft);box-shadow:none}
-.login-card h1{font-size:42px;line-height:1.1;font-weight:800;letter-spacing:-.05em;margin:0 0 25px}
+.login-card h1{font-family:"Malgun Gothic","Apple SD Gothic Neo",var(--font-ui);font-size:42px;line-height:1.1;font-weight:800;letter-spacing:0;margin:0 0 25px}
 .login-card .field-label{margin-top:20px;font-size:12px;font-weight:650}.login-card .text-input{min-height:46px;background:var(--card);border-color:var(--input-border);font-size:13px;border-radius:10px}
 .password-field .icon-button{top:6px;right:6px}.login-card .btn{min-height:44px;margin-top:27px;font-size:13px}
 .login-switch{font-size:12px;margin-top:21px}.login-divider{font-size:11px;gap:14px;margin:24px 0 18px}
 .demo-enter{min-height:43px;border-radius:99px;font-size:12px;background:var(--card);transition:background-color 140ms ease,transform 140ms var(--ease-out)}
 .demo-enter:active{transform:scale(.98)}
-.login-disclaimer{font-size:11px;line-height:19px;padding:0 8px;margin:14px 0 6px}.login-footer{font-size:11px;padding:20px;color:var(--ink-panel-muted)}
+.login-disclaimer{font-size:11px;line-height:19px;padding:0 8px;margin:14px 0 6px}.login-footer{font-size:11px;padding:20px;color:var(--muted)}
 .signup-form .signup-ack{font-size:11px;line-height:19px}.signup-errors{border-radius:10px;font-size:11px;line-height:19px}
 
 /* Registration and the static Stageshow illustration have separate design responsibilities. */
