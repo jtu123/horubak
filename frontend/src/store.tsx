@@ -104,8 +104,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const sessionRevision = useRef(0);
   const renderSession = sessionRevision.current;
   const saveQueue = useRef<SaveQueue | null>(null);
-  const signingOut = useRef(false);
-  const reloadingWorkspace = useRef(false);
+  const sessionOperation = useRef<'logout' | 'reload' | null>(null);
   const currentProjects = useRef(projects); currentProjects.current = projects;
   const notify: Workspace['notify'] = (title, description, kind = 'success') => setToasts(old => [{ id: ++toastSeq.current, title, description, kind }, ...old].slice(0, 4));
   const disconnectVideos = () => { urls.current.forEach(url => URL.revokeObjectURL(url)); urls.current.clear(); setVideos({}); };
@@ -140,7 +139,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   };
   const loadServerSession = async (next: DemoUser, active = () => true) => {
     const revision = sessionRevision.current;
-    const isCurrent = () => active() && revision === sessionRevision.current && !signingOut.current;
+    const isCurrent = () => active() && revision === sessionRevision.current && sessionOperation.current !== 'logout';
     try {
       const workspace = await workspaceApi.load();
       if (isCurrent()) adoptServer(next, workspace);
@@ -177,22 +176,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   };
   const reloadWorkspace = async () => {
     if (!SERVER_AUTH || !user || user.guest) return;
-    if (reloadingWorkspace.current || signingOut.current) throw new Error('작업공간 상태가 바뀌는 중이에요.');
+    if (sessionOperation.current) throw new Error('작업공간 상태가 바뀌는 중이에요.');
     const revision = sessionRevision.current;
-    reloadingWorkspace.current = true;
+    sessionOperation.current = 'reload';
     try {
       await saveQueue.current?.wait();
       const [me, workspace] = await Promise.all([authApi.me(), workspaceApi.load()]);
       if (revision === sessionRevision.current) adoptServer(me.user, workspace);
     } finally {
-      reloadingWorkspace.current = false;
+      sessionOperation.current = null;
       setSaveAttempt(value => value + 1);
     }
   };
   const logout: Workspace['logout'] = async ({ discardUnsaved = false } = {}) => {
-    if (signingOut.current) throw new Error('로그아웃 중이에요.');
-    if (reloadingWorkspace.current) throw new Error('작업공간을 불러오는 중이에요.');
-    signingOut.current = true;
+    if (sessionOperation.current === 'logout') throw new Error('로그아웃 중이에요.');
+    if (sessionOperation.current === 'reload') throw new Error('작업공간을 불러오는 중이에요.');
+    sessionOperation.current = 'logout';
     try {
       if (SERVER_AUTH && user && !user.guest) {
         const queue = saveQueue.current;
@@ -214,7 +213,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setSaveAttempt(value => value + 1);
       throw error;
     } finally {
-      signingOut.current = false;
+      sessionOperation.current = null;
     }
   };
   useLayoutEffect(() => {
@@ -225,11 +224,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     if (SERVER_AUTH && !user.guest) {
       const queue = saveQueue.current;
-      if (!queue || signingOut.current || reloadingWorkspace.current || queue.isBlocked()) return;
+      if (!queue || sessionOperation.current || queue.isBlocked()) return;
       if (!queue.needsSave(projects)) { setSyncStatus('saved'); return; }
       setSyncStatus('saving');
       const timer = window.setTimeout(() => {
-        if (!signingOut.current && !reloadingWorkspace.current && saveQueue.current === queue) void saveWorkspace(queue, projects).catch(() => {});
+        if (!sessionOperation.current && saveQueue.current === queue) void saveWorkspace(queue, projects).catch(() => {});
       }, 500);
       return () => window.clearTimeout(timer);
     }
@@ -246,7 +245,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!processing) return;
     const timer = window.setInterval(() => {
-      if (signingOut.current) return;
+      if (sessionOperation.current === 'logout') return;
       setProjects(old => old.map(p => {
         if (p.status !== 'processing') return p;
         const progress = Math.min(100, Math.floor((Date.now() - (p.startedAt ?? Date.now())) / 160));
@@ -299,12 +298,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const deleteClip: Workspace['deleteClip'] = (projectId, clipId) => setProjects(old => old.map(p => p.id === projectId ? normalizeProject({ ...p, clips: getProjectClips(p).filter(clip => clip.id !== clipId), updatedAt: new Date().toISOString() })! : p));
   const addProject: Workspace['addProject'] = (project, file) => {
     // Reading video metadata can finish after the originating session has changed.
-    if (signingOut.current || renderSession !== sessionRevision.current) throw new Error('로그인 상태를 다시 확인해 주세요.');
+    if (sessionOperation.current === 'logout' || renderSession !== sessionRevision.current) throw new Error('로그인 상태를 다시 확인해 주세요.');
     setProjects(old => old.some(p => p.id === project.id) ? old : [normalizeProject(project)!, ...old]);
     if (file) attachVideo(project.id, file);
   };
   return <Context.Provider value={{ user, projects, theme, toasts, storageError, storageNotice, authLoading, authError, serverAuth: SERVER_AUTH, syncStatus, syncError,
-    retrySave: () => { if (!signingOut.current) { saveQueue.current?.retry(); setSaveAttempt(value => value + 1); } }, reloadWorkspace,
+    retrySave: () => { if (sessionOperation.current !== 'logout') { saveQueue.current?.retry(); setSaveAttempt(value => value + 1); } }, reloadWorkspace,
     enterDemo: () => switchUser({ id: 'guest', name: '크리에이터', email: 'guest@moment.local', guest: true }),
     login, signup, logout, updateProject, videos, attachVideo, createClip, selectClip, updateClip, renameClip, duplicateClip, deleteClip,
     addProject,

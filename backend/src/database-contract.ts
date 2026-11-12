@@ -18,10 +18,6 @@ export interface Database {
   transaction<T>(run: () => T): T;
 }
 
-export function transaction<T>(db: Database, run: () => T): T {
-  return db.transaction(run);
-}
-
 export function audit(db: Database, actor: string | null, action: string, target: string, reason = '') {
   db.prepare('INSERT INTO audit_log(id,actor_id,action,target_id,reason,created_at) VALUES(?,?,?,?,?,?)')
     .run(randomUUID(), actor, action, target, reason, new Date().toISOString());

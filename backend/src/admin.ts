@@ -1,5 +1,5 @@
 import type { Express } from 'express';
-import { audit, transaction } from './database-contract.js';
+import { audit } from './database-contract.js';
 import type { Database, UserRow } from './database-contract.js';
 import { createSecurity, HttpError } from './security.js';
 import * as validate from './validation.js';
@@ -24,7 +24,7 @@ export function mountAdmin(app: Express, db: Database, security: ReturnType<type
     const actor = security.admin(req); const id = String(req.params.id); const body = validate.object(req.body);
     const reason = validate.text(body.reason, 300, '변경 사유', 5);
     if ((body.role !== undefined && (typeof body.role !== 'string' || !['user', 'admin'].includes(body.role))) || (body.status !== undefined && (typeof body.status !== 'string' || !['active', 'suspended'].includes(body.status))) || (body.role === undefined && body.status === undefined)) throw new HttpError(400, 'INVALID_INPUT', '역할 또는 상태를 확인해 주세요.');
-    transaction(db, () => {
+    db.transaction(() => {
       const target = db.prepare('SELECT * FROM users WHERE id=?').get(id) as unknown as UserRow | undefined;
       if (!target) throw new HttpError(404, 'NOT_FOUND', '회원을 찾을 수 없습니다.');
       const role = body.role === undefined ? target.role : String(body.role); const status = body.status === undefined ? target.status : String(body.status);
@@ -55,7 +55,7 @@ export function mountAdmin(app: Express, db: Database, security: ReturnType<type
     const actor = security.admin(req); const ownerId = String(req.params.ownerId); const id = String(req.params.id); const body = validate.object(req.body);
     const reason = validate.text(body.reason, 300, '변경 사유', 5);
     if (typeof body.archived !== 'boolean') throw new HttpError(400, 'INVALID_INPUT', '보관 상태를 확인해 주세요.');
-    transaction(db, () => {
+    db.transaction(() => {
       if (!db.prepare('SELECT id FROM projects WHERE owner_id=? AND id=?').get(ownerId, id)) throw new HttpError(404, 'NOT_FOUND', '프로젝트를 찾을 수 없습니다.');
       db.prepare('UPDATE projects SET archived_at=? WHERE owner_id=? AND id=?').run(body.archived ? new Date().toISOString() : null, ownerId, id);
       db.prepare('UPDATE users SET workspace_version=workspace_version+1 WHERE id=?').run(ownerId);

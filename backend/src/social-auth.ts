@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import express from 'express';
 import type { Express, Request, Response } from 'express';
-import { audit, transaction } from './database-contract.js';
+import { audit } from './database-contract.js';
 import type { Database, UserRow } from './database-contract.js';
 import { hashPassword, hashToken, HttpError } from './security.js';
 import type { createSecurity, SecurityOptions } from './security.js';
@@ -44,7 +44,7 @@ async function findOrCreateUser(db: Database, provider: SocialName, configuratio
   // Social accounts have no usable password. Keep the existing users schema and hash format.
   const passwordHash = linkedUser() ? undefined : await hashPassword(randomToken());
 
-  return transaction(db, () => {
+  return db.transaction(() => {
     if (!db.prepare('SELECT 1 FROM sessions WHERE token_hash=? AND user_id IS NULL AND expires_at>?').get(sessionHash, Date.now())) {
       return { error: 'expired' } as const;
     }
@@ -103,7 +103,7 @@ export function mountSocialAuth(app: Express, db: Database, security: Security, 
     const flow = { state: randomToken(), nonce: randomToken(), verifier: randomBytes(32).toString('base64url') };
     const browserToken = randomToken();
     const authorizationUrl = configuration.authorize(redirectUri(provider), flow).href;
-    transaction(db, () => {
+    db.transaction(() => {
       db.prepare('DELETE FROM social_login_flows WHERE expires_at<=? OR (session_hash=? AND provider=?)')
         .run(Date.now(), session.token_hash, provider);
       db.prepare(`INSERT INTO social_login_flows(state_hash,provider,browser_hash,session_hash,nonce,verifier,expires_at)

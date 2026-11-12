@@ -16,6 +16,7 @@ import { useWorkspace } from '../store';
 import '../components/lucian/login-feedback.css';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
+const SOCIAL_LOGIN_FAILED = '소셜 로그인에 실패했어요. 다시 시도해 주세요.';
 const SOCIAL_PROVIDERS = [
   { id: 'naver', name: '네이버', logo: naverLogo },
   { id: 'google', name: '구글', logo: googleLogo },
@@ -27,34 +28,34 @@ const SOCIAL_ERRORS = new Map([
   ['email-required', '첫 소셜 로그인에는 이메일 제공 동의가 필요해요.'],
   ['email-in-use', '이미 등록된 이메일이에요. 기존 로그인 방식으로 로그인해 주세요.'],
   ['blocked', '이 계정은 현재 이용할 수 없어요.'],
-  ['failed', '소셜 로그인에 실패했어요. 다시 시도해 주세요.'],
+  ['failed', SOCIAL_LOGIN_FAILED],
 ]);
 
 function SocialLogin({ callbackError }: { callbackError: string | null }) {
-  const [pending, setPending] = useState<SocialProvider | null>(null);
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const message = error ?? SOCIAL_ERRORS.get(callbackError ?? '');
 
   async function start(provider: SocialProvider) {
-    setPending(provider);
+    setPending(true);
     setError('');
     try {
       const { authorizationUrl } = await authApi.startSocialLogin(provider);
       window.location.assign(authorizationUrl);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : SOCIAL_ERRORS.get('failed')!);
+      setError(reason instanceof Error ? reason.message : SOCIAL_LOGIN_FAILED);
     } finally {
-      setPending(null);
+      setPending(false);
     }
   }
 
   return <>
     <div className="login-divider" aria-hidden="true">또는</div>
-    <div className="social-login" role="group" aria-label="소셜 로그인" aria-busy={pending !== null}>
+    <div className="social-login" role="group" aria-label="소셜 로그인" aria-busy={pending}>
       {SOCIAL_PROVIDERS.map(({ id, name, logo }) => <button
         key={id} type="button" className={'social-login-button social-login-' + id}
         aria-label={name + '로 로그인'} title={name + '로 로그인'}
-        disabled={pending !== null} onClick={() => void start(id)}
+        disabled={pending} onClick={() => void start(id)}
       ><img src={logo} alt="" width={48} height={48} /></button>)}
     </div>
     {message && <p className="social-login-error" role="alert">{message}</p>}

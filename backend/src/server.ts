@@ -3,7 +3,7 @@ import type { ErrorRequestHandler } from 'express';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { audit, publicUser, transaction } from './database-contract.js';
+import { audit, publicUser } from './database-contract.js';
 import type { Database, UserRow } from './database-contract.js';
 import { createSecurity, hashPassword, HttpError, verifyPassword } from './security.js';
 import type { SecurityOptions } from './security.js';
@@ -38,7 +38,7 @@ export async function createApp(db: Database, options: ServerOptions) {
     const name = validate.text(body.name, 50, '이름'); const password = validate.password(body.password, true);
     security.rate(req, email);
     const passwordHash = await hashPassword(password);
-    const row = transaction(db, () => {
+    const row = db.transaction(() => {
       if (db.prepare('SELECT id FROM users WHERE email=?').get(email)) throw new HttpError(409, 'EMAIL_EXISTS', '이미 가입된 이메일입니다. 로그인해 주세요.');
       const id = randomUUID(); const now = new Date().toISOString();
       db.prepare('INSERT INTO users(id,name,email,password_hash,created_at,last_login_at) VALUES(?,?,?,?,?,?)').run(id, name, email, passwordHash, now, now);
@@ -72,7 +72,7 @@ export async function createApp(db: Database, options: ServerOptions) {
     if (body.ownerId !== owner.id) throw new HttpError(409, 'WORKSPACE_ACCOUNT_CHANGED', '다른 계정으로 로그인했어요. 편집 정보를 백업하고 서버 내용을 다시 불러와 주세요.');
     const documents = body.projects.map(validate.project); const ids = documents.map(doc => doc.id as string);
     if (new Set(ids).size !== ids.length) throw new HttpError(400, 'DUPLICATE_PROJECT', '중복된 프로젝트가 있습니다.');
-    const version = transaction(db, () => {
+    const version = db.transaction(() => {
       const current = db.prepare('SELECT workspace_version FROM users WHERE id=?').get(owner.id) as { workspace_version: number };
       if (current.workspace_version !== body.version) throw new HttpError(409, 'VERSION_CONFLICT', '다른 창 또는 관리자가 변경했습니다. 서버 내용을 다시 불러와 주세요.');
       for (const doc of documents) {

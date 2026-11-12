@@ -2,7 +2,6 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DATABASE_SCHEMA } from './database-contract.js';
-export { audit, transaction } from './database-contract.js';
 
 class LocalDatabase extends DatabaseSync {
   transaction<T>(run: () => T): T {
