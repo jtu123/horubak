@@ -244,7 +244,9 @@ public class VideoController {
     public ResponseEntity<Map<String, String>> createClip(
             @PathVariable("projectId") UUID projectId,
             @RequestParam("start") double start,
-            @RequestParam("duration") double duration
+            @RequestParam("duration") double duration,
+            @RequestParam(value = "editorClipId", required = false)
+            String editorClipId
     ) throws IOException, InterruptedException {
 
         // 1. 시작 시간과 길이 검사
@@ -307,14 +309,16 @@ public class VideoController {
                     duration
             );
             // FFmpeg로 생성한 MP4 정보를 DB에 저장
-            VideoClip savedClip = videoClipRepository.save(
-                    new VideoClip(
-                            projectId,
-                            clipFileName,
-                            start,
-                            duration
-                    )
+            VideoClip newClip = new VideoClip(
+                    projectId,
+                    clipFileName,
+                    start,
+                    duration
             );
+
+            newClip.setEditorClipId(editorClipId);
+
+            VideoClip savedClip = videoClipRepository.save(newClip);
         } catch (IOException | InterruptedException | RuntimeException e) {
             try {
                 Files.deleteIfExists(outputPath);
@@ -397,6 +401,7 @@ public class VideoController {
 
                     item.put("id", clip.getId());
                     item.put("projectId", clip.getProjectId());
+                    item.put("editorClipId", clip.getEditorClipId()); // 추가
                     item.put("clipFileName", clip.getFileName());
                     item.put("start", clip.getStartSeconds());
                     item.put("duration", clip.getDurationSeconds());

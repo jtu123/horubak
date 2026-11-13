@@ -18,6 +18,7 @@ export function Results() {
   const project = projects.find(item => item.id === id);
   const clips = project ? getProjectClips(project) : [];
   const clip = clips.find(item => item.id === params.get('clip')) ?? (project ? getActiveClip(project) : undefined);
+  const clipId = clip?.id;
   const [time, setTime] = useState(clip?.edit.start ?? 0);
   const [playing, setPlaying] = useState(false);
   const [savedClipUrl, setSavedClipUrl] = useState<string | null>(null);
@@ -47,18 +48,25 @@ useEffect(() => {
         throw new Error(`MP4 조회 실패 (HTTP ${response.status})`);
       }
 
-      const savedClips: { clipFileName: string }[] =
-        await response.json();
+      const savedClips: {
+  editorClipId: string | null;
+  clipFileName: string;
+}[] = await response.json();
 
-      if (cancelled) return;
+if (cancelled) return;
 
-      if (savedClips.length > 0) {
-        const latestClip = savedClips[0];
+// 현재 선택한 클립 ID와 일치하는 MP4 검색
+const matchedClip = savedClips.find(
+  item => item.editorClipId === clipId
+);
 
-        setSavedClipUrl(
-          `http://localhost:8080/api/videos/clips/${encodeURIComponent(latestClip.clipFileName)}`
-        );
-      }
+if (matchedClip) {
+  setSavedClipUrl(
+    `http://localhost:8080/api/videos/clips/${encodeURIComponent(matchedClip.clipFileName)}`
+  );
+} else {
+  setSavedClipUrl(null);
+}
     } catch (error) {
       if (!cancelled) {
         console.error('저장된 MP4 조회 실패:', error);
@@ -75,7 +83,7 @@ useEffect(() => {
   return () => {
     cancelled = true;
   };
-}, [project?.id]);
+}, [project?.id, clipId]);
 
 
 useEffect(() => {

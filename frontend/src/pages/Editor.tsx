@@ -113,20 +113,26 @@ useEffect(() => {
         throw new Error(`클립 조회 실패 (HTTP ${response.status})`);
       }
 
-      const savedClips: { clipFileName: string }[] =
-        await response.json();
+      const savedClips: {
+  editorClipId: string | null;
+  clipFileName: string;
+}[] = await response.json();
 
-      if (cancelled) return;
+if (cancelled) return;
 
-      if (savedClips.length > 0) {
-        const latestClip = savedClips[0];
+// 현재 선택한 편집 클립 ID와 일치하는 MP4 검색
+  const matchedClip = savedClips.find(
+    item => item.editorClipId === clipId
+  );
 
-        setGeneratedClipUrl(
-          `http://localhost:8080/api/videos/clips/${encodeURIComponent(latestClip.clipFileName)}`
-        );
-      } else {
-        setGeneratedClipUrl(null);
-      }
+  if (matchedClip) {
+    setGeneratedClipUrl(
+      `http://localhost:8080/api/videos/clips/${encodeURIComponent(matchedClip.clipFileName)}`
+    );
+  } else {
+    // 해당 클립의 MP4가 아직 생성되지 않은 경우
+    setGeneratedClipUrl(null);
+  }
     } catch (error) {
       if (cancelled) return;
 
@@ -140,7 +146,7 @@ useEffect(() => {
   return () => {
     cancelled = true;
   };
-}, [project?.id]);
+}, [project?.id,clipId]);
 
   const [shortcuts, setShortcuts] = useState(false);
   const onPlaying = useCallback((value: boolean) => setPlaying(value), []);
@@ -227,6 +233,7 @@ const generateMp4Clip = async () => {
 
     url.searchParams.set('start', String(start));
     url.searchParams.set('duration', String(duration));
+    url.searchParams.set('editorClipId', clip.id);
 
     const response = await apiFetch(
   `/api/videos/projects/${project.id}/clips?${url.searchParams.toString()}`,

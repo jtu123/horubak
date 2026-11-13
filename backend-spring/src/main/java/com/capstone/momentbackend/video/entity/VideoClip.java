@@ -29,6 +29,9 @@ public class VideoClip {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "editor_clip_id", length = 100)
+    private String editorClipId;
+
     protected VideoClip() {
     }
 
@@ -67,5 +70,13 @@ public class VideoClip {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public String getEditorClipId() {
+        return editorClipId;
+    }
+
+    public void setEditorClipId(String editorClipId) {
+        this.editorClipId = editorClipId;
     }
 }
