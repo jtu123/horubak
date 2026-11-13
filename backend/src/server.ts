@@ -18,6 +18,9 @@ export interface ServerOptions extends SecurityOptions {
   socialProviders?: SocialProviders;
   mountSources?: (app: Express, security: ReturnType<typeof createSecurity>) => void;
 }
+
+const INVALID_USERNAME_LOGIN = '아이디 또는 비밀번호를 확인해 주세요.';
+
 export async function createApp(db: Database, options: ServerOptions) {
   const app = express(); const security = createSecurity(db, options);
   const dummyHash = await hashPassword(randomUUID());
@@ -38,33 +41,59 @@ export async function createApp(db: Database, options: ServerOptions) {
     const csrfToken = session?.csrf ?? security.issue(req, res, null);
     res.json({ csrfToken, headerName: 'X-CSRF-Token' });
   });
-  app.get('/api/auth/me', (req, res) => res.json({ user: publicUser(security.user(req)), csrfToken: security.session(req)!.csrf }));
-  app.post('/api/auth/signup', async (req, res) => {
+  function accountUsername(userId: string) {
+    const row = db.prepare('SELECT username FROM password_usernames WHERE user_id=?').get(userId) as { username: string } | undefined;
+    return row?.username;
+  }
+  function addAccountUsername(userId: string, username: string) {
+    if (db.prepare('SELECT user_id FROM password_usernames WHERE username=?').get(username)) {
+      throw new HttpError(409, 'USERNAME_EXISTS', '이미 사용 중인 아이디입니다. 다른 아이디를 입력해 주세요.');
+    }
+    db.prepare('INSERT INTO password_usernames(user_id,username) VALUES(?,?)').run(userId, username);
+  }
+  function recordPasswordLogin(userId: string) {
+    db.prepare('UPDATE users SET last_login_at=? WHERE id=?').run(new Date().toISOString(), userId);
+    audit(db, userId, 'account.login', userId);
+  }
+  app.get('/api/auth/me', (req, res) => {
+    const user = security.user(req);
+    res.json({ user: publicUser(user, accountUsername(user.id)), csrfToken: security.session(req)!.csrf });
+  });
+  app.post(['/api/auth/signup', '/api/auth/login'], () => {
+    throw new HttpError(409, 'AUTH_CLIENT_OUTDATED', '로그인 화면이 업데이트됐어요. 페이지를 새로고침해 주세요.');
+  });
+  app.post('/api/auth/username/signup', async (req, res) => {
     const body = validate.object(req.body); const email = validate.email(body.email);
-    const name = validate.text(body.name, 50, '이름'); const password = validate.password(body.password, true);
+    const username = validate.signupUsername(body.username);
+    const name = validate.text(body.name, 50, '이름'); const password = validate.signupPassword(body.password);
     security.rate(req, email);
     const passwordHash = await hashPassword(password);
     const row = db.transaction(() => {
       if (db.prepare('SELECT id FROM users WHERE email=?').get(email)) throw new HttpError(409, 'EMAIL_EXISTS', '이미 가입된 이메일입니다. 로그인해 주세요.');
       const id = randomUUID(); const now = new Date().toISOString();
       db.prepare('INSERT INTO users(id,name,email,password_hash,created_at,last_login_at) VALUES(?,?,?,?,?,?)').run(id, name, email, passwordHash, now, now);
+      addAccountUsername(id, username);
       audit(db, id, 'account.signup', id);
       return db.prepare('SELECT * FROM users WHERE id=?').get(id) as unknown as UserRow;
     });
-    res.status(201).json({ user: publicUser(row), csrfToken: security.issue(req, res, row.id) });
+    res.status(201).json({ user: publicUser(row, username), csrfToken: security.issue(req, res, row.id) });
   });
-  app.post('/api/auth/login', async (req, res) => {
-    const body = validate.object(req.body); const email = validate.email(body.email); const password = validate.password(body.password);
-    security.rate(req, email);
-    const row = db.prepare('SELECT * FROM users WHERE email=?').get(email) as unknown as UserRow | undefined;
+  app.post('/api/auth/username/login', async (req, res) => {
+    const body = validate.object(req.body);
+    const username = validate.loginUsername(body.username);
+    const password = validate.loginPassword(body.password);
+    security.rate(req, 'username:' + username);
+    const row = db.prepare('SELECT u.* FROM password_usernames n JOIN users u ON u.id=n.user_id WHERE n.username=?').get(username) as unknown as UserRow | undefined;
     const correct = await verifyPassword(password, row?.password_hash ?? dummyHash);
-    if (!correct || !row || row.status !== 'active') throw new HttpError(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호를 확인해 주세요.');
+    if (!correct || !row || row.status !== 'active') throw new HttpError(401, 'INVALID_CREDENTIALS', INVALID_USERNAME_LOGIN);
     // An administrator may suspend the account while password verification is running.
-    const current = db.prepare('SELECT * FROM users WHERE id=?').get(row.id) as unknown as UserRow;
-    if (current.status !== 'active') throw new HttpError(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호를 확인해 주세요.');
-    db.prepare('UPDATE users SET last_login_at=? WHERE id=?').run(new Date().toISOString(), current.id);
-    audit(db, current.id, 'account.login', current.id);
-    res.json({ user: publicUser(current), csrfToken: security.issue(req, res, current.id) });
+    const current = db.transaction(() => {
+      const account = db.prepare('SELECT * FROM users WHERE id=?').get(row.id) as unknown as UserRow | undefined;
+      if (account?.status !== 'active' || account.password_hash !== row.password_hash) throw new HttpError(401, 'INVALID_CREDENTIALS', INVALID_USERNAME_LOGIN);
+      recordPasswordLogin(account.id);
+      return account;
+    });
+    res.json({ user: publicUser(current, username), csrfToken: security.issue(req, res, current.id) });
   });
   app.post('/api/auth/logout', () => {
     throw new HttpError(409, 'WORKSPACE_CLIENT_OUTDATED', '이 화면의 버전이 바뀌었어요. 필요한 편집 정보를 백업한 뒤 새로고침해 주세요.');
@@ -124,7 +153,7 @@ export async function createApp(db: Database, options: ServerOptions) {
     const directory = resolve(options.staticDirectory);
     if (!existsSync(resolve(directory, 'index.html'))) throw new Error('FRONTEND_DIST에 빌드된 index.html이 없습니다.');
     app.use(express.static(directory));
-    app.get('/{*path}', (_req, res) => res.sendFile(resolve(directory, 'index.html')));
+    app.get('/{*path}', (_req, res) => res.sendFile('index.html', { root: directory }));
   }
   const errors: ErrorRequestHandler = (error, _req, res, next) => {
     if (res.headersSent) return next(error);

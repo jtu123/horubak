@@ -129,6 +129,7 @@ test('소셜 로그인에서 브라우저와 토큰을 검증하고 제공업체
   assert.equal((await callback('google', 'google-first', google.state)).headers.get('location'), '/login?social=expired');
   assert.equal(exchanges, 0);
   const googleUser = await signedIn(await callback('google', 'google-first', google.state, google.binding));
+  assert.equal(googleUser.username, undefined);
   assert.equal((await callback('google', 'google-first', google.state, google.binding)).headers.get('location'), '/login?social=expired');
   const googleAgain = await start('google', 'google-again');
   const returningUser = await signedIn(await callback('google', 'google-again', googleAgain.state, googleAgain.binding));
@@ -138,9 +139,9 @@ test('소셜 로그인에서 브라우저와 토큰을 검증하고 제공업체
   assert.equal((await callback('google', 'bad-nonce', badNonce.state, badNonce.binding)).headers.get('location'), '/login?social=failed');
 
   const owner = await session();
-  const signup = await http(base + '/api/auth/signup', {
+  const signup = await http(base + '/api/auth/username/signup', {
     method: 'POST', headers: { Origin: origin, Cookie: owner.cookie, 'Content-Type': 'application/json', 'X-CSRF-Token': owner.csrf },
-    body: JSON.stringify({ name: '기존 관리자', email: 'owner@test.example', password: 'test-owner-password' }),
+    body: JSON.stringify({ name: '기존 관리자', email: 'owner@test.example', username: 'owner', password: 'TestOwner123' }),
   });
   assert.equal(signup.status, 201);
   db.prepare("UPDATE users SET role='admin' WHERE email='owner@test.example'").run();

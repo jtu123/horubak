@@ -18,8 +18,8 @@ export interface ProjectGateway {
 export interface AuthGateway {
   csrf(): Promise<{ token: string; headerName: string }>;
   me(): Promise<DemoUser>;
-  login(email: string, password: string): Promise<DemoUser>;
-  signup(name: string, email: string, password: string): Promise<DemoUser>;
+  login(username: string, password: string): Promise<DemoUser>;
+  signup(name: string, email: string, username: string, password: string): Promise<DemoUser>;
   logout(): Promise<void>;
 }
 export interface JobGateway { start(projectId: string, inputVersion: number): Promise<JobView>; get(id: string): Promise<JobView>; cancel(id: string): Promise<JobView> }

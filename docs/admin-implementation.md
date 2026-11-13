@@ -8,6 +8,8 @@
 ## 범위
 
 - 회원가입·로그인·로그아웃·새로고침 복원을 서버 세션으로 처리한다.
+- 일반 로그인에는 아이디와 비밀번호를 사용한다. 새 아이디는 영문·숫자만 3~10자이고, 아이디의 대소문자는 구분하지 않는다. 새 비밀번호는 영문·숫자만 7~15자다. 회원가입 이메일은 계정 정보로 저장한다.
+- 아이디가 없는 기존 이메일·비밀번호 계정의 데이터는 유지된다. 이 계정에서 비밀번호 로그인을 다시 사용하려면 아이디 전환 절차가 필요하다.
 - SQLite에 회원, 세션, 사용자별 프로젝트 편집 정보, 관리자 감사 이력을 저장한다. 영상 파일 저장·AI 큐·렌더는 별도 연결 범위다.
 - 관리자는 회원 검색·역할 변경·이용 정지/복구, 프로젝트 검색·보관/복원, 작업 이력을 조회한다.
 - 역할·소유자 검사는 API에서 수행한다. 첫 회원을 자동으로 관리자로 만들지 않는다. 서버 CLI로 기존 회원을 지정한다.
@@ -67,8 +69,8 @@ pnpm dev
 | 경로 | 동작·반환 |
 |---|---|
 | GET /api/auth/csrf | 익명/로그인 세션의 `{ csrfToken, headerName }` |
-| POST /api/auth/signup | `{ name, email, password }` → `{ user, csrfToken }`, 역할은 항상 user |
-| POST /api/auth/login | `{ email, password }` → `{ user, csrfToken }`, 세션·CSRF 교체 |
+| POST /api/auth/username/signup | `{ name, email, username, password }` → `{ user, csrfToken }`, 역할은 항상 user |
+| POST /api/auth/username/login | `{ username, password }` → `{ user, csrfToken }`, 세션·CSRF 교체 |
 | GET /api/auth/me | 서버에서 확인한 `{ user, csrfToken }` |
 | POST /api/auth/session/logout | `{ ownerId }`와 세션을 대조한 후 해당 세션 폐기·쿠키 삭제 |
 | GET /api/workspace | 현재 세션의 `{ ownerId, projects, version }`, 보관 프로젝트 제외 |
@@ -92,6 +94,8 @@ pnpm dev
 임시 Worker를 다시 배포할 때는 `backend`에서 `wrangler deploy --config wrangler.auth-test.toml`로 설정을 선택한다. 임시 Pages 빌드를 직접 배포하는 별도 작업 폴더에서는 `frontend/wrangler.auth-test.toml`을 `wrangler.toml`로 복사해 사용한다. 기본 Git 빌드가 테스트 Worker 바인딩을 선택하지 않도록 두 설정은 테스트용 이름으로 보관한다.
 
 작업공간과 로그아웃의 쓰기 경로가 바뀌었다. 공개 테스트를 잠시 중단할 수 있는 시간에 열린 탭의 편집을 저장하거나 설정에서 백업한 뒤 Worker를 먼저 올리고 Pages를 이어서 배포한다. 구형 경로로 들어온 쓰기는 업데이트 안내와 함께 거부하며, 새 프런트도 구형 Worker의 작업공간을 채택하지 않는다. 배포 직후 새로고침한 탭에서 로그인·프로젝트 조회·저장·로그아웃을 확인한다. 롤백 시 Pages와 Worker를 같은 버전 조합으로 복구한다.
+
+아이디 로그인도 Worker와 Pages를 함께 배포한다. 서버는 기존 SQLite에 아이디 테이블을 추가하고, 구형 가입·로그인 요청에 새로고침 안내를 반환한다.
 
 Node 서버에서 `ENABLE_SOURCE_UPLOAD=1`을 설정하면 파일 업로드와 원본 미리보기를 사용할 수 있다. 원본은 `UPLOAD_DIR`에 비공개로 저장되고 같은 계정의 프로젝트에서만 읽을 수 있다. SQLite 파일과 `UPLOAD_DIR`을 함께 보관한다. Pages 임시 Worker에서는 브라우저 미리보기만 제공한다.
 

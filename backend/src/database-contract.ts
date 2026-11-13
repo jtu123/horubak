@@ -23,8 +23,8 @@ export function audit(db: Database, actor: string | null, action: string, target
     .run(randomUUID(), actor, action, target, reason, new Date().toISOString());
 }
 
-export function publicUser(row: UserRow) {
-  return { id: row.id, name: row.name, email: row.email, role: row.role, guest: false as const };
+export function publicUser(row: UserRow, username?: string) {
+  return { id: row.id, name: row.name, email: row.email, role: row.role, guest: false as const, ...(username && { username }) };
 }
 
 export const DATABASE_SCHEMA = `
@@ -33,6 +33,11 @@ export const DATABASE_SCHEMA = `
     password_hash TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user','admin')),
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','suspended')),
     created_at TEXT NOT NULL, last_login_at TEXT, workspace_version INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE TABLE IF NOT EXISTS password_usernames (
+    user_id TEXT PRIMARY KEY NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    CHECK(length(username) BETWEEN 3 AND 24 AND username GLOB '[a-z0-9]*' AND username NOT GLOB '*[^a-z0-9_]*')
   );
   CREATE TABLE IF NOT EXISTS sessions (
     token_hash TEXT PRIMARY KEY, user_id TEXT REFERENCES users(id) ON DELETE CASCADE,

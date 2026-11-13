@@ -17,7 +17,7 @@
 }
 .u062 .u062-password-label .field-label { margin: 0; }
 .u062 .u062-caps { color: var(--ux-warn); font-size: 11.5px; font-weight: 800; }
-.u062 .u062-eye svg {
+.password-field .u062-eye svg {
   width: 22px;
   height: 22px;
   fill: none;
@@ -26,16 +26,16 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.u062 .u062-lid { transform-origin: 12px 12px; transition: transform .35s var(--ux-spring); }
-.u062 .u062-eye[aria-pressed="false"] .u062-lid { transform: scaleY(.5); }
-.u062 .u062-slash { stroke-dasharray: 24; transition: stroke-dashoffset .35s var(--ux-ease); }
-.u062 .u062-eye[aria-pressed="true"] .u062-slash { stroke-dashoffset: 24; }
+.password-field .u062-lid { transform-origin: 12px 12px; transition: transform .35s var(--ux-spring); }
+.password-field .u062-eye[aria-pressed="false"] .u062-lid { transform: scaleY(.5); }
+.password-field .u062-slash { stroke-dasharray: 24; transition: stroke-dashoffset .35s var(--ux-ease); }
+.password-field .u062-eye[aria-pressed="true"] .u062-slash { stroke-dashoffset: 24; }
 
 .u062 .u062-err { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ux-ease); }
 .u062 .u062-err.bad { grid-template-rows: 1fr; }
 .u062 .u062-err > span { overflow: hidden; min-height: 0; color: var(--ux-danger); font-size: 12.5px; font-weight: 650; }
 .u062 .u062-err > span::before { content: ''; display: block; height: 7px; }
-.u062 .password-field .text-input[aria-invalid="true"] {
+.u062 .text-input[aria-invalid="true"] {
   border-color: var(--ux-danger);
   background: color-mix(in srgb, var(--ux-danger) 6%, var(--ux-surface));
 }
@@ -90,6 +90,7 @@
 @keyframes u062-spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
+  .password-field :is(.u062-lid, .u062-slash) { transition: none; }
   .u062 .u062-go.busy { width: 100%; border-radius: 17px; }
   .u062 .u062-go.busy > span { opacity: 1; }
   .u062 .u062-go.busy > i { opacity: 0; }

@@ -2,6 +2,7 @@ import { HttpError } from './security.js';
 
 const MAX_SOURCE_URL_LENGTH = 4096;
 const MAX_VIDEO_SECONDS = 7 * 86400;
+const MAX_PASSWORD_LENGTH = 128;
 
 export function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new HttpError(400, 'INVALID_INPUT', '입력 형식을 확인해 주세요.');
@@ -16,8 +17,29 @@ export function email(value: unknown) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(result)) throw new HttpError(400, 'INVALID_INPUT', '이메일 형식을 확인해 주세요.');
   return result;
 }
-export function password(value: unknown, signup = false) {
-  if (typeof value !== 'string' || value.length < (signup ? 12 : 1) || value.length > 128) throw new HttpError(400, 'INVALID_INPUT', signup ? '비밀번호는 12~128자로 입력해 주세요.' : '이메일 또는 비밀번호를 확인해 주세요.');
+export function signupUsername(value: unknown) {
+  if (typeof value !== 'string' || value.length < 3 || value.length > 10 || /[^a-zA-Z0-9]/.test(value)) {
+    throw new HttpError(400, 'INVALID_USERNAME', '아이디는 영문·숫자만 3~10자로 입력해 주세요.');
+  }
+  return value.toLowerCase();
+}
+export function signupPassword(value: unknown) {
+  if (typeof value !== 'string' || value.length < 7 || value.length > 15 || /[^a-zA-Z0-9]/.test(value)) {
+    throw new HttpError(400, 'INVALID_PASSWORD', '비밀번호는 영문·숫자만 7~15자로 입력해 주세요.');
+  }
+  return value;
+}
+export function loginUsername(value: unknown) {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_]{2,23}$/.test(normalized)) {
+    throw new HttpError(400, 'INVALID_USERNAME', '아이디는 영문·숫자로 시작하는 3~24자의 영문·숫자·밑줄로 입력해 주세요.');
+  }
+  return normalized.toLowerCase();
+}
+export function loginPassword(value: unknown) {
+  if (typeof value !== 'string' || value.length < 1 || value.length > MAX_PASSWORD_LENGTH) {
+    throw new HttpError(400, 'INVALID_INPUT', '비밀번호를 확인해 주세요.');
+  }
   return value;
 }
 function number(value: unknown, max: number) { return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= max; }

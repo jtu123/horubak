@@ -147,18 +147,18 @@ test('실행 서버에 등록한 원본은 소유자의 작업공간과 범위 �
   const address = server.address();
   assert.ok(address && typeof address !== 'string');
   const base = 'http://127.0.0.1:' + address.port;
-  async function signup(email: string) {
+  async function signup(email: string, username: string) {
     const csrf = await fetch(base + '/api/auth/csrf');
-    const response = await fetch(base + '/api/auth/signup', {
-      method: 'POST', body: JSON.stringify({ email, name: '원본 검증', password: randomUUID() }),
+    const response = await fetch(base + '/api/auth/username/signup', {
+      method: 'POST', body: JSON.stringify({ email, username, name: '원본 검증', password: randomUUID().replaceAll('-', '').slice(0, 12) }),
       headers: { Origin: origin, Cookie: csrf.headers.getSetCookie()[0].split(';')[0], 'X-CSRF-Token': (await csrf.json()).csrfToken, 'Content-Type': 'application/json' },
     });
     assert.equal(response.status, 201);
     const { user, csrfToken } = await response.json();
     return { user, csrfToken, cookie: response.headers.getSetCookie()[0].split(';')[0] };
   }
-  const owner = await signup('video-owner@example.com');
-  const other = await signup('another-owner@example.com');
+  const owner = await signup('video-owner@example.com', 'videoowner');
+  const other = await signup('another-owner@example.com', 'otherowner');
   const original = await readFile('../frontend/public/samples/pl-tottenham-arsenal-2010.mp4');
   const projectId = randomUUID();
   const form = new FormData();

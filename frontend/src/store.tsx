@@ -7,6 +7,7 @@ import type { ServerWorkspace } from './services/api';
 import { addProjectClip, getProjectClips, loadProjectCollection, normalizeProject, patchProject, selectProjectClip, updateProjectClip } from './workspace-model';
 import type { LoadedProjects } from './workspace-model';
 import { workspaceLimitError } from './workspace-limits';
+import { normalizeSignupUsername, normalizeUsername, USERNAME_RULES } from './username';
 import type { Candidate, DemoAccount, DemoUser, EditState, Project, ToastMessage } from './types';
 
 function read<T>(key: string, fallback: T): T {
@@ -85,14 +86,28 @@ export function createWorkspaceSaveQueue({ ownerId, projects, version: initialVe
 type SaveQueue = ReturnType<typeof createWorkspaceSaveQueue>;
 const CLIP_TITLE_LIMIT = 200;
 const COPY_TITLE_SUFFIX = ' 복사본';
+const DEMO_ACCOUNTS_KEY = 'moment.accounts.v1';
+const DEMO_USERNAME = 'demo';
+const DEMO_EMAIL = 'demo@moment.studio';
+
+function availableDemoUsername(value: string, accounts: DemoAccount[]) {
+  const username = normalizeSignupUsername(value);
+  if (!username) throw new Error(USERNAME_RULES);
+  if (username === DEMO_USERNAME || accounts.some(account => account.username === username)) throw new Error('이미 사용 중인 아이디예요.');
+  return username;
+}
+
+function demoProfile({ id, name, email, username }: DemoAccount): DemoUser {
+  return { id, name, email, username, guest: false };
+}
 interface Workspace {
   user: DemoUser | null; projects: Project[]; theme: 'light' | 'dark'; toasts: ToastMessage[]; storageError: boolean; storageNotice?: string;
   authLoading: boolean; authError: string; serverAuth: boolean;
   syncStatus: 'idle' | 'saving' | 'saved' | 'error' | 'conflict'; syncError: string;
   retrySave: () => void; reloadWorkspace: () => Promise<void>;
   enterDemo: () => void;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, username: string, password: string) => Promise<void>;
   logout: (options?: { discardUnsaved?: boolean }) => Promise<void>;
   updateProject: (id: string, patch: Partial<Project>) => boolean;
   addProject: (project: Project, file?: File) => void;
@@ -324,23 +339,28 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     replaceProjects(next);
     return true;
   };
-  const login = async (email: string, password: string) => {
-    if (SERVER_AUTH) { const result = await authApi.login(email, password); return loadServerSession(result.user); }
-    const normalized = email.trim().toLowerCase();
-    if (normalized === 'demo@moment.studio' && password === 'moment2026') { switchUser({ id: 'demo', name: '권준한', email: normalized, guest: false }); return; }
-    const account = read<DemoAccount[]>('moment.accounts.v1', []).find(a => a.email === normalized);
-    if (!account || await passwordDigest(password, account.salt) !== account.passwordHash) throw new Error('이메일 또는 비밀번호를 확인해 주세요.');
-    switchUser({ id: account.id, name: account.name, email: account.email, guest: false });
+  const login: Workspace['login'] = async (username, password) => {
+    if (SERVER_AUTH) { const result = await authApi.login(username, password); return loadServerSession(result.user); }
+    const normalized = normalizeUsername(username);
+    if (normalized === DEMO_USERNAME && password === 'moment2026') {
+      switchUser({ id: 'demo', name: '권준한', email: DEMO_EMAIL, username: DEMO_USERNAME, guest: false });
+      return;
+    }
+    const account = normalized ? read<DemoAccount[]>(DEMO_ACCOUNTS_KEY, []).find(item => item.username === normalized) : undefined;
+    if (!account || await passwordDigest(password, account.salt) !== account.passwordHash) throw new Error('아이디 또는 비밀번호를 확인해 주세요.');
+    switchUser(demoProfile(account));
   };
-  const signup = async (name: string, email: string, password: string) => {
-    if (SERVER_AUTH) { const result = await authApi.signup(name, email, password); return loadServerSession(result.user); }
-    const normalized = email.trim().toLowerCase();
-    const accounts = read<DemoAccount[]>('moment.accounts.v1', []);
-    if (normalized === 'demo@moment.studio' || accounts.some(a => a.email === normalized)) throw new Error('이미 등록된 데모 이메일이에요. 로그인해 주세요.');
+  const signup: Workspace['signup'] = async (name, email, username, password) => {
+    if (SERVER_AUTH) { const result = await authApi.signup(name, email, username, password); return loadServerSession(result.user); }
+    const address = email.trim().toLowerCase();
     const salt = crypto.randomUUID();
-    const account: DemoAccount = { id: crypto.randomUUID(), name: name.trim(), email: normalized, salt, passwordHash: await passwordDigest(password, salt) };
-    localStorage.setItem('moment.accounts.v1', JSON.stringify([...accounts, account]));
-    switchUser({ id: account.id, name: account.name, email: account.email, guest: false });
+    const passwordHash = await passwordDigest(password, salt);
+    const accounts = read<DemoAccount[]>(DEMO_ACCOUNTS_KEY, []);
+    const normalized = availableDemoUsername(username, accounts);
+    if (address === DEMO_EMAIL || accounts.some(account => account.email === address)) throw new Error('이미 등록된 데모 이메일이에요.');
+    const account = { id: crypto.randomUUID(), name: name.trim(), email: address, username: normalized, salt, passwordHash };
+    localStorage.setItem(DEMO_ACCOUNTS_KEY, JSON.stringify([...accounts, account]));
+    switchUser(demoProfile(account));
   };
   const editProject = (id: string, edit: (project: Project) => Project, options?: Parameters<typeof editProjects>[1]) => editProjects(current => {
     const project = current.find(item => item.id === id);

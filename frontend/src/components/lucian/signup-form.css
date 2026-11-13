@@ -1,5 +1,6 @@
 /* Error-summary pattern adapted from Lucian #244 · MIT (c) 2026 Seokwoooo. */
 .signup-form .signup-field .field-label { margin-top: 18px; }
+.signup-field-hint { margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .signup-errors { padding: 12px; border: 1px solid var(--danger); border-radius: 8px; background: var(--danger-soft); color: var(--danger); font-size: 12px; line-height: 18px; }
 .signup-errors b { font-weight: 500; }
 .signup-errors ul { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; padding-left: 16px; }

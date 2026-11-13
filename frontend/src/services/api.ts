@@ -44,8 +44,8 @@ export interface ServerWorkspace { ownerId: string; projects: Project[]; version
 export type SocialProvider = 'naver' | 'google' | 'apple';
 export const authApi = {
   me: () => request<{ user: DemoUser }>('/api/auth/me'),
-  login: (email: string, password: string) => request<{ user: DemoUser }>('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  signup: (name: string, email: string, password: string) => request<{ user: DemoUser }>('/api/auth/signup', { method: 'POST', body: JSON.stringify({ name, email, password }) }),
+  login: (username: string, password: string) => request<{ user: DemoUser }>('/api/auth/username/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  signup: (name: string, email: string, username: string, password: string) => request<{ user: DemoUser }>('/api/auth/username/signup', { method: 'POST', body: JSON.stringify({ name, email, username, password }) }),
   startSocialLogin: (provider: SocialProvider) => request<{ authorizationUrl: string }>(`/api/auth/social/${provider}/start`, { method: 'POST', body: '{}' }),
   logout: async (ownerId: string) => {
     csrf = '';

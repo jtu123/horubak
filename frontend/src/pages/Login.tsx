@@ -7,12 +7,14 @@ import appleLogo from '../assets/social-login/apple.png?no-inline';
 import googleLogo from '../assets/social-login/google.svg?no-inline';
 import naverLogo from '../assets/social-login/naver.png?no-inline';
 import { Brand } from '../components/Brand';
+import { PasswordVisibilityButton } from '../components/lucian/PasswordVisibilityButton';
 import { SignupForm } from '../components/lucian/SignupForm';
 import { ThemeToggle } from '../components/lucian/ThemeToggle';
-import { authApi } from '../services/api';
+import { ApiError, authApi } from '../services/api';
 import type { SocialProvider } from '../services/api';
 import { SITE_NAME } from '../site';
 import { useWorkspace } from '../store';
+import { LOGIN_USERNAME_MAX_LENGTH, normalizeUsername } from '../username';
 import '../components/lucian/login-feedback.css';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
@@ -26,7 +28,7 @@ const SOCIAL_ERRORS = new Map([
   ['cancelled', '소셜 로그인을 취소했어요.'],
   ['expired', '로그인 요청이 만료됐어요. 다시 시도해 주세요.'],
   ['email-required', '첫 소셜 로그인에는 이메일 제공 동의가 필요해요.'],
-  ['email-in-use', '이미 등록된 이메일이에요. 기존 로그인 방식으로 로그인해 주세요.'],
+  ['email-in-use', '이미 등록된 이메일이에요. 처음 가입한 방식으로 로그인해 주세요.'],
   ['blocked', '이 계정은 현재 이용할 수 없어요.'],
   ['failed', SOCIAL_LOGIN_FAILED],
 ]);
@@ -62,37 +64,48 @@ function SocialLogin({ callbackError }: { callbackError: string | null }) {
   </>;
 }
 
-function LoginForm({ onLogin, onComplete }: { onLogin: (email: string, password: string) => Promise<void>; onComplete: () => void }) {
-  const [email, setEmail] = useState('');
+type PasswordFormProps = {
+  onLogin: (username: string, password: string) => Promise<void>;
+  onComplete: () => void;
+};
+
+function LoginForm({ onLogin, onComplete }: PasswordFormProps) {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'pending' | 'success'>('idle');
-  const [error, setError] = useState<{ message: string } | null>(null);
+  const [error, setError] = useState<{ message: string; field?: 'username' | 'password' } | null>(null);
   const alive = useRef(true);
   const completion = useRef<number | undefined>(undefined);
+  const usernameInput = useRef<HTMLInputElement>(null);
   const passwordInput = useRef<HTMLInputElement>(null);
   const busy = phase !== 'idle';
-  const status = phase === 'pending' ? '확인하는 중…' : phase === 'success' ? '로그인 성공' : '';
+  const status = phase === 'pending' ? '확인하는 중…' : phase === 'success' ? '로그인 완료' : '';
 
   useEffect(() => {
     alive.current = true;
     return () => { alive.current = false; window.clearTimeout(completion.current); };
   }, []);
   useEffect(() => {
-    if (!error) return;
-    passwordInput.current?.focus({ preventScroll: true });
-    passwordInput.current?.select();
+    const input = error?.field === 'username' ? usernameInput.current : error?.field === 'password' ? passwordInput.current : null;
+    input?.focus({ preventScroll: true });
+    input?.select();
   }, [error]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
+    const normalized = normalizeUsername(username);
+    if (!normalized) {
+      setError({ message: '아이디를 확인해 주세요.', field: 'username' });
+      return;
+    }
     const form = event.currentTarget;
     setError(null);
     setPhase('pending');
     try {
-      await onLogin(email, password);
+      await onLogin(normalized, password);
       if (!alive.current) return;
       if (window.matchMedia(REDUCED_MOTION).matches) {
         onComplete();
@@ -102,7 +115,9 @@ function LoginForm({ onLogin, onComplete }: { onLogin: (email: string, password:
       completion.current = window.setTimeout(onComplete, 650);
     } catch (reason) {
       if (!alive.current) return;
-      setError({ message: reason instanceof Error ? reason.message : '브라우저 저장 공간을 확인해 주세요.' });
+      const code = reason instanceof ApiError ? reason.code : undefined;
+      const field = code === 'INVALID_USERNAME' ? 'username' : code === 'INVALID_CREDENTIALS' ? 'password' : undefined;
+      setError({ message: reason instanceof Error ? reason.message : '다시 시도해 주세요.', field });
       setPhase('idle');
       if (!window.matchMedia(REDUCED_MOTION).matches) {
         form.classList.remove('shake');
@@ -117,21 +132,17 @@ function LoginForm({ onLogin, onComplete }: { onLogin: (email: string, password:
       if (event.target === event.currentTarget && event.animationName === 'u062-no') event.currentTarget.classList.remove('shake');
     }}>
       <h1>로그인</h1>
-      <label className="field-label" htmlFor="login-email">이메일</label>
-      <input className="text-input" id="login-email" type="email" autoComplete="username" required maxLength={254} placeholder="name@example.com" value={email} disabled={busy} onChange={e => { setEmail(e.target.value); setError(null); }} />
+      <label className="field-label" htmlFor="login-username">아이디</label>
+      <input ref={usernameInput} className="text-input" id="login-username" name="username" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required maxLength={LOGIN_USERNAME_MAX_LENGTH} placeholder="아이디 입력" value={username} disabled={busy} aria-invalid={error?.field === 'username' || undefined}
+        aria-describedby={error?.field === 'username' ? 'login-error' : undefined} onChange={e => { setUsername(e.target.value); setError(null); }} />
       <div className="u062-password-label">
         <label className="field-label" htmlFor="login-password">비밀번호</label>
         <span className="u062-caps" role="status">{capsLock ? 'Caps Lock 켜짐' : ''}</span>
       </div>
       <div className="password-field">
-        <input ref={passwordInput} className="text-input" id="login-password" type={visible ? 'text' : 'password'} autoComplete="current-password" required maxLength={128} placeholder="비밀번호 입력" value={password} disabled={busy} aria-invalid={!!error} aria-describedby={error ? 'login-error' : undefined}
+        <input ref={passwordInput} className="text-input" id="login-password" name="password" type={visible ? 'text' : 'password'} autoComplete="current-password" required maxLength={128} placeholder="비밀번호 입력" value={password} disabled={busy} aria-invalid={error?.field === 'password' || undefined} aria-describedby={error?.field === 'password' ? 'login-error' : undefined}
           onChange={e => { setPassword(e.target.value); setError(null); }} onKeyUp={e => setCapsLock(e.getModifierState('CapsLock'))} onBlur={() => setCapsLock(false)} />
-        <button className="icon-button u062-eye" type="button" disabled={busy} aria-pressed={visible} aria-label={visible ? '비밀번호 숨기기' : '비밀번호 보기'} onClick={() => setVisible(v => !v)}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <g className="u062-lid"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" /><circle cx="12" cy="12" r="3" /></g>
-            <path className="u062-slash" d="M4 4l16 16" />
-          </svg>
-        </button>
+        <PasswordVisibilityButton inputId="login-password" visible={visible} disabled={busy} onToggle={() => setVisible(v => !v)} />
       </div>
       <div className={'u062-err' + (error ? ' bad' : '')}><span id="login-error" role="alert">{error?.message}</span></div>
       <button className={'btn primary u062-go' + (phase === 'pending' ? ' busy' : phase === 'success' ? ' ok' : '')} disabled={busy} type="submit">
@@ -147,18 +158,23 @@ export function Login() {
   const { login, signup, enterDemo, authError, serverAuth } = useWorkspace();
   const navigate = useNavigate(); const [params] = useSearchParams();
   const registering = params.get('mode') === 'signup';
+  const formArea = useRef<HTMLElement>(null);
   useEffect(() => {
-    const heading = document.querySelector<HTMLElement>('h1');
+    const heading = formArea.current?.querySelector('h1');
     if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
   }, [registering]);
   const complete = () => navigate('/projects');
   return <div className="login-page ux">
     <header className="login-header"><Brand /><ThemeToggle /></header>
-    <main className="login-body"><section className="login-form-area" aria-label={registering ? '회원가입' : '로그인'}>
+    <main className="login-body"><section key={registering ? 'signup' : 'login'} ref={formArea} className="login-form-area" aria-label={registering ? '회원가입' : '로그인'}>
       {authError && <p className="field-error" role="status">{authError}</p>}
-      {registering ? <SignupForm onCreate={signup} onComplete={complete} /> : <LoginForm onLogin={login} onComplete={complete} />}
-      <p className="login-switch">{registering ? '이미 프로필이 있나요?' : '처음 오셨나요?'} <Link to={registering ? '/login' : '/login?mode=signup'}>{registering ? '로그인' : '회원가입'}</Link></p>
-      {serverAuth ? <SocialLogin key={registering ? 'signup' : 'login'} callbackError={params.get('social')} /> : <>
+      {registering
+        ? <SignupForm onCreate={signup} onComplete={complete} />
+        : <LoginForm onLogin={login} onComplete={complete} />}
+      <p className="login-switch">
+        {registering ? '이미 계정이 있나요?' : '처음 오셨나요?'} <Link to={registering ? '/login' : '/login?mode=signup'}>{registering ? '로그인' : '회원가입'}</Link>
+      </p>
+      {serverAuth ? <SocialLogin callbackError={params.get('social')} /> : <>
         <div className="login-divider" aria-hidden="true">또는</div>
         <button type="button" className="demo-enter" onClick={() => { enterDemo(); complete(); }}>샘플로 시작<ArrowRight size={16} /></button>
       </>}

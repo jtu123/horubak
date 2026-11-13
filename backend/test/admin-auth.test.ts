@@ -8,9 +8,26 @@ import { spawnSync } from 'node:child_process';
 import { openDatabase } from '../src/database.js';
 import { createApp } from '../src/server.js';
 import { hashPassword, verifyPassword } from '../src/security.js';
+import { signupPassword, signupUsername } from '../src/validation.js';
 
 const origin = 'http://127.0.0.1:5173';
-const password = 'test-password-' + randomUUID();
+const password = 'Test' + randomUUID().replaceAll('-', '').slice(0, 11);
+const memberUsername = 'member2026';
+
+test('가입 정책은 아이디 3~10자와 비밀번호 7~15자의 경계를 검사한다', () => {
+  assert.equal(signupUsername('aB1'), 'ab1');
+  assert.equal(signupUsername('1234567890'), '1234567890');
+  for (const invalid of ['ab', 'abcdefghijk', 'new_user', ' newuser', 'newuser\n', '\u212Ainvalid']) {
+    assert.throws(() => signupUsername(invalid), { code: 'INVALID_USERNAME' });
+  }
+  for (const valid of ['abcdefg', 'ABCDEFG', '1234567', 'aB12345', 'a'.repeat(15)]) {
+    assert.equal(signupPassword(valid), valid);
+  }
+  for (const invalid of ['abcdef', 'a'.repeat(16), 'abcdef!', 'abc defg', 'abcdefg\n', 'abcde한글']) {
+    assert.throws(() => signupPassword(invalid), { code: 'INVALID_PASSWORD' });
+  }
+});
+
 test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
   const path = join(tmpdir(), 'horubak-test-' + randomUUID() + '.sqlite');
   const db = openDatabase(path);
@@ -28,8 +45,8 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
       return { response, data };
     }
     async init() { return this.send('/api/auth/csrf'); }
-    async signup(email: string, name = '테스트 회원') { await this.init(); return this.send('/api/auth/signup', 'POST', { email, name, password, role: 'admin' }); }
-    async login(email: string) { await this.init(); return this.send('/api/auth/login', 'POST', { email, password }); }
+    async signup(email: string, username = email.split('@')[0]) { await this.init(); return this.send('/api/auth/username/signup', 'POST', { email, username, name: '테스트 회원', password, role: 'admin' }); }
+    async login(username: string) { await this.init(); return this.send('/api/auth/username/login', 'POST', { username, password }); }
   }
   const admin = new Client(); const member = new Client(); const stranger = new Client();
   let adminId = ''; let memberId = '';
@@ -40,20 +57,43 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
       const init = await stranger.init();
       const cookie = init.response.headers.get('set-cookie')!;
       assert.match(cookie, /HttpOnly/); assert.match(cookie, /SameSite=Lax/);
-      const form = { name: '외부 입력', email: 'bad@example.com', password };
-      assert.equal((await stranger.send('/api/auth/signup', 'POST', form, { 'X-CSRF-Token': '' })).response.status, 403);
-      assert.equal((await stranger.send('/api/auth/signup', 'POST', form, { 'X-CSRF-Token': 'Z'.repeat(64) })).response.status, 403);
-      assert.equal((await stranger.send('/api/auth/signup', 'POST', form, { Origin: 'https://evil.example' })).response.status, 403);
+      const form = { name: '외부 입력', email: 'bad@example.com', username: 'external', password };
+      assert.equal((await stranger.send('/api/auth/username/signup', 'POST', form, { 'X-CSRF-Token': '' })).response.status, 403);
+      assert.equal((await stranger.send('/api/auth/username/signup', 'POST', form, { 'X-CSRF-Token': 'Z'.repeat(64) })).response.status, 403);
+      assert.equal((await stranger.send('/api/auth/username/signup', 'POST', form, { Origin: 'https://evil.example' })).response.status, 403);
     });
     await t.test('회원가입·기본 역할·비밀번호 해시·중복/약한 입력', async () => {
       const first = await admin.signup('admin@test.example'); adminId = first.data.user.id;
       assert.equal(first.response.status, 201); assert.equal(first.data.user.role, 'user');
-      const second = await member.signup('member@test.example'); memberId = second.data.user.id;
+      const second = await member.signup('member@test.example', 'Member2026'); memberId = second.data.user.id;
       assert.equal(second.response.status, 201);
-      assert.equal((await stranger.send('/api/auth/login', 'POST', { email: 'member@test.example', password: 'wrong-password' })).response.status, 401);
+      assert.equal(second.data.user.username, memberUsername);
+      assert.equal((await member.send('/api/auth/me')).data.user.username, memberUsername);
+      assert.equal((await stranger.send('/api/auth/username/login', 'POST', { username: 'MEMBER2026', password: password.toLowerCase() })).response.status, 401);
+      assert.equal((await stranger.send('/api/auth/username/login', 'POST', { email: 'member@test.example', password })).response.status, 400);
+      const oldLogin = await stranger.send('/api/auth/login', 'POST', { email: 'member@test.example', password });
+      const oldSignup = await stranger.send('/api/auth/signup', 'POST', { name: '구형 화면', email: 'old@test.example', password });
+      for (const { response, data } of [oldLogin, oldSignup]) {
+        assert.equal(response.status, 409);
+        assert.equal(data.code, 'AUTH_CLIENT_OUTDATED');
+        assert.equal(response.headers.get('set-cookie'), null);
+      }
       assert.equal((await stranger.signup('MEMBER@test.example')).response.status, 409);
-      const weak = await stranger.send('/api/auth/signup', 'POST', { name: '회원', email: 'weak@test.example', password: 'short' });
-      assert.equal(weak.response.status, 400);
+      const taken = await stranger.signup('different@test.example', 'MEMBER2026');
+      assert.equal(taken.response.status, 409);
+      assert.equal(taken.data.code, 'USERNAME_EXISTS');
+      assert.equal(db.prepare('SELECT id FROM users WHERE email=?').get('different@test.example'), undefined);
+      const invalid = await stranger.signup('different@test.example', '\u212Ainvalid');
+      assert.equal(invalid.response.status, 400);
+      assert.equal(invalid.data.code, 'INVALID_USERNAME');
+      const legacyUsername = await stranger.signup('different@test.example', 'member_1');
+      assert.equal(legacyUsername.response.status, 400);
+      assert.equal(legacyUsername.data.code, 'INVALID_USERNAME');
+      for (const invalidPassword of ['abcdef', 'abcdef!', 'a'.repeat(16)]) {
+        const rejected = await stranger.send('/api/auth/username/signup', 'POST', { name: '회원', email: 'weak@test.example', username: 'weak', password: invalidPassword });
+        assert.equal(rejected.response.status, 400);
+        assert.equal(rejected.data.code, 'INVALID_PASSWORD');
+      }
       const row = db.prepare('SELECT password_hash FROM users WHERE id=?').get(memberId) as { password_hash: string };
       assert.match(row.password_hash, /^scrypt\$32768\$8\$3\$/); assert.ok(!row.password_hash.includes(password));
       assert.ok(!JSON.stringify(second.data).includes('password'));
@@ -71,7 +111,7 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
       const cli = adminCli(['--verified-account', adminId]);
       assert.equal(cli.status, 0, cli.stderr);
       assert.equal((await admin.send('/api/auth/me')).response.status, 401);
-      const login = await admin.login('admin@test.example');
+      const login = await admin.login('ADMIN');
       assert.equal(login.response.status, 200); assert.equal(login.data.user.role, 'admin');
       assert.equal((await admin.send('/api/admin/overview')).response.status, 200);
     });
@@ -119,19 +159,19 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
       assert.equal((await member.send('/api/workspace')).data.projects.length, 1);
     });
     await t.test('이용 정지 시 기존 세션 무효화·복구 후 재로그인', async () => {
-      const secondDevice = new Client(); await secondDevice.login('member@test.example');
+      const secondDevice = new Client(); await secondDevice.login(memberUsername);
       await admin.send('/api/admin/users/' + memberId, 'PATCH', { status: 'suspended', reason: '정지 세션 무효화 검증' });
       assert.equal((await member.send('/api/auth/me')).response.status, 401);
       assert.equal((await secondDevice.send('/api/workspace')).response.status, 401);
-      assert.equal((await member.login('member@test.example')).response.status, 401);
+      assert.equal((await member.login(memberUsername)).response.status, 401);
       await admin.send('/api/admin/users/' + memberId, 'PATCH', { status: 'active', reason: '이용 복구 검증 완료' });
       assert.equal((await secondDevice.send('/api/auth/me')).response.status, 401);
-      assert.equal((await member.login('member@test.example')).response.status, 200);
+      assert.equal((await member.login(memberUsername)).response.status, 200);
     });
     await t.test('권한 변경 후 세션 재인증·감사 이력·정상 로그아웃', async () => {
       await admin.send('/api/admin/users/' + memberId, 'PATCH', { role: 'admin', reason: '관리 권한 변경 검증' });
       assert.equal((await member.send('/api/auth/me')).response.status, 401);
-      assert.equal((await member.login('member@test.example')).data.user.role, 'admin');
+      assert.equal((await member.login(memberUsername)).data.user.role, 'admin');
       await admin.send('/api/admin/users/' + memberId, 'PATCH', { role: 'user', reason: '일반 회원 권한 복원' });
       assert.equal((await member.send('/api/admin/overview')).response.status, 401);
       const log = await admin.send('/api/admin/activity?size=100');
@@ -148,7 +188,7 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
       admin.cookie = oldCookie; assert.equal((await admin.send('/api/auth/me')).response.status, 401);
     });
     await t.test('파일 DB를 다른 연결에서 읽을 수 있고 세션 만료를 거부', async () => {
-      await member.login('member@test.example');
+      await member.login(memberUsername);
       const copy = openDatabase(path);
       try {
         assert.equal((copy.prepare('SELECT count(*) AS count FROM users').get() as any).count, 2);
@@ -179,7 +219,7 @@ test('로그인 호출 제한과 운영용 Secure 쿠키', async () => {
     assert.match(response.headers.get('set-cookie')!, /__Host-horubak_session/); assert.match(response.headers.get('set-cookie')!, /; Secure/);
     const headers = { Origin: origin, Cookie: response.headers.get('set-cookie')!.split(';')[0]!, 'Content-Type': 'application/json', 'X-CSRF-Token': data.csrfToken };
     for (const expected of [401, 401, 429]) {
-      const attempt = await fetch(base + '/api/auth/login', { method: 'POST', headers, body: JSON.stringify({ email: 'unknown@example.com', password }) });
+      const attempt = await fetch(base + '/api/auth/username/login', { method: 'POST', headers, body: JSON.stringify({ username: 'unknown_user', password }) });
       assert.equal(attempt.status, expected);
     }
     assert.equal((await fetch(base + '/api/auth/csrf')).status, 200);
