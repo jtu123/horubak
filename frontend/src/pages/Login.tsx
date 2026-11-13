@@ -1,5 +1,6 @@
 // Lucian UX/UI Prompt #062 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#062
-import { useEffect, useRef, useState } from 'react';
+// Lucian UX/UI Prompt #216 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#216
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
@@ -15,6 +16,7 @@ import type { SocialProvider } from '../services/api';
 import { SITE_NAME } from '../site';
 import { useWorkspace } from '../store';
 import { LOGIN_USERNAME_MAX_LENGTH, normalizeUsername } from '../username';
+import '../components/lucian/auth-entrance.css';
 import '../components/lucian/login-feedback.css';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
@@ -159,6 +161,12 @@ export function Login() {
   const navigate = useNavigate(); const [params] = useSearchParams();
   const registering = params.get('mode') === 'signup';
   const formArea = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    if (window.matchMedia(REDUCED_MOTION).matches) return;
+    const initialCard = formArea.current;
+    initialCard?.classList.add('u216-enter');
+    return () => initialCard?.classList.remove('u216-enter');
+  }, []);
   useEffect(() => {
     const heading = formArea.current?.querySelector('h1');
     if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }

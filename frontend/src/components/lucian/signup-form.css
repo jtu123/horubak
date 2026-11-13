@@ -1,10 +1,45 @@
-/* Error-summary pattern adapted from Lucian #244 · MIT (c) 2026 Seokwoooo. */
-.signup-form .signup-field .field-label { margin-top: 18px; }
+/* Lucian UX/UI Prompt #063 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#063 */
+/* Lucian UX/UI Prompt #244 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#244 */
+.u063 .u063-count { margin: 0 0 6px; color: var(--muted); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.u063 .u063-bar { display: flex; gap: 6px; }
+.u063 .u063-bar i { flex: 1; height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.u063 .u063-bar i::after {
+  content: ""; display: block; height: 100%; border-radius: inherit; background: var(--accent);
+  transform: scaleX(0); transform-origin: left; transition: transform .6s var(--ux-ease);
+}
+.u063 .u063-bar i[data-complete="true"]::after { transform: none; }
+.u063 .u063-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.u063 .u063-chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; max-width: 100%; min-width: 0; padding: 0 12px 0 8px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--text);
+  font-size: 12px; cursor: pointer; animation: u063-chip .55s var(--ux-spring) backwards; transition: background-color .2s;
+}
+.u063 .u063-chip:disabled { cursor: default; }
+.u063 .u063-chip:hover:not(:disabled) { background: var(--accent-soft); }
+.u063 .u063-chip svg { flex: none; color: var(--green); }
+.u063 .u063-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.u063 .u063-stage { margin-top: 22px; animation: u063-step .55s var(--ux-ease); }
+.u063 .signup-field .field-label { margin-top: 0; }
+.u063 .u063-actions { display: flex; gap: 8px; margin-top: 22px; }
+.signup-form.u063 .u063-actions .btn { margin-top: 0; }
+.u063 .u063-actions .primary { flex: 1; }
+.u063 .u063-actions .primary svg { transition: transform .3s var(--ux-spring); }
+.u063 .u063-actions .primary:hover:not(:disabled) svg { transform: translateX(3px); }
+@keyframes u063-chip { from { opacity: 0; transform: translateY(8px) scale(.94); } }
+@keyframes u063-step { from { transform: translateY(10px); } }
+
 .signup-field-hint { margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.signup-errors { padding: 12px; border: 1px solid var(--danger); border-radius: 8px; background: var(--danger-soft); color: var(--danger); font-size: 12px; line-height: 18px; }
+.signup-errors { margin-top: 14px; padding: 12px; border: 1px solid var(--danger); border-radius: 8px; background: var(--danger-soft); color: var(--danger); font-size: 12px; line-height: 18px; }
 .signup-errors b { font-weight: 500; }
 .signup-errors ul { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; padding-left: 16px; }
 .signup-errors a { text-decoration: underline; text-underline-offset: 3px; }
 .signup-ack { display: flex; align-items: flex-start; gap: 8px; margin-top: 20px; font-size: 12px; line-height: 20px; cursor: pointer; }
 .signup-ack input { flex: none; width: 16px; height: 16px; margin: 2px 0; accent-color: var(--accent); }
 .signup-form .field-error { margin-top: 6px; }
+.u244 .text-input[aria-invalid="true"] { border-color: var(--danger); }
+.u244 .signup-ack input[aria-invalid="true"] { box-shadow: 0 0 0 1px var(--danger); }
+@media (prefers-reduced-motion: reduce) {
+  .u063 :is(.u063-chip, .u063-stage) { animation: none; }
+  .u063 .u063-bar i::after, .u063 .u063-actions .primary svg { transition: none; }
+  .u063 .u063-actions .primary:hover:not(:disabled) svg { transform: none; }
+}

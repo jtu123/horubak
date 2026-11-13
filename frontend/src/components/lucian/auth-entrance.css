@@ -1,0 +1,20 @@
+/* Lucian UX/UI Prompt #216 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#216 */
+@media (prefers-reduced-motion: no-preference) {
+  .login-form-area.u216-enter {
+    animation: u216-auth-card-in .7s cubic-bezier(.2, .8, .2, 1) backwards;
+  }
+
+  .login-form-area.u216-enter .login-card h1 {
+    animation: u216-auth-title-in .75s cubic-bezier(.2, .8, .2, 1) 70ms backwards;
+  }
+}
+
+@keyframes u216-auth-card-in {
+  from { transform: translateY(14px); }
+  to { transform: none; }
+}
+
+@keyframes u216-auth-title-in {
+  from { transform: translateY(8px); opacity: .8; }
+  to { transform: none; opacity: 1; }
+}

@@ -92,8 +92,10 @@ const DEMO_EMAIL = 'demo@moment.studio';
 
 function availableDemoUsername(value: string, accounts: DemoAccount[]) {
   const username = normalizeSignupUsername(value);
-  if (!username) throw new Error(USERNAME_RULES);
-  if (username === DEMO_USERNAME || accounts.some(account => account.username === username)) throw new Error('이미 사용 중인 아이디예요.');
+  if (!username) throw new ApiError(400, 'INVALID_USERNAME', USERNAME_RULES);
+  if (username === DEMO_USERNAME || accounts.some(account => account.username === username)) {
+    throw new ApiError(409, 'USERNAME_EXISTS', '이미 사용 중인 아이디예요.');
+  }
   return username;
 }
 
@@ -357,7 +359,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const passwordHash = await passwordDigest(password, salt);
     const accounts = read<DemoAccount[]>(DEMO_ACCOUNTS_KEY, []);
     const normalized = availableDemoUsername(username, accounts);
-    if (address === DEMO_EMAIL || accounts.some(account => account.email === address)) throw new Error('이미 등록된 데모 이메일이에요.');
+    if (address === DEMO_EMAIL || accounts.some(account => account.email === address)) {
+      throw new ApiError(409, 'EMAIL_EXISTS', '이미 등록된 데모 이메일이에요.');
+    }
     const account = { id: crypto.randomUUID(), name: name.trim(), email: address, username: normalized, salt, passwordHash };
     localStorage.setItem(DEMO_ACCOUNTS_KEY, JSON.stringify([...accounts, account]));
     switchUser(demoProfile(account));

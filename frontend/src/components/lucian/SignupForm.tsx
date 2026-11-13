@@ -1,6 +1,8 @@
-// Error-summary pattern adapted from Lucian #244 · MIT (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#244
-import { useEffect, useId, useRef, useState } from 'react';
+// Lucian UX/UI Prompt #063 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#063
+// Lucian UX/UI Prompt #244 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#244
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { ArrowRight, Check } from 'lucide-react';
 import './signup-form.css';
 import { ApiError, SERVER_AUTH } from '../../services/api';
 import { normalizeSignupUsername, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, USERNAME_RULES } from '../../username';
@@ -18,6 +20,12 @@ const FIELDS = [
   { key: 'password', label: '비밀번호', type: 'password', autoComplete: 'new-password', minLength: PASSWORD_MIN, maxLength: PASSWORD_MAX, placeholder: '비밀번호 입력', hint: PASSWORD_RULES },
 ] as const;
 const LABELS: Record<Field, string> = { name: '이름', email: '이메일', username: '아이디', password: '비밀번호', acknowledged: '저장 방식 확인' };
+const STEP_FIELDS: readonly (readonly Field[])[] = [['name'], ['username'], ['email'], ['password', 'acknowledged']];
+const SERVER_ERROR_FIELDS = new Map<string, Field>([
+  ['USERNAME_EXISTS', 'username'], ['INVALID_USERNAME', 'username'],
+  ['EMAIL_EXISTS', 'email'], ['INVALID_PASSWORD', 'password'],
+]);
+
 function validate(values: Values, username: string | undefined): Partial<Record<Field, string>> {
   return {
     ...(!values.name.trim() && { name: '이름을 입력해 주세요.' }),
@@ -33,69 +41,128 @@ export function SignupForm({ onCreate, onComplete }: Props) {
   const uid = useId(); const controls = useRef<Partial<Record<Field, HTMLInputElement>>>({});
   const alive = useRef(true);
   const [values, setValues] = useState<Values>({ name: '', email: '', username: '', password: '', acknowledged: false });
+  const [step, setStep] = useState(0);
+  const [focusRequest, setFocusRequest] = useState<{ field: Field }>();
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [tried, setTried] = useState(false); const [busy, setBusy] = useState(false);
+  const [attempted, setAttempted] = useState<readonly Field[]>([]);
+  const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState<{ message: string; field?: Field }>();
   const username = normalizeSignupUsername(values.username);
   const invalidFields = validate(values, username);
   const errors = serverError?.field ? { ...invalidFields, [serverError.field]: serverError.message } : invalidFields;
-  const wrong = Object.keys(errors) as Field[];
+  const field = FIELDS[step];
+  const lastStep = step === FIELDS.length - 1;
+  const wrong = STEP_FIELDS[step].filter(key => errors[key] && (attempted.includes(key) || serverError?.field === key));
+  const generalError = serverError && !serverError.field ? serverError.message : undefined;
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
-  useEffect(() => { if (serverError?.field) controls.current[serverError.field]?.focus(); }, [serverError]);
-  function change<K extends Field>(field: K, value: Values[K]) { setValues(old => ({ ...old, [field]: value })); setServerError(undefined); }
+  useLayoutEffect(() => {
+    if (focusRequest) controls.current[focusRequest.field]?.focus();
+  }, [focusRequest]);
+
+  function showStep(index: number, focus: Field = FIELDS[index].key) {
+    if (index !== step) {
+      setStep(index);
+      setPasswordVisible(false);
+    }
+    setFocusRequest({ field: focus });
+  }
+
+  function change<K extends Field>(key: K, value: Values[K]) {
+    setValues(old => ({ ...old, [key]: value }));
+    if (!serverError?.field || serverError.field === key) setServerError(undefined);
+  }
+
   async function submit(event: FormEvent) {
-    event.preventDefault(); if (busy) return;
-    setTried(true); setServerError(undefined);
-    const invalid = Object.keys(invalidFields) as Field[];
-    if (!username || invalid.length) { controls.current[invalid[0]]?.focus(); return; }
+    event.preventDefault();
+    if (busy) return;
+    const firstErrorStep = lastStep ? STEP_FIELDS.findIndex(keys => keys.some(key => errors[key])) : step;
+    const invalid = STEP_FIELDS[firstErrorStep]?.filter(key => errors[key]);
+    if (invalid?.length) {
+      setAttempted(previous => [...new Set([...previous, ...invalid])]);
+      showStep(firstErrorStep, invalid[0]);
+      return;
+    }
+    if (!lastStep) {
+      showStep(step + 1);
+      return;
+    }
+    if (!username) return;
+    setServerError(undefined);
+    setPasswordVisible(false);
     setBusy(true);
     try { await onCreate(values.name.trim(), values.email.trim(), username, values.password); if (alive.current) onComplete(); }
     catch (reason) {
       if (!alive.current) return;
-      const code = reason instanceof ApiError ? reason.code : undefined;
-      const field = code === 'USERNAME_EXISTS' || code === 'INVALID_USERNAME' ? 'username'
-        : code === 'EMAIL_EXISTS' ? 'email'
-        : code === 'INVALID_PASSWORD' ? 'password' : undefined;
-      setServerError({ message: reason instanceof Error ? reason.message : '계정을 만들지 못했어요. 다시 시도해 주세요.', field });
+      const key = reason instanceof ApiError ? SERVER_ERROR_FIELDS.get(reason.code) : undefined;
+      setServerError({ message: reason instanceof Error ? reason.message : '계정을 만들지 못했어요. 다시 시도해 주세요.', field: key });
+      if (key) showStep(STEP_FIELDS.findIndex(keys => keys.includes(key)), key);
     }
     finally { if (alive.current) setBusy(false); }
   }
-  return <form className="login-card signup-form" noValidate aria-label="회원가입 양식" aria-busy={busy} onSubmit={submit}>
+
+  const inputId = `${uid}-${field.key}`;
+  const messageId = `${inputId}-error`;
+  const hintId = 'hint' in field ? `${inputId}-hint` : undefined;
+  const invalid = wrong.includes(field.key);
+  const ackInvalid = wrong.includes('acknowledged');
+  const disableTextCorrection = lastStep || field.key === 'username';
+  const input = <input
+    ref={element => { if (element) controls.current[field.key] = element; else delete controls.current[field.key]; }}
+    className="text-input" id={inputId} name={field.key} type={lastStep && passwordVisible ? 'text' : field.type}
+    autoComplete={field.autoComplete} autoCapitalize={disableTextCorrection ? 'none' : undefined}
+    autoCorrect={disableTextCorrection ? 'off' : undefined} spellCheck={disableTextCorrection ? false : undefined}
+    required maxLength={field.maxLength} minLength={'minLength' in field ? field.minLength : undefined}
+    placeholder={field.placeholder} value={values[field.key]} disabled={busy}
+    aria-invalid={invalid || undefined} aria-describedby={invalid ? messageId : hintId}
+    onChange={event => change(field.key, event.target.value)}
+  />;
+
+  return <form className="login-card signup-form u063 u244" noValidate aria-label="회원가입 양식" aria-busy={busy} onSubmit={submit}>
     <h1>회원가입</h1>
-    {tried && (wrong.length > 0 || serverError) && <div className="signup-errors" role="alert"><b>{serverError?.message || wrong.length + '개 항목을 확인해 주세요.'}</b>
-      {wrong.length > 0 && <ul>{wrong.map(field => <li key={field}><a href={'#' + uid + '-' + field} onClick={event => { event.preventDefault(); controls.current[field]?.focus(); }}>{LABELS[field]}</a></li>)}</ul>}
+    <p className="u063-count" aria-live="polite" aria-atomic="true">{step + 1} / {FIELDS.length}</p>
+    <div className="u063-bar" aria-hidden="true">
+      {FIELDS.map(({ key }, index) => <i key={key} data-complete={index <= step} />)}
+    </div>
+    {step > 0 && <div className="u063-chips" role="group" aria-label="입력한 항목">
+      {FIELDS.slice(0, step).map(({ key, label }, index) => <button
+        className="u063-chip" key={key} type="button" aria-label={`${label} 수정`} disabled={busy} onClick={() => showStep(index)}
+      ><Check size={14} aria-hidden="true" /><span>{values[key]}</span></button>)}
     </div>}
-    {FIELDS.map(field => {
-      const invalid = tried && !!errors[field.key]; const messageId = uid + '-message-' + field.key;
-      const hintId = 'hint' in field ? `${uid}-${field.key}-hint` : undefined;
-      const inputId = uid + '-' + field.key;
-      const password = field.key === 'password';
-      const disableTextCorrection = password || field.key === 'username';
-      const input = <input
-        ref={element => { if (element) controls.current[field.key] = element; else delete controls.current[field.key]; }}
-        className="text-input" id={inputId} name={field.key} type={password && passwordVisible ? 'text' : field.type}
-        autoComplete={field.autoComplete} autoCapitalize={disableTextCorrection ? 'none' : undefined}
-        autoCorrect={disableTextCorrection ? 'off' : undefined} spellCheck={disableTextCorrection ? false : undefined}
-        required maxLength={field.maxLength} minLength={'minLength' in field ? field.minLength : undefined}
-        placeholder={field.placeholder} value={values[field.key]} disabled={busy}
-        aria-invalid={invalid || undefined} aria-describedby={invalid ? messageId : hintId}
-        onChange={event => change(field.key, event.target.value)}
-      />;
-      return <div className="signup-field" key={field.key}>
+    {(wrong.length > 0 || generalError) && <div className="signup-errors" role="alert">
+      <b>{generalError ?? `${wrong.length}개 항목을 확인해 주세요.`}</b>
+      {wrong.length > 0 && <ul>{wrong.map(key => <li key={key}><a href={`#${uid}-${key}`} onClick={event => {
+        event.preventDefault();
+        controls.current[key]?.focus();
+      }}>{LABELS[key]}</a></li>)}</ul>}
+    </div>}
+    <div className="u063-stage" key={field.key}>
+      {lastStep && <input type="hidden" name="username" autoComplete="username" value={username ?? ''} />}
+      <div className="signup-field">
         <label className="field-label" htmlFor={inputId}>{field.label}</label>
-        {password ? <div className="password-field">
+        {lastStep ? <div className="password-field">
           {input}
           <PasswordVisibilityButton inputId={inputId} visible={passwordVisible} disabled={busy} onToggle={() => setPasswordVisible(value => !value)} />
         </div> : input}
         {'hint' in field && !invalid && <p className="signup-field-hint" id={hintId}>{field.hint}</p>}
         {invalid && <p className="field-error" id={messageId}>{errors[field.key]}</p>}
-      </div>;
-    })}
-    <label className="signup-ack" htmlFor={uid + '-acknowledged'}>
-      <input ref={element => { if (element) controls.current.acknowledged = element; else delete controls.current.acknowledged; }} id={uid + '-acknowledged'} type="checkbox" checked={values.acknowledged} disabled={busy} aria-invalid={tried && !!errors.acknowledged || undefined} aria-describedby={tried && errors.acknowledged ? uid + '-message-acknowledged' : undefined} onChange={event => change('acknowledged', event.target.checked)} />
-      <span>{SERVER_AUTH ? '계정·편집 정보가 서버에 저장됨을 확인했어요' : '이 브라우저에만 저장됨을 확인했어요'}</span>
-    </label>
-    {tried && errors.acknowledged && <p className="field-error" id={uid + '-message-acknowledged'}>{errors.acknowledged}</p>}
-    <button className="btn primary full" type="submit" disabled={busy}>{busy ? '생성 중…' : '계정 만들기'}</button>
+      </div>
+      {lastStep && <>
+        <label className="signup-ack" htmlFor={`${uid}-acknowledged`}>
+          <input ref={element => { if (element) controls.current.acknowledged = element; else delete controls.current.acknowledged; }}
+            id={`${uid}-acknowledged`} type="checkbox" checked={values.acknowledged} disabled={busy}
+            aria-invalid={ackInvalid || undefined} aria-describedby={ackInvalid ? `${uid}-acknowledged-error` : undefined}
+            onChange={event => change('acknowledged', event.target.checked)}
+          />
+          <span>{SERVER_AUTH ? '계정·편집 정보가 서버에 저장됨을 확인했어요' : '이 브라우저에만 저장됨을 확인했어요'}</span>
+        </label>
+        {ackInvalid && <p className="field-error" id={`${uid}-acknowledged-error`}>{errors.acknowledged}</p>}
+      </>}
+    </div>
+    <div className="u063-actions">
+      {step > 0 && <button className="btn secondary" type="button" disabled={busy} onClick={() => showStep(step - 1)}>이전</button>}
+      <button className="btn primary" type="submit" disabled={busy}>
+        {lastStep ? (busy ? '생성 중…' : '계정 만들기') : <>다음<ArrowRight size={16} aria-hidden="true" /></>}
+      </button>
+    </div>
   </form>;
 }
