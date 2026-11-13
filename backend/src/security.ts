@@ -51,12 +51,15 @@ export function createSecurity(db: Database, options: SecurityOptions) {
     if (row.role !== 'admin') throw new HttpError(403, 'FORBIDDEN', '관리자 권한이 필요합니다.');
     return row;
   }
-  function mutation(req: Request, _res: Response, next: NextFunction) {
-    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  function verifyMutation(req: Request) {
     if (req.get('origin') !== options.origin || req.get('sec-fetch-site') === 'cross-site') throw new HttpError(403, 'ORIGIN_REJECTED', '허용된 사이트에서 다시 시도해 주세요.');
-    if (!req.is('application/json')) throw new HttpError(415, 'JSON_REQUIRED', 'JSON 요청이 필요합니다.');
     const current = session(req); const csrf = req.get('x-csrf-token');
     if (!current || !csrf || !/^[a-f0-9]{64}$/.test(csrf) || !timingSafeEqual(Buffer.from(csrf), Buffer.from(current.csrf))) throw new HttpError(403, 'CSRF_REJECTED', '페이지를 새로고침한 뒤 다시 시도해 주세요.');
+  }
+  function mutation(req: Request, _res: Response, next: NextFunction) {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+    if (!req.is('application/json')) throw new HttpError(415, 'JSON_REQUIRED', 'JSON 요청이 필요합니다.');
+    verifyMutation(req);
     next();
   }
   function limitRates(buckets: ReadonlyArray<readonly [string, number]>) {
@@ -79,5 +82,5 @@ export function createSecurity(db: Database, options: SecurityOptions) {
     if (current) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(current.token_hash);
     res.clearCookie(cookieName, { httpOnly: true, secure: options.secureCookies, sameSite: 'lax', path: '/' });
   }
-  return { session, issue, user, admin, mutation, rate, rateAnonymousSession, logout };
+  return { session, issue, user, admin, mutation, verifyMutation, rate, rateAnonymousSession, logout };
 }

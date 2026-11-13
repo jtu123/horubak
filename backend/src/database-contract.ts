@@ -57,6 +57,11 @@ export const DATABASE_SCHEMA = `
     id TEXT NOT NULL, document TEXT NOT NULL CHECK(json_valid(document)),
     archived_at TEXT, PRIMARY KEY(owner_id,id)
   );
+  CREATE TABLE IF NOT EXISTS project_sources (
+    owner_id TEXT NOT NULL, project_id TEXT NOT NULL, filename TEXT NOT NULL,
+    PRIMARY KEY(owner_id, project_id),
+    FOREIGN KEY(owner_id, project_id) REFERENCES projects(owner_id, id) ON DELETE CASCADE
+  );
   CREATE TABLE IF NOT EXISTS audit_log (
     id TEXT PRIMARY KEY, actor_id TEXT REFERENCES users(id), action TEXT NOT NULL,
     target_id TEXT NOT NULL, reason TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL

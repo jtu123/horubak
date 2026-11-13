@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { getProjectCandidates, getProjectEvidence, getProjectTranscript, legacySeedProjects, refreshDefaultSamples, seedProjects } from './data';
 import { rangeError } from './lib';
-import { getSportsSample } from './sports-samples';
+import { getDashboardSampleProject, getSportsSample, SPORTS_SAMPLES } from './sports-samples';
 import { addProjectClip, normalizeProject } from './workspace-model';
 
 describe('sports samples', () => {
+  it('reopens an active sample and assigns a fresh project ID after removal', () => {
+    const match = SPORTS_SAMPLES[0];
+    const first = getDashboardSampleProject([], match, true);
+    expect(getDashboardSampleProject([first], match, true)).toBe(first);
+
+    const reopened = getDashboardSampleProject([], match, true);
+    expect(reopened.id).not.toBe(first.id);
+    expect(reopened.sportsSampleId).toBe(first.sportsSampleId);
+    expect(getDashboardSampleProject([], match, false).id).toBe(`sample-${match.id}`);
+  });
   it('keeps the bundled footage and matching clip ranges after copying and saving a sample', () => {
     for (const seed of seedProjects()) {
       const copied = { ...seed, id: 'copy-of-' + seed.id, title: '사용자 프로젝트' };

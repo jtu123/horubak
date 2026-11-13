@@ -47,6 +47,7 @@ export interface Project {
   sourceName: string;
   sportsSampleId?: string;
   sourceUrl?: string;
+  sourceUploaded?: boolean;
   fileSize?: number;
   startedAt?: number;
   progress: number;

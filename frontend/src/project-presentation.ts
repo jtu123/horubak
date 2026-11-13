@@ -22,10 +22,10 @@ export function describeProject(
   const rangeIssue = rangeError(edit.start, edit.end, project.duration);
   return {
     statusLabel: STATUS_LABELS[project.status],
-    sourceLabel: sample ? '샘플' : project.source === 'file' ? '로컬 파일' : 'URL',
+    sourceLabel: sample ? '샘플' : project.sourceUploaded ? '서버 파일' : project.source === 'file' ? '로컬 파일' : 'URL',
     analysisLabel: match ? '샘플 후보' : sample ? '샘플 분석' : '분석 연결 전',
     mediaLabel: match ? '경기 샘플 영상' : sample ? '샘플 미리보기'
-      : !hasVideo ? project.source === 'url' ? '주소만 등록됨' : '원본 연결 필요'
+      : !hasVideo && !project.sourceUploaded ? project.source === 'url' ? '주소만 등록됨' : '원본 연결 필요'
       : !Number.isFinite(project.duration) || project.duration <= 0 ? '길이 확인 필요' : '원본 연결됨',
     rangeIssue,
     canDownloadSrt: editable && sample && project.genre !== 'general' && !rangeIssue,

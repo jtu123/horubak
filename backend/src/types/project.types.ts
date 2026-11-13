@@ -1,24 +1,27 @@
-export type Genre = "lecture" | "speech" | "podcast";
-
-export type InputType = "FILE" | "URL";
+export type Genre = "lecture" | "speech" | "podcast" | "general";
 
 export interface VideoMetadata {
-  filename?: string;
-  format?: string;
-  duration?: number;
-  width?: number;
-  height?: number;
+  format: string;
+  duration: number;
+  width: number;
+  height: number;
   videoCodec?: string;
   audioCodec?: string;
 }
 
-export interface CreateProjectResponse {
-  success: boolean;
+export type ContentSignal = "speech" | "visual" | "music" | "screen";
+
+export interface StagedProject {
   projectId: string;
-  status: string;
-  inputType: InputType;
+  projectName: string;
   genre: Genre;
-  metadata?: VideoMetadata;
-  message: string;
-  nextAction?: string;
+  inputType: "FILE";
+  contentProfile?: { purpose: string; focus?: string; signals: ContentSignal[] };
+  metadata: VideoMetadata & { filename: string };
+  file: { stagedPath: string; filename: string; size: number };
+}
+
+export interface RegisteredProject {
+  project: object;
+  version: number;
 }

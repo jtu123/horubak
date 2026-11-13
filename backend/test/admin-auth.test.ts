@@ -65,7 +65,10 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
       assert.equal((await member.send('/api/admin/users')).response.status, 403);
       assert.equal((await member.send('/api/admin/projects')).response.status, 403);
       assert.equal((await member.send('/api/admin/activity')).response.status, 403);
-      const cli = spawnSync(process.execPath, ['--import', 'tsx', 'src/scripts/admin.ts', '--', 'admin@test.example'], { env: { ...process.env, DATABASE_PATH: path }, encoding: 'utf8' });
+      const adminCli = (args: string[]) => spawnSync(process.execPath, ['--import', 'tsx', 'src/scripts/admin.ts', '--', ...args], { env: { ...process.env, DATABASE_PATH: path }, encoding: 'utf8' });
+      assert.equal(adminCli(['admin@test.example']).status, 1);
+      assert.equal((await admin.send('/api/auth/me')).data.user.role, 'user');
+      const cli = adminCli(['--verified-account', adminId]);
       assert.equal(cli.status, 0, cli.stderr);
       assert.equal((await admin.send('/api/auth/me')).response.status, 401);
       const login = await admin.login('admin@test.example');
@@ -76,20 +79,22 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
       const sourceUrl = 'https://example.com/video.mp4?key=' + 'x'.repeat(2800);
       const draft = { ...project, sourceName: sourceUrl, sourceUrl, clips: [{ id: 'draft', title: '초안', edit: { start: 95, end: 40, subtitle: '' } }] };
       const request = { ownerId: memberId, version: 0, projects: [draft] };
-      const switchedAccount = await admin.send('/api/workspace', 'PUT', request);
+      const switchedAccount = await admin.send('/api/workspace/session', 'PUT', request);
       assert.equal(switchedAccount.response.status, 409);
       assert.equal(switchedAccount.data.code, 'WORKSPACE_ACCOUNT_CHANGED');
       assert.deepEqual((await admin.send('/api/workspace')).data, { ownerId: adminId, version: 0, projects: [] });
-      assert.equal((await member.send('/api/workspace', 'PUT', { version: 0, projects: [] })).response.status, 400);
-      assert.equal((await member.send('/api/workspace', 'PUT', request)).response.status, 200);
+      const oldClient = await member.send('/api/workspace', 'PUT', { version: 0, projects: [] });
+      assert.equal(oldClient.response.status, 409);
+      assert.equal(oldClient.data.code, 'WORKSPACE_CLIENT_OUTDATED');
+      assert.equal((await member.send('/api/workspace/session', 'PUT', request)).response.status, 200);
       const saved = await member.send('/api/workspace');
       assert.deepEqual(saved.data, { ownerId: memberId, version: 1, projects: [draft] });
       assert.equal((await admin.send('/api/projects/' + project.id)).response.status, 404);
       assert.equal((await member.send('/api/projects/' + project.id)).response.status, 200);
       assert.deepEqual((await admin.send('/api/workspace')).data.projects, []);
-      assert.equal((await member.send('/api/workspace', 'PUT', { ownerId: memberId, version: 0, projects: [] })).response.status, 409);
-      assert.equal((await member.send('/api/workspace', 'PUT', { ownerId: memberId, version: 1, projects: [{ ...project, status: 'made-up' }] })).response.status, 400);
-      assert.equal((await member.send('/api/workspace', 'PUT', { ownerId: memberId, version: 1, projects: [{ ...project, sourceUrl: 'javascript:alert(1)' }] })).response.status, 400);
+      assert.equal((await member.send('/api/workspace/session', 'PUT', { ownerId: memberId, version: 0, projects: [] })).response.status, 409);
+      assert.equal((await member.send('/api/workspace/session', 'PUT', { ownerId: memberId, version: 1, projects: [{ ...project, status: 'made-up' }] })).response.status, 400);
+      assert.equal((await member.send('/api/workspace/session', 'PUT', { ownerId: memberId, version: 1, projects: [{ ...project, sourceUrl: 'javascript:alert(1)' }] })).response.status, 400);
       assert.equal((await member.send('/api/admin/users/' + adminId, 'PATCH', { role: 'user', reason: '권한 위조 시도' })).response.status, 403);
     });
     await t.test('관리자 회원 검색·페이지·비밀정보 제외·자기 보호', async () => {
@@ -107,8 +112,8 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
       assert.equal((await admin.send(path, 'PATCH', { archived: true, reason: '운영 검증을 위한 보관' })).response.status, 200);
       assert.equal((await member.send('/api/workspace')).data.projects.length, 0);
       assert.equal((await member.send('/api/projects/' + project.id)).response.status, 404);
-      assert.equal((await member.send('/api/workspace', 'PUT', { ownerId: memberId, version: 1, projects: [project] })).response.status, 409);
-      assert.equal((await member.send('/api/workspace', 'PUT', { ownerId: memberId, version: 2, projects: [project] })).response.status, 409);
+      assert.equal((await member.send('/api/workspace/session', 'PUT', { ownerId: memberId, version: 1, projects: [project] })).response.status, 409);
+      assert.equal((await member.send('/api/workspace/session', 'PUT', { ownerId: memberId, version: 2, projects: [project] })).response.status, 409);
       assert.equal((await admin.send('/api/admin/projects?archived=true')).data.total, 1);
       assert.equal((await admin.send(path, 'PATCH', { archived: false, reason: '운영 검증 후 원상 복원' })).response.status, 200);
       assert.equal((await member.send('/api/workspace')).data.projects.length, 1);
@@ -133,7 +138,13 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
       assert.ok(log.data.items.some((item: any) => item.action === 'project.archive' && item.reason === '운영 검증을 위한 보관'));
       assert.ok(!JSON.stringify(log.data).includes(password)); assert.ok(!JSON.stringify(log.data).includes('password_hash'));
       const oldCookie = admin.cookie;
-      assert.equal((await admin.send('/api/auth/logout', 'POST', {})).response.status, 200);
+      assert.equal((await admin.send('/api/auth/logout', 'POST', {})).data.code, 'WORKSPACE_CLIENT_OUTDATED');
+      const switched = await admin.send('/api/auth/session/logout', 'POST', { ownerId: memberId });
+      assert.equal(switched.response.status, 409);
+      assert.equal(switched.data.code, 'WORKSPACE_ACCOUNT_CHANGED');
+      assert.equal(switched.response.headers.get('set-cookie'), null);
+      assert.equal((await admin.send('/api/auth/me')).data.user.id, adminId);
+      assert.equal((await admin.send('/api/auth/session/logout', 'POST', { ownerId: adminId })).response.status, 200);
       admin.cookie = oldCookie; assert.equal((await admin.send('/api/auth/me')).response.status, 401);
     });
     await t.test('파일 DB를 다른 연결에서 읽을 수 있고 세션 만료를 거부', async () => {

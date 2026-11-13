@@ -42,7 +42,7 @@ pnpm dev
 pnpm dev
 ```
 
-개발 주소는 `http://127.0.0.1:5173`이다. 이 주소의 회원가입 화면에서 실제 서버 계정을 생성한 다음, backend 디렉터리의 별도 터미널에서 `pnpm admin -- 가입한이메일`로 관리자 권한을 지정한다. 해당 회원의 기존 세션은 종료되며, 다시 로그인하면 `/admin`과 사이드바의 관리자 메뉴를 사용할 수 있다. 기본 관리자 계정·공개 비밀번호·첫 가입자 자동 승격은 없다.
+개발 주소는 `http://127.0.0.1:5173`이다. 관리자 지정을 요청한 사람에게 직접 로그인하도록 하고, 그 세션의 `GET /api/auth/me` 응답에서 `user.id`를 확인한다. 요청자와 세션의 소유자가 일치하는 것을 확인한 뒤 backend 디렉터리에서 `pnpm admin -- --verified-account <계정-ID>`를 실행한다. 이메일·비밀번호 가입 주소는 소유권이 검증되지 않으므로 주소만 보고 지정하지 않는다. 관리자 화면에서 역할을 변경할 때도 같은 기준을 사용한다. 지정된 회원의 세션은 종료되며 다시 로그인하면 `/admin`을 열 수 있다.
 
 기본 DB 파일은 **backend 디렉터리에서 실행할 때** `backend/data/horubak.sqlite`이다. `DATABASE_PATH`로 영속 디스크 경로를 바꿀 수 있다. `-wal`, `-shm` 파일도 DB 운영 파일이므로 Git에 포함하지 않는다. 백업은 서버 정지 후 DB 파일을 복사하거나 SQLite의 일관된 백업 방식을 사용한다.
 
@@ -70,9 +70,9 @@ pnpm dev
 | POST /api/auth/signup | `{ name, email, password }` → `{ user, csrfToken }`, 역할은 항상 user |
 | POST /api/auth/login | `{ email, password }` → `{ user, csrfToken }`, 세션·CSRF 교체 |
 | GET /api/auth/me | 서버에서 확인한 `{ user, csrfToken }` |
-| POST /api/auth/logout | 서버 세션 폐기·쿠키 삭제 |
+| POST /api/auth/session/logout | `{ ownerId }`와 세션을 대조한 후 해당 세션 폐기·쿠키 삭제 |
 | GET /api/workspace | 현재 세션의 `{ ownerId, projects, version }`, 보관 프로젝트 제외 |
-| PUT /api/workspace | `{ ownerId, projects, version }` 저장 → `{ version }`, 계정 또는 버전이 바뀌면 409 |
+| PUT /api/workspace/session | `{ ownerId, projects, version }` 저장 → `{ version }`, 계정 또는 버전이 바뀌면 409 |
 | GET /api/projects/:id | 소유자만 프로젝트 조회, 다른 소유자의 ID는 404 |
 | GET /api/admin/overview | 실제 DB의 회원·프로젝트 수와 연결 상태 |
 | GET /api/admin/users | q·status·page·size 검색, 비밀번호/세션 정보 제외 |
@@ -91,7 +91,9 @@ pnpm dev
 
 임시 Worker를 다시 배포할 때는 `backend`에서 `wrangler deploy --config wrangler.auth-test.toml`로 설정을 선택한다. 임시 Pages 빌드를 직접 배포하는 별도 작업 폴더에서는 `frontend/wrangler.auth-test.toml`을 `wrangler.toml`로 복사해 사용한다. 기본 Git 빌드가 테스트 Worker 바인딩을 선택하지 않도록 두 설정은 테스트용 이름으로 보관한다.
 
-작업공간 응답과 저장 요청의 `ownerId` 계약은 프런트와 Worker에 함께 적용한다. 이전 화면이 열린 탭은 배포 후 새로고침해야 새 저장 계약을 사용한다.
+작업공간과 로그아웃의 쓰기 경로가 바뀌었다. 공개 테스트를 잠시 중단할 수 있는 시간에 열린 탭의 편집을 저장하거나 설정에서 백업한 뒤 Worker를 먼저 올리고 Pages를 이어서 배포한다. 구형 경로로 들어온 쓰기는 업데이트 안내와 함께 거부하며, 새 프런트도 구형 Worker의 작업공간을 채택하지 않는다. 배포 직후 새로고침한 탭에서 로그인·프로젝트 조회·저장·로그아웃을 확인한다. 롤백 시 Pages와 Worker를 같은 버전 조합으로 복구한다.
+
+Node 서버에서 `ENABLE_SOURCE_UPLOAD=1`을 설정하면 파일 업로드와 원본 미리보기를 사용할 수 있다. 원본은 `UPLOAD_DIR`에 비공개로 저장되고 같은 계정의 프로젝트에서만 읽을 수 있다. SQLite 파일과 `UPLOAD_DIR`을 함께 보관한다. Pages 임시 Worker에서는 브라우저 미리보기만 제공한다.
 
 기존 chatgpt.site 배포는 정적 프론트엔드다. 실제 회원/관리자 기능을 외부에 제공하려면 별도의 **실행 중인 Node 서버와 영속 디스크**가 필요하다. 해당 정적 배포에 브라우저 저장소를 사용한 가짜 관리자 기능을 추가하지 않는다.
 

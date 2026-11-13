@@ -11,7 +11,7 @@ import type { FilterKey } from '../project-search';
 import { describeProject } from '../project-presentation';
 import { useWorkspace } from '../store';
 import { getProjectLabel } from '../data';
-import { createSportsSample, SPORTS_SAMPLES, type SportsSample } from '../sports-samples';
+import { getDashboardSampleProject, SPORTS_SAMPLES, type SportsSample } from '../sports-samples';
 import { getActiveClip, getProjectClips } from '../workspace-model';
 import { formatTime } from '../lib';
 import type { ContentSignal, Project } from '../types';
@@ -31,7 +31,7 @@ function projectPath(project: Project) {
 }
 
 export function Dashboard() {
-  const { projects, updateProject, addProject, deleteProject, notify, videos } = useWorkspace();
+  const { projects, updateProject, addProject, deleteProject, notify, videos, serverAuth, user } = useWorkspace();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const view = params.get('view') ?? 'all';
@@ -64,14 +64,21 @@ export function Dashboard() {
   const reset = () => { recoverFocus.current = true; setQuery(''); setSignal('all'); if (view !== 'all') navigate('/projects'); };
   const removeFilter = (key: FilterKey) => { recoverFocus.current = true; if (key === 'query') setQuery(''); else if (key === 'genre') setSignal('all'); else navigate('/projects'); };
   const openSample = (match: SportsSample) => {
-    const project = createSportsSample(match);
-    const existing = projects.find(item => item.id === project.id);
-    if (!existing) {
-      addProject(project);
-      notify('경기 샘플을 추가했어요');
+    const project = getDashboardSampleProject(projects, match, serverAuth && !!user && !user.guest);
+    if (projects.some(item => item.id === project.id)) {
+      setBrowsingSamples(false);
+      open(project);
+      return;
     }
+    try {
+      addProject(project);
+    } catch (error) {
+      notify('경기 샘플을 추가하지 못했어요', error instanceof Error ? error.message : undefined, 'error');
+      return;
+    }
+    notify('경기 샘플을 추가했어요');
     setBrowsingSamples(false);
-    open(existing ?? project);
+    open(project);
   };
 
   return <div className="dashboard dashboard-v3 reference-dashboard">
@@ -110,7 +117,7 @@ export function Dashboard() {
         const info = describeProject(project, project.edit, !!videos[project.id]);
         const count = getProjectClips(project).length;
         const isSample = project.source === 'sample';
-        const waitingForSource = !isSample && (project.status === 'ready' || project.status === 'completed') && !videos[project.id];
+        const waitingForSource = !isSample && (project.status === 'ready' || project.status === 'completed') && !project.sourceUploaded && !videos[project.id];
         return <ProjectMenu key={project.id} project={project} index={index} onOpen={() => open(project)} onRename={() => { setRenaming(project); setName(project.title); }} onFavorite={() => updateProject(project.id, { favorite: !project.favorite })} onDelete={() => setDeleting(project)}>{trigger => <>
           <button className="project-open" onClick={() => open(project)} aria-label={project.title + ' 열기'}>
             <div className={'project-cover project-cover-' + project.genre}>
@@ -137,7 +144,7 @@ export function Dashboard() {
         </button>)}
       </div>
     </Modal>}
-    {renaming && <Modal title="이름 변경" onClose={() => setRenaming(null)}><form onSubmit={event => { event.preventDefault(); if (!name.trim()) return; updateProject(renaming.id, { title: name.trim() }); setRenaming(null); notify('프로젝트 이름을 바꿨어요'); }}><label className="field-label" htmlFor="rename">프로젝트 이름</label><input className="text-input" id="rename" autoFocus maxLength={80} required value={name} onChange={event => setName(event.target.value)} /><div className="modal-actions"><button type="button" className="btn secondary" onClick={() => setRenaming(null)}>취소</button><button className="btn primary" type="submit">변경</button></div></form></Modal>}
-    {deleting && <Modal title="프로젝트를 삭제할까요?" onClose={() => setDeleting(null)}><p className="muted">작업공간의 <b>{deleting.title}</b> 프로젝트와 클립이 목록에서 제거됩니다.</p><div className="modal-actions"><button className="btn secondary" onClick={() => setDeleting(null)}>취소</button><button className="btn danger" onClick={() => { deleteProject(deleting.id); setDeleting(null); notify('프로젝트를 삭제했어요'); }}>삭제</button></div></Modal>}
+    {renaming && <Modal title="이름 변경" onClose={() => setRenaming(null)}><form onSubmit={event => { event.preventDefault(); if (!name.trim() || !updateProject(renaming.id, { title: name.trim() })) return; setRenaming(null); notify('프로젝트 이름을 바꿨어요'); }}><label className="field-label" htmlFor="rename">프로젝트 이름</label><input className="text-input" id="rename" autoFocus maxLength={80} required value={name} onChange={event => setName(event.target.value)} /><div className="modal-actions"><button type="button" className="btn secondary" onClick={() => setRenaming(null)}>취소</button><button className="btn primary" type="submit">변경</button></div></form></Modal>}
+    {deleting && <Modal title="프로젝트를 삭제할까요?" onClose={() => setDeleting(null)}><p className="muted">작업공간의 <b>{deleting.title}</b> 프로젝트와 클립이 목록에서 제거됩니다.</p><div className="modal-actions"><button className="btn secondary" onClick={() => setDeleting(null)}>취소</button><button className="btn danger" onClick={() => { if (!deleteProject(deleting.id)) return; setDeleting(null); notify('프로젝트를 삭제했어요'); }}>삭제</button></div></Modal>}
   </div>;
 }

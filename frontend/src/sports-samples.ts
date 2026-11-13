@@ -79,6 +79,14 @@ export function getSportsSample(project: Project): SportsSample | undefined {
     : undefined;
 }
 
+export function getDashboardSampleProject(projects: Project[], match: SportsSample, serverUser: boolean): Project {
+  const sample = createSportsSample(match);
+  const existing = projects.find(project => project.id === sample.id ||
+    (serverUser && project.source === 'sample' && project.sportsSampleId === match.id));
+  if (existing) return existing;
+  return serverUser ? { ...sample, id: crypto.randomUUID() } : sample;
+}
+
 export function createSportsSample(match: SportsSample, now = new Date().toISOString()): Project {
   return {
     id: 'sample-' + match.id, sportsSampleId: match.id, title: match.title,

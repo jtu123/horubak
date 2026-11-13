@@ -31,6 +31,12 @@ describe('project presentation and available outputs', () => {
     expect(view.canDownloadSrt).toBe(false);
   });
 
+  it('keeps a server-backed source available after the browser drops local previews', () => {
+    const view = describeProject({ ...project, source: 'file', sourceUploaded: true });
+    expect(view.sourceLabel).toBe('서버 파일');
+    expect(view.mediaLabel).toBe('원본 연결됨');
+  });
+
   it('does not offer output when duration or selection is invalid', () => {
     for (const duration of [0, Number.NaN, 30]) {
       const view = describeProject({ ...project, duration }, { start: 10, end: 50 });

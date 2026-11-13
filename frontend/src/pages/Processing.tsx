@@ -34,7 +34,7 @@ export function Processing() {
       })}</div>
       {!sample && <p className="notice"><CircleAlert size={16} /><span>{project.source === 'url' && !videos[project.id] ? '주소만 등록됐어요. 원본 가져오기와 분석은 연결 전입니다.' : '원본 미리보기와 수동 편집만 사용할 수 있어요. 분석은 연결 전입니다.'}</span></p>}
       <div className="processing-actions">{ready ? <button className="btn primary full" onClick={() => navigate('/projects/' + project.id)}>프로젝트 열기 <ArrowRight size={16} /></button>
-        : running ? <button className="btn secondary" onClick={() => { updateProject(project.id, { status: 'cancelled' }); notify('화면 준비를 취소했어요', '다시 시작으로 이어갈 수 있어요.', 'info'); }}><X size={16} /> 취소</button>
+        : running ? <button className="btn secondary" onClick={() => { if (updateProject(project.id, { status: 'cancelled' })) notify('화면 준비를 취소했어요', '다시 시작으로 이어갈 수 있어요.', 'info'); }}><X size={16} /> 취소</button>
         : <button className="btn primary full" onClick={() => updateProject(project.id, { status: 'processing', startedAt: Date.now(), progress: 0 })}>다시 시작 <ArrowRight size={16} /></button>}
       </div>
     </div>

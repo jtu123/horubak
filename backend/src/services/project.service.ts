@@ -1,115 +1,47 @@
-import fs from "fs";
-import path from "path";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from 'node:crypto';
+import { HttpError } from '../security.js';
+import { object, text } from '../validation.js';
+import type { ContentSignal, Genre, StagedProject } from '../types/project.types.js';
+import { probeVideo } from './video.service.js';
 
-import env from "../config/env";
-import {
-  CreateProjectResponse,
-  Genre,
-  InputType,
-} from "../types/project.types";
+const GENRES = new Set<unknown>(['lecture', 'speech', 'podcast', 'general']);
+const SIGNALS = new Set<unknown>(['speech', 'visual', 'music', 'screen']);
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-import {
-  ensureDirectory,
-  isSupportedVideo,
-} from "../utils/file.utils";
-
-import { probeVideo } from "./video.service";
-
-interface CreateProjectParams {
-  projectName: string;
-  genre: Genre;
-  inputType: InputType;
-  sourceUrl?: string;
-  file?: {
-  originalname: string;
-  buffer: Buffer;
-};
+function readContentProfile(value: unknown): StagedProject['contentProfile'] {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') throw new HttpError(400, 'INVALID_CONTENT_PROFILE', '제작 목적을 확인해 주세요.');
+  let parsed: unknown;
+  try { parsed = JSON.parse(value); }
+  catch { throw new HttpError(400, 'INVALID_CONTENT_PROFILE', '제작 목적을 확인해 주세요.'); }
+  const profile = object(parsed);
+  const purpose = text(profile.purpose, 80, '제작 목적');
+  const focus = profile.focus === undefined ? undefined : text(profile.focus, 160, '남기고 싶은 순간', 0);
+  const signals = profile.signals ?? [];
+  if (!Array.isArray(signals) || signals.length > SIGNALS.size || !signals.every(signal => SIGNALS.has(signal))) {
+    throw new HttpError(400, 'INVALID_CONTENT_PROFILE', '영상 단서를 확인해 주세요.');
+  }
+  return { purpose, ...(focus ? { focus } : {}), signals: [...new Set<ContentSignal>(signals)] };
 }
 
-export async function createProject(
-  params: CreateProjectParams
-): Promise<CreateProjectResponse> {
-
-  // 파일 업로드 방식
-  if (params.inputType === "FILE") {
-
-    // 파일이 실제로 전달되었는지 확인
-    if (!params.file) {
-      throw new Error("영상 파일이 없습니다.");
-    }
-
-    // MP4 / MOV 확인
-    if (!isSupportedVideo(params.file.originalname)) {
-      throw new Error(
-        "MP4 또는 MOV 파일만 지원합니다."
-      );
-    }
-
-    // 프로젝트 ID 생성
-    const projectId = uuidv4();
-
-    // 저장 폴더가 없으면 생성
-    ensureDirectory(env.uploadDir);
-
-    // 원본 파일 확장자
-    const extension = path.extname(
-      params.file.originalname
-    );
-
-    // 서버에 저장할 파일명
-    const savedFilename =
-      `${projectId}${extension}`;
-
-    const savedPath = path.join(
-      env.uploadDir,
-      savedFilename
-    );
-
-    // 파일 저장
-    fs.writeFileSync(
-      savedPath,
-      params.file.buffer
-    );
-
-    try {
-
-      // ffprobe로 영상 정보 확인
-      const metadata =
-        await probeVideo(savedPath);
-
-      return {
-        success: true,
-        projectId,
-        status: "READY",
-        inputType: "FILE",
-        genre: params.genre,
-
-        metadata: {
-          filename:
-            params.file.originalname,
-
-          ...metadata,
-        },
-
-        message:
-          "영상이 정상적으로 등록되었습니다.",
-      };
-
-    } catch (error) {
-
-      // 영상 분석 실패 시 저장한 파일 삭제
-      if (fs.existsSync(savedPath)) {
-        fs.unlinkSync(savedPath);
-      }
-
-      throw new Error(
-        "손상되었거나 분석할 수 없는 영상 파일입니다."
-      );
-    }
+export async function inspectStagedProject(body: unknown, file: Express.Multer.File | undefined, signal: AbortSignal): Promise<StagedProject> {
+  const fields = object(body);
+  if (fields.projectId !== undefined && (typeof fields.projectId !== 'string' || !UUID_V4.test(fields.projectId))) {
+    throw new HttpError(400, 'INVALID_PROJECT_ID', '프로젝트 ID를 확인해 주세요.');
   }
+  const projectId = fields.projectId ?? randomUUID();
+  if (fields.inputType !== 'FILE') throw new HttpError(400, 'UNSUPPORTED_INPUT', '현재는 영상 파일만 서버에 등록할 수 있습니다.');
+  const projectName = text(fields.projectName, 80, '프로젝트 이름');
+  if (!GENRES.has(fields.genre)) throw new HttpError(400, 'INVALID_GENRE', '영상 종류를 확인해 주세요.');
+  if (!file || file.size === 0) throw new HttpError(400, 'MISSING_VIDEO', '영상 파일을 선택해 주세요.');
+  const filename = text(file.originalname, 255, '원본 파일 이름');
+  const contentProfile = readContentProfile(fields.contentProfile);
+  const metadata = await probeVideo(file.path, signal);
 
-  throw new Error(
-    "현재 지원하지 않는 입력 방식입니다."
-  );
+  return {
+    projectId, projectName, genre: fields.genre as Genre, inputType: 'FILE',
+    ...(contentProfile ? { contentProfile } : {}),
+    metadata: { filename, ...metadata },
+    file: { stagedPath: file.path, filename: file.filename, size: file.size },
+  };
 }

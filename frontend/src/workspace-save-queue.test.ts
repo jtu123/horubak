@@ -60,4 +60,32 @@ describe('workspace save queue', () => {
     await expect(Promise.all([edit, revert])).resolves.toEqual([false, false]);
     expect(save).toHaveBeenCalledTimes(1);
   });
+
+  it('merges a registered upload into the saved snapshot with the next workspace version', async () => {
+    const upload = normalizeProject({ id: 'upload', title: 'Uploaded source', source: 'file', sourceUploaded: true })!;
+    const save = vi.fn().mockResolvedValueOnce({ version: 5 }).mockResolvedValueOnce({ version: 7 });
+    const register = vi.fn().mockResolvedValueOnce({ project: upload, version: 6 });
+    const queue = createWorkspaceSaveQueue(initial, save);
+
+    await queue.enqueue(edited);
+    const registered = await queue.registerFile(edited, upload.id, register);
+    expect(register).toHaveBeenCalledWith(5, 'owner-a');
+    expect(registered).toEqual({ project: upload, projects: [upload, ...edited] });
+    expect(queue.needsSave(registered.projects)).toBe(false);
+
+    await queue.enqueue([upload, ...original]);
+    expect(save).toHaveBeenLastCalledWith([upload, ...original], 6, 'owner-a');
+  });
+
+  it('blocks autosave when an upload outcome could already have changed the server', async () => {
+    const error = new ApiError(0, 'UNREACHABLE', 'Upload outcome unknown');
+    const register = vi.fn().mockRejectedValueOnce(error);
+    const save = vi.fn();
+    const queue = createWorkspaceSaveQueue(initial, save);
+
+    await expect(queue.registerFile(original, 'upload', register)).rejects.toBe(error);
+    expect(queue.isBlocked()).toBe(true);
+    await expect(queue.enqueue(edited)).rejects.toBe(error);
+    expect(save).not.toHaveBeenCalled();
+  });
 });

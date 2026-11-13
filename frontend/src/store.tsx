@@ -6,6 +6,7 @@ import { ApiError, authApi, SERVER_AUTH, workspaceApi } from './services/api';
 import type { ServerWorkspace } from './services/api';
 import { addProjectClip, getProjectClips, loadProjectCollection, normalizeProject, patchProject, selectProjectClip, updateProjectClip } from './workspace-model';
 import type { LoadedProjects } from './workspace-model';
+import { workspaceLimitError } from './workspace-limits';
 import type { Candidate, DemoAccount, DemoUser, EditState, Project, ToastMessage } from './types';
 
 function read<T>(key: string, fallback: T): T {
@@ -26,6 +27,11 @@ export function createWorkspaceSaveQueue({ ownerId, projects, version: initialVe
   let pending = 0;
   let failure: Error | undefined;
   let closed = false;
+  const recordFailure = (error: unknown) => {
+    savedSnapshot = undefined;
+    failure = error instanceof Error ? error : new Error('서버에 저장하지 못했어요.');
+    return failure;
+  };
 
   return {
     needsSave: (next: Project[]) => pending > 0 || JSON.stringify(next) !== savedSnapshot,
@@ -47,18 +53,38 @@ export function createWorkspaceSaveQueue({ ownerId, projects, version: initialVe
           savedSnapshot = snapshot;
           return true;
         } catch (error) {
-          savedSnapshot = undefined;
-          failure = error instanceof Error ? error : new Error('서버에 저장하지 못했어요.');
-          throw failure;
+          throw recordFailure(error);
         }
       }).finally(() => { pending--; });
       tail = operation.then(() => {}, () => {});
       return operation;
     },
+    async registerFile(current: Project[], id: string, register: (version: number, ownerId: string) => Promise<{ project: Project; version: number }>) {
+      await tail;
+      if (closed) throw new Error('작업공간 상태가 바뀌었어요. 다시 시도해 주세요.');
+      if (failure) throw failure;
+
+      try {
+        const result = await register(version, ownerId);
+        const project = normalizeProject(result.project);
+        if (!project || project.id !== id || project.sourceUploaded !== true || result.version !== version + 1) {
+          throw new Error('서버에 등록된 프로젝트를 다시 불러와 주세요.');
+        }
+        const projects = [project, ...current];
+        version = result.version;
+        savedSnapshot = JSON.stringify(projects);
+        return { project, projects };
+      } catch (error) {
+        if (error instanceof ApiError && error.status >= 400 && error.status < 500 && ![408, 409].includes(error.status)) throw error;
+        throw recordFailure(error);
+      }
+    },
   };
 }
 
 type SaveQueue = ReturnType<typeof createWorkspaceSaveQueue>;
+const CLIP_TITLE_LIMIT = 200;
+const COPY_TITLE_SUFFIX = ' 복사본';
 interface Workspace {
   user: DemoUser | null; projects: Project[]; theme: 'light' | 'dark'; toasts: ToastMessage[]; storageError: boolean; storageNotice?: string;
   authLoading: boolean; authError: string; serverAuth: boolean;
@@ -68,16 +94,18 @@ interface Workspace {
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: (options?: { discardUnsaved?: boolean }) => Promise<void>;
-  updateProject: (id: string, patch: Partial<Project>) => void;
+  updateProject: (id: string, patch: Partial<Project>) => boolean;
   addProject: (project: Project, file?: File) => void;
-  deleteProject: (id: string) => void;
+  registerProjectFile: (project: Project, file: File, signal?: AbortSignal) => Promise<Project>;
+  deleteProject: (id: string) => boolean;
   createClip: (projectId: string, candidate?: Candidate) => string;
+  createClips: (projectId: string, candidates: Candidate[]) => boolean;
   selectClip: (projectId: string, clipId: string) => void;
-  updateClip: (projectId: string, clipId: string, patch: Partial<EditState>) => void;
-  renameClip: (projectId: string, clipId: string, title: string) => void;
+  updateClip: (projectId: string, clipId: string, patch: Partial<EditState>) => boolean;
+  renameClip: (projectId: string, clipId: string, title: string) => boolean;
   duplicateClip: (projectId: string, clipId: string) => string;
-  deleteClip: (projectId: string, clipId: string) => void;
-  attachVideo: (id: string, file: File) => void;
+  deleteClip: (projectId: string, clipId: string) => boolean;
+  replaceVideoSource: (projectId: string, file: File, duration: number) => boolean;
   videos: Record<string, string>;
   toggleTheme: () => void;
   notify: (title: string, description?: string, kind?: ToastMessage['kind']) => void;
@@ -104,10 +132,29 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const sessionRevision = useRef(0);
   const renderSession = sessionRevision.current;
   const saveQueue = useRef<SaveQueue | null>(null);
-  const sessionOperation = useRef<'logout' | 'reload' | null>(null);
-  const currentProjects = useRef(projects); currentProjects.current = projects;
+  const sessionOperation = useRef<'logout' | 'reload' | 'upload' | null>(null);
+  const currentProjects = useRef(projects);
   const notify: Workspace['notify'] = (title, description, kind = 'success') => setToasts(old => [{ id: ++toastSeq.current, title, description, kind }, ...old].slice(0, 4));
   const disconnectVideos = () => { urls.current.forEach(url => URL.revokeObjectURL(url)); urls.current.clear(); setVideos({}); };
+  const replaceProjects = (next: Project[]) => { currentProjects.current = next; setProjects(next); };
+  const canEdit = () => renderSession === sessionRevision.current && !sessionOperation.current;
+  const limitError = (next: Project[]) => SERVER_AUTH && user && !user.guest ? workspaceLimitError(next, user.id) : undefined;
+  const editProjects = (edit: (current: Project[]) => Project[], { removing = false, report = true } = {}) => {
+    if (!canEdit()) {
+      if (report) notify('변경 내용을 저장할 수 없어요', '작업공간 상태가 바뀌었어요. 잠시 후 다시 시도해 주세요.', 'error');
+      return false;
+    }
+    const current = currentProjects.current;
+    const next = edit(current);
+    if (next === current) return false;
+    const error = removing ? undefined : limitError(next);
+    if (error) {
+      if (report) notify('변경 내용을 저장할 수 없어요', error, 'error');
+      return false;
+    }
+    replaceProjects(next);
+    return true;
+  };
   const replaceSaveQueue = (next: SaveQueue | null) => {
     sessionRevision.current++;
     saveQueue.current?.close();
@@ -119,12 +166,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     saveAllowed.current = loaded.writeAllowed;
     setStorageError(!loaded.writeAllowed); setStorageNotice(loaded.notice);
     if (user?.id !== next.id) disconnectVideos();
-    setProjects(loaded.projects); setUser(next);
+    replaceProjects(loaded.projects); setUser(next);
     try { localStorage.setItem('moment.session.v1', JSON.stringify(next)); } catch { setStorageError(true); }
   };
   const setServerSession = (next: DemoUser, workspace?: ServerWorkspace, error = '') => {
     replaceSaveQueue(workspace ? createWorkspaceSaveQueue(workspace) : null);
-    disconnectVideos(); setProjects(workspace?.projects ?? []); setUser(next); setAuthError(error);
+    disconnectVideos(); replaceProjects(workspace?.projects ?? []); setUser(next); setAuthError(error);
     setStorageError(false); setStorageNotice(undefined); setSyncStatus(workspace ? 'saved' : 'idle'); setSyncError('');
     try { localStorage.removeItem('moment.session.v1'); } catch { /* Server sessions do not depend on browser storage. */ }
   };
@@ -191,6 +238,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const logout: Workspace['logout'] = async ({ discardUnsaved = false } = {}) => {
     if (sessionOperation.current === 'logout') throw new Error('로그아웃 중이에요.');
     if (sessionOperation.current === 'reload') throw new Error('작업공간을 불러오는 중이에요.');
+    if (sessionOperation.current === 'upload') throw new Error('원본 영상을 서버에 올리는 중이에요.');
     sessionOperation.current = 'logout';
     try {
       if (SERVER_AUTH && user && !user.guest) {
@@ -204,9 +252,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             if (queue.needsSave(currentProjects.current)) throw new Error('저장할 변경이 생겼어요. 저장한 뒤 다시 로그아웃해 주세요.');
           }
         }
-        await authApi.logout();
+        try { await authApi.logout(user.id); }
+        catch (error) {
+          if (!(error instanceof ApiError && error.status === 409 && error.code === 'WORKSPACE_ACCOUNT_CHANGED')) throw error;
+        }
       }
-      replaceSaveQueue(null); disconnectVideos(); setUser(null); setProjects([]);
+      replaceSaveQueue(null); disconnectVideos(); setUser(null); replaceProjects([]);
       setAuthError(''); setSyncStatus('idle'); setSyncError('');
       try { localStorage.removeItem('moment.session.v1'); } catch { setStorageError(true); }
     } catch (error) {
@@ -237,7 +288,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [projects, user, saveAttempt]);
   useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => {
-      if (saveQueue.current?.needsSave(currentProjects.current)) { event.preventDefault(); event.returnValue = ''; }
+      if (sessionOperation.current === 'upload' || saveQueue.current?.needsSave(currentProjects.current)) { event.preventDefault(); event.returnValue = ''; }
     };
     window.addEventListener('beforeunload', guard); return () => window.removeEventListener('beforeunload', guard);
   }, []);
@@ -245,19 +296,33 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!processing) return;
     const timer = window.setInterval(() => {
-      if (sessionOperation.current === 'logout') return;
-      setProjects(old => old.map(p => {
+      if (!canEdit()) return;
+      replaceProjects(currentProjects.current.map(p => {
         if (p.status !== 'processing') return p;
         const progress = Math.min(100, Math.floor((Date.now() - (p.startedAt ?? Date.now())) / 160));
         return { ...p, progress, status: progress === 100 ? 'ready' : 'processing' };
       }));
     }, 400);
     return () => window.clearInterval(timer);
-  }, [processing]);
+  }, [processing, renderSession]);
   useEffect(() => { const ownedUrls = urls.current; return () => { ownedUrls.forEach(url => URL.revokeObjectURL(url)); ownedUrls.clear(); }; }, []);
   const attachVideo = (id: string, file: File) => {
+    const url = URL.createObjectURL(file);
     const old = urls.current.get(id); if (old) URL.revokeObjectURL(old);
-    const url = URL.createObjectURL(file); urls.current.set(id, url); setVideos(v => ({ ...v, [id]: url }));
+    urls.current.set(id, url); setVideos(v => ({ ...v, [id]: url }));
+  };
+  const replaceVideoSource: Workspace['replaceVideoSource'] = (id, file, duration) => {
+    if (!canEdit()) return false;
+    const current = currentProjects.current;
+    const project = current.find(item => item.id === id);
+    if (!project || project.source === 'sample' || project.sourceUploaded) return false;
+    const replacement = patchProject(project, { duration, sourceName: file.name, source: 'file', fileSize: file.size, sourceUrl: undefined, sportsSampleId: undefined });
+    const next = current.map(item => item.id === id ? replacement : item);
+    const error = limitError(next);
+    if (error) { notify('원본을 연결할 수 없어요', error, 'error'); return false; }
+    attachVideo(id, file);
+    replaceProjects(next);
+    return true;
   };
   const login = async (email: string, password: string) => {
     if (SERVER_AUTH) { const result = await authApi.login(email, password); return loadServerSession(result.user); }
@@ -277,37 +342,107 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('moment.accounts.v1', JSON.stringify([...accounts, account]));
     switchUser({ id: account.id, name: account.name, email: account.email, guest: false });
   };
-  const updateProject = (id: string, patch: Partial<Project>) => setProjects(old => old.map(p => p.id === id ? patchProject(p, patch) : p));
+  const editProject = (id: string, edit: (project: Project) => Project, options?: Parameters<typeof editProjects>[1]) => editProjects(current => {
+    const project = current.find(item => item.id === id);
+    if (!project) return current;
+    const next = edit(project);
+    return next === project ? current : current.map(item => item.id === id ? next : item);
+  }, options);
+  const updateProject: Workspace['updateProject'] = (id, patch) => editProject(id, project => patchProject(project, patch));
   const createClip: Workspace['createClip'] = (projectId, candidate) => {
     const id = crypto.randomUUID();
-    setProjects(old => old.map(p => p.id === projectId ? addProjectClip(p, id, candidate) : p));
-    return id;
+    return editProject(projectId, project => addProjectClip(project, id, candidate)) ? id : '';
   };
-  const selectClip: Workspace['selectClip'] = (projectId, clipId) => setProjects(old => old.map(p => p.id === projectId ? selectProjectClip(p, clipId) : p));
-  const updateClip: Workspace['updateClip'] = (projectId, clipId, patch) => setProjects(old => old.map(p => p.id === projectId ? updateProjectClip(p, clipId, patch) : p));
-  const renameClip: Workspace['renameClip'] = (projectId, clipId, title) => setProjects(old => old.map(p => p.id === projectId ? normalizeProject({ ...p, clips: getProjectClips(p).map(clip => clip.id === clipId ? { ...clip, title: title.trim() || clip.title, updatedAt: new Date().toISOString() } : clip), updatedAt: new Date().toISOString() })! : p));
+  const createClips: Workspace['createClips'] = (projectId, candidates) => candidates.length === 0 || editProject(projectId, project => {
+    for (const candidate of candidates) project = addProjectClip(project, crypto.randomUUID(), candidate);
+    return project;
+  });
+  const selectClip: Workspace['selectClip'] = (projectId, clipId) => { editProject(projectId, project => selectProjectClip(project, clipId), { report: false }); };
+  const updateClip: Workspace['updateClip'] = (projectId, clipId, patch) => editProject(projectId, project => updateProjectClip(project, clipId, patch));
+  const renameClip: Workspace['renameClip'] = (projectId, clipId, title) => editProject(projectId, project => {
+    const now = new Date().toISOString();
+    const clips = getProjectClips(project).map(clip => clip.id === clipId ? { ...clip, title: title.trim() || clip.title, updatedAt: now } : clip);
+    return normalizeProject({ ...project, clips, updatedAt: now })!;
+  });
   const duplicateClip: Workspace['duplicateClip'] = (projectId, clipId) => {
-    const id = crypto.randomUUID(); const now = new Date().toISOString();
-    setProjects(old => old.map(p => {
-      if (p.id !== projectId) return p;
-      const original = getProjectClips(p).find(clip => clip.id === clipId);
-      return original ? normalizeProject({ ...p, clips: [...getProjectClips(p), { ...original, id, title: `${original.title} 복사본`, edit: { ...original.edit }, createdAt: now, updatedAt: now }], activeClipId: id, updatedAt: now })! : p;
-    }));
-    return id;
+    const id = crypto.randomUUID();
+    const duplicated = editProject(projectId, project => {
+      const clips = getProjectClips(project);
+      const original = clips.find(clip => clip.id === clipId);
+      if (!original) return project;
+      const now = new Date().toISOString();
+      const title = original.title.slice(0, CLIP_TITLE_LIMIT - COPY_TITLE_SUFFIX.length) + COPY_TITLE_SUFFIX;
+      const copy = { ...original, id, title, edit: { ...original.edit }, createdAt: now, updatedAt: now };
+      return normalizeProject({ ...project, clips: [...clips, copy], activeClipId: id, updatedAt: now })!;
+    });
+    return duplicated ? id : '';
   };
-  const deleteClip: Workspace['deleteClip'] = (projectId, clipId) => setProjects(old => old.map(p => p.id === projectId ? normalizeProject({ ...p, clips: getProjectClips(p).filter(clip => clip.id !== clipId), updatedAt: new Date().toISOString() })! : p));
+  const deleteClip: Workspace['deleteClip'] = (projectId, clipId) => editProject(projectId, project => normalizeProject({ ...project, clips: getProjectClips(project).filter(clip => clip.id !== clipId), updatedAt: new Date().toISOString() })!, { removing: true });
   const addProject: Workspace['addProject'] = (project, file) => {
     // Reading video metadata can finish after the originating session has changed.
-    if (sessionOperation.current === 'logout' || renderSession !== sessionRevision.current) throw new Error('로그인 상태를 다시 확인해 주세요.');
-    setProjects(old => old.some(p => p.id === project.id) ? old : [normalizeProject(project)!, ...old]);
+    if (!canEdit()) throw new Error('작업공간 상태가 바뀌었어요. 다시 시도해 주세요.');
+    const current = currentProjects.current;
+    if (current.some(item => item.id === project.id)) return;
+    const next = [normalizeProject(project)!, ...current];
+    const error = limitError(next);
+    if (error) throw new Error(error);
     if (file) attachVideo(project.id, file);
+    replaceProjects(next);
+  };
+  const registerProjectFile: Workspace['registerProjectFile'] = async (project, file, signal) => {
+    signal?.throwIfAborted();
+    if (!canEdit()) throw new Error('작업공간 상태가 바뀌었어요. 다시 시도해 주세요.');
+    if (!SERVER_AUTH || !user || user.guest || !await workspaceApi.sourceUploadsEnabled()) {
+      signal?.throwIfAborted();
+      addProject(project, file);
+      return project;
+    }
+
+    signal?.throwIfAborted();
+    if (!canEdit()) throw new Error('작업공간 상태가 바뀌었어요. 다시 시도해 주세요.');
+    const queue = saveQueue.current;
+    if (!queue) throw new Error('작업공간을 다시 불러온 뒤 시도해 주세요.');
+    const normalized = normalizeProject({ ...project, sourceUploaded: true })!;
+    const current = currentProjects.current;
+    const error = limitError([normalized, ...current]);
+    if (error) throw new Error(error);
+
+    sessionOperation.current = 'upload';
+    try {
+      await saveWorkspace(queue, current);
+      signal?.throwIfAborted();
+      const saved = await queue.registerFile(current, project.id, (version, ownerId) => workspaceApi.registerFile(file, normalized, version, ownerId));
+      if (saveQueue.current === queue) {
+        replaceProjects(saved.projects);
+        setSyncStatus('saved');
+        setSyncError('');
+      }
+      return saved.project;
+    } catch (error) {
+      if (saveQueue.current === queue && queue.isBlocked()) {
+        setSyncStatus(error instanceof ApiError && error.status === 409 ? 'conflict' : 'error');
+        setSyncError(error instanceof Error ? error.message : '서버에 저장하지 못했어요.');
+      }
+      throw error;
+    } finally {
+      sessionOperation.current = null;
+      setSaveAttempt(value => value + 1);
+    }
   };
   return <Context.Provider value={{ user, projects, theme, toasts, storageError, storageNotice, authLoading, authError, serverAuth: SERVER_AUTH, syncStatus, syncError,
-    retrySave: () => { if (sessionOperation.current !== 'logout') { saveQueue.current?.retry(); setSaveAttempt(value => value + 1); } }, reloadWorkspace,
+    retrySave: () => { if (!sessionOperation.current) { saveQueue.current?.retry(); setSaveAttempt(value => value + 1); } }, reloadWorkspace,
     enterDemo: () => switchUser({ id: 'guest', name: '크리에이터', email: 'guest@moment.local', guest: true }),
-    login, signup, logout, updateProject, videos, attachVideo, createClip, selectClip, updateClip, renameClip, duplicateClip, deleteClip,
-    addProject,
-    deleteProject: id => { const url = urls.current.get(id); if (url) URL.revokeObjectURL(url); urls.current.delete(id); setVideos(v => { const next = { ...v }; delete next[id]; return next; }); setProjects(old => old.filter(p => p.id !== id)); },
+    login, signup, logout, updateProject, videos, replaceVideoSource, createClip, createClips, selectClip, updateClip, renameClip, duplicateClip, deleteClip,
+    addProject, registerProjectFile,
+    deleteProject: id => {
+      const removed = editProjects(current => current.some(project => project.id === id) ? current.filter(project => project.id !== id) : current, { removing: true });
+      if (!removed) return false;
+      const url = urls.current.get(id);
+      if (url) URL.revokeObjectURL(url);
+      urls.current.delete(id);
+      setVideos(v => { const next = { ...v }; delete next[id]; return next; });
+      return true;
+    },
     toggleTheme: () => setTheme(t => t === 'light' ? 'dark' : 'light'), notify, dismissToast: id => setToasts(old => old.filter(t => t.id !== id)),
   }}>{children}</Context.Provider>;
 }

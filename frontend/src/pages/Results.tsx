@@ -31,7 +31,10 @@ export function Results() {
   const profile = getOutputProfile(edit.aspectRatio);
   const info = describeProject(project, edit, !!videos[project.id]);
   const transcript = getProjectTranscript(project);
-  const canSrt = info.canDownloadSrt && transcript.length > 0;
+  const sampleSrt = info.canDownloadSrt ? buildSrt(transcript, edit) : '';
+  const canSrt = sampleSrt.length > 0;
+  const srtDescription = canSrt ? 'SRT · 샘플 전사 기준' : !transcript.length ? '전사 없음 · 생성 불가'
+    : info.canDownloadSrt ? '선택 구간 내 발화 없음' : '클립 구간을 확인해 주세요';
   const editorPath = '/projects/' + project.id + '/editor?clip=' + encodeURIComponent(clip.id);
   const json = () => {
     if (!info.canDownloadJson) return;
@@ -41,7 +44,7 @@ export function Results() {
   };
   const srt = () => {
     if (!canSrt) return;
-    downloadText(clip.title + '_sample.srt', buildSrt(transcript, edit), 'application/x-subrip;charset=utf-8');
+    downloadText(clip.title + '_sample.srt', sampleSrt, 'application/x-subrip;charset=utf-8');
     notify('이 클립 구간의 샘플 자막을 내려받았어요');
   };
   return <div className="results-page v3-results">
@@ -50,8 +53,8 @@ export function Results() {
     <div className="results-layout"><div className="results-preview"><div className="v3-panel-caption"><h2>미리보기</h2><span>영상 합성 전</span></div><VideoPreview project={project} edit={edit} time={time} playing={playing} onTime={onTime} onPlaying={onPlaying} /></div>
       <section className="results-card"><div className="v3-output-heading"><h2>다운로드</h2><span className="tiny-tag">브라우저 데모</span></div><div className="result-tags"><span>{formatTime(edit.end - edit.start)}</span><span>{profile.ratio}</span><span>{info.sourceLabel}</span></div><div className="result-facts"><span>원본 구간<b>{formatTime(edit.start)} — {formatTime(edit.end)}</b></span><span>출력 목표<b>{profile.width} × {profile.height}</b></span><span>맥락 보정<b>{edit.contextApplied ? '확인 후 적용' : '미적용'}</b></span><span>저장 위치<b>{storageError ? '저장 실패' : storagePlace}</b></span><span>MP4 영상<b>출력 연결 전</b></span></div>
         {info.rangeIssue && <p className="field-error" role="alert">{info.rangeIssue} 편집 화면에서 수정해 주세요.</p>}
-        <div className="download-list"><button onClick={json} disabled={!info.canDownloadJson}><span className="download-icon"><FileJson size={19} /></span><span><b>편집 정보</b><small>JSON · 선택한 클립</small></span><Download size={17} /></button><button onClick={srt} disabled={!canSrt}><span className="download-icon"><FileText size={19} /></span><span><b>샘플 자막</b><small>{transcript.length ? 'SRT · 샘플 전사 기준' : '전사 없음 · 생성 불가'}</small></span><Download size={17} /></button><div className="download-unavailable"><span className="download-icon"><Film size={19} /></span><span><b>MP4 영상</b><small>렌더 서버 연결 전</small></span><span className="tiny-tag">미연결</span></div></div>
-        <div className="v3-inline-note"><Info size={15} /><span>{transcript.length ? '샘플 전사와 편집 정보를 내려받을 수 있습니다.' : '편집 정보를 내려받을 수 있습니다.'} 영상 출력은 연결 전입니다.</span></div><div className="result-actions"><Link className="btn secondary" to={editorPath}><PencilLine size={15} />다시 편집</Link><Link className="btn primary" to={'/projects/' + project.id + '?tab=clips'}>내 클립<ArrowRight size={15} /></Link></div>
+        <div className="download-list"><button onClick={json} disabled={!info.canDownloadJson}><span className="download-icon"><FileJson size={19} /></span><span><b>편집 정보</b><small>JSON · 선택한 클립</small></span><Download size={17} /></button><button onClick={srt} disabled={!canSrt}><span className="download-icon"><FileText size={19} /></span><span><b>샘플 자막</b><small>{srtDescription}</small></span><Download size={17} /></button><div className="download-unavailable"><span className="download-icon"><Film size={19} /></span><span><b>MP4 영상</b><small>렌더 서버 연결 전</small></span><span className="tiny-tag">미연결</span></div></div>
+        <div className="v3-inline-note"><Info size={15} /><span>영상 출력은 연결 전입니다.</span></div><div className="result-actions"><Link className="btn secondary" to={editorPath}><PencilLine size={15} />다시 편집</Link><Link className="btn primary" to={'/projects/' + project.id + '?tab=clips'}>내 클립<ArrowRight size={15} /></Link></div>
       </section>
     </div>
   </div>;

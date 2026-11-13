@@ -1,11 +1,4 @@
-import fs from "fs";
-import path from "path";
-
-export function ensureDirectory(directory: string): void {
-  if (!fs.existsSync(directory)) {
-    fs.mkdirSync(directory, { recursive: true });
-  }
-}
+import path from 'node:path';
 
 export function getExtension(filename: string): string {
   return path.extname(filename).toLowerCase();

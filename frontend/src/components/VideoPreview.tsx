@@ -6,6 +6,7 @@ import { useWorkspace } from '../store';
 import type { EditState, Project } from '../types';
 import { getOutputProfile } from '../output-profile';
 import { getSportsSample } from '../sports-samples';
+import { clipPlaybackStart, readVideoDuration, useVideoProbe } from '../video-metadata';
 import '../styles/output-profile.css';
 
 const sampleVideos = new Map<string, Promise<Blob>>();
@@ -29,27 +30,26 @@ function loadSampleVideo(source: string): Promise<Blob> {
 
 export function SourceReconnect({ project }: { project: Project }) {
   const input = useRef<HTMLInputElement>(null);
-  const { attachVideo, updateProject, videos, notify } = useWorkspace();
-  if (project.source === 'sample') return null;
+  const probe = useVideoProbe(project.id);
+  const { replaceVideoSource, videos, notify } = useWorkspace();
+  if (project.source === 'sample' || project.sourceUploaded) return null;
+  const reconnect = async (file: File) => {
+    const signal = probe.start();
+    const invalid = validateVideo(file);
+    if (invalid) { notify('영상을 확인해 주세요', invalid, 'error'); return; }
+    try {
+      const duration = await readVideoDuration(file, signal);
+      if (!signal.aborted && replaceVideoSource(project.id, file, duration)) {
+        notify('원본을 연결했어요', '기존 편집 구간이 새 길이에 맞는지 확인해 주세요.');
+      }
+    } catch (error) {
+      if (!signal.aborted) notify('원본을 연결하지 못했어요', error instanceof Error ? error.message : '다시 시도해 주세요.', 'error');
+    }
+  };
   return <div className="v3-source-reconnect"><button className="btn secondary" onClick={() => input.current?.click()}><Link2 size={15} />{videos[project.id] ? '원본 교체' : '원본 다시 연결'}</button><span>편집 구간과 스타일은 유지됩니다.</span><input ref={input} type="file" className="sr-only" accept="video/mp4,video/quicktime,.mp4,.mov" aria-label="원본 다시 연결" onChange={event => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file) return;
-    const invalid = validateVideo(file);
-    if (invalid) { notify('영상을 확인해 주세요', invalid, 'error'); return; }
-    const metadata = document.createElement('video');
-    const temporaryUrl = URL.createObjectURL(file);
-    metadata.preload = 'metadata';
-    metadata.onloadedmetadata = () => {
-      const duration = Number.isFinite(metadata.duration) ? metadata.duration : 0;
-      URL.revokeObjectURL(temporaryUrl);
-      if (duration <= 0) { notify('영상 길이를 확인할 수 없어요', '기존 원본과 편집 정보는 유지됩니다.', 'error'); return; }
-      attachVideo(project.id, file);
-      updateProject(project.id, { duration, sourceName: file.name, source: 'file', fileSize: file.size });
-      notify('원본을 연결했어요', '기존 편집 구간이 새 길이에 맞는지 확인해 주세요.');
-    };
-    metadata.onerror = () => { URL.revokeObjectURL(temporaryUrl); notify('영상을 읽을 수 없어요', '기존 원본과 편집 정보는 유지됩니다.', 'error'); };
-    metadata.src = temporaryUrl;
+    if (file) void reconnect(file);
   }} /></div>;
 }
 
@@ -66,12 +66,22 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
   const match = getSportsSample(project);
   const sampleSource = match?.videoUrl;
   const loadedSample = sampleMedia?.source === sampleSource ? sampleMedia : undefined;
-  const url = videos[project.id] ?? loadedSample?.url ?? undefined;
+  const uploadedSource = project.sourceUploaded ? '/api/projects/' + encodeURIComponent(project.id) + '/source' : undefined;
+  const url = videos[project.id] ?? uploadedSource ?? loadedSample?.url ?? undefined;
   const stillSample = project.source === 'sample' && !match && !url;
   const canMute = !!url && !match;
   const mediaError = error || loadedSample?.url === null;
   const profile = getOutputProfile(edit.aspectRatio);
   const invalidBounds = ![edit.start, edit.end, project.duration].every(Number.isFinite) || edit.start < 0 || edit.end <= edit.start || edit.end > project.duration;
+  const togglePlayback = () => {
+    if (playing) { onPlaying(false); return; }
+    const node = video.current;
+    const position = clipPlaybackStart(time, edit);
+    const mediaTime = node ? clipPlaybackStart(node.currentTime, edit) : position;
+    if (node && (mediaTime !== node.currentTime || position !== time)) node.currentTime = position;
+    if (position !== time) onTime(position);
+    onPlaying(true);
+  };
   useEffect(() => {
     if (!sampleSource) return;
     let active = true;
@@ -119,8 +129,8 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
       {edit.showSafeArea && <div className="preview-safe-area" aria-label="일반 안전영역 가이드"><span>일반 안전영역</span></div>}
       {stillSample && <span className="sample-frame-tag">이미지·구간 조작 예시</span>}
       {match && !url && !mediaError && <span className="sample-frame-tag" role="status">경기 영상 불러오는 중…</span>}
-      {mediaError && <div className="video-error" role="alert">영상을 재생할 수 없어요.<br />{match ? '페이지를 새로고침해 주세요.' : 'H.264/AAC MP4로 다시 연결해 주세요.'}</div>}
+      {mediaError && <div className="video-error" role="alert">영상을 재생할 수 없어요.<br />{match ? '페이지를 새로고침해 주세요.' : uploadedSource ? '로그인 상태와 영상 형식을 확인해 주세요.' : 'H.264/AAC MP4로 다시 연결해 주세요.'}</div>}
     </div><span className="aspect-label">{profile.ratio} · 자막·구도 미리보기</span></div>
-    <div className="player-controls"><button className="icon-button" aria-label="구간 처음으로" onClick={() => { onTime(edit.start); if (video.current) video.current.currentTime = edit.start; }}><RotateCcw size={16} /></button><button className="play-button" aria-label={playing ? '일시 정지' : '미리보기 재생'} disabled={(!url && !stillSample) || mediaError || invalidBounds} onClick={() => onPlaying(!playing)}>{playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}</button><span className="player-time">{formatTime(Math.max(0, time - edit.start))}<span> / {formatTime(Math.max(0, edit.end - edit.start))}</span></span><button className="icon-button" disabled={!canMute} aria-label={match ? '무음 경기 영상' : muted ? '음소거 해제' : '음소거'} aria-pressed={!!match || muted} onClick={() => setMuted(value => !value)}>{match || muted ? <VolumeX size={16} /> : <Volume2 size={16} />}</button><button className="icon-button" aria-label="미리보기 전체 화면" onClick={() => { if (document.fullscreenElement) void document.exitFullscreen(); else void frame.current?.requestFullscreen().catch(() => {}); }}><Maximize2 size={16} /></button></div>
+    <div className="player-controls"><button className="icon-button" aria-label="구간 처음으로" onClick={() => { onTime(edit.start); if (video.current) video.current.currentTime = edit.start; }}><RotateCcw size={16} /></button><button className="play-button" aria-label={playing ? '일시 정지' : '미리보기 재생'} disabled={(!url && !stillSample) || mediaError || invalidBounds} onClick={togglePlayback}>{playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}</button><span className="player-time">{formatTime(Math.max(0, time - edit.start))}<span> / {formatTime(Math.max(0, edit.end - edit.start))}</span></span><button className="icon-button" disabled={!canMute} aria-label={match ? '무음 경기 영상' : muted ? '음소거 해제' : '음소거'} aria-pressed={!!match || muted} onClick={() => setMuted(value => !value)}>{match || muted ? <VolumeX size={16} /> : <Volume2 size={16} />}</button><button className="icon-button" aria-label="미리보기 전체 화면" onClick={() => { if (document.fullscreenElement) void document.exitFullscreen(); else void frame.current?.requestFullscreen().catch(() => {}); }}><Maximize2 size={16} /></button></div>
   </div>;
 }

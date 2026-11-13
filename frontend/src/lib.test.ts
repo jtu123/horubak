@@ -9,6 +9,8 @@ describe('input boundaries', () => {
     expect(validateVideo({ name: 'lecture.exe', size: 2000 })).toBeTruthy();
     expect(validateVideo({ name: 'lecture.mp4', size: 0 })).toBeTruthy();
     expect(validateVideo({ name: 'lecture.mov', size: 4 * 1024 ** 3 + 1 })).toBeTruthy();
+    expect(validateVideo({ name: 'x'.repeat(497) + '.mp4', size: 2000 })).toBeTruthy();
+    expect(validateVideo({ name: 'lecture\u0000.mp4', size: 2000 })).toBeTruthy();
   });
   it('accepts HTTPS but does not treat arbitrary strings or embedded credentials as media URLs', () => {
     expect(validateSourceUrl('https://example.com/video.mp4')).toBeUndefined();
@@ -18,6 +20,11 @@ describe('input boundaries', () => {
     const url = 'https://example.com/video.mp4?key='.padEnd(MAX_SOURCE_URL_LENGTH, 'x');
     expect(validateSourceUrl(url)).toBeUndefined();
     expect(validateSourceUrl(url + 'x')).toMatch(/4,096/);
+  });
+  it('rejects raw control characters before the URL parser can strip them', () => {
+    expect(validateSourceUrl('https://example.com/vid\teo.mp4')).toMatch(/제어 문자/);
+    expect(validateSourceUrl('https://example.com/video.mp4\u0000')).toMatch(/제어 문자/);
+    expect(validateSourceUrl('https://example.com/video%20sample.mp4')).toBeUndefined();
   });
   it('enforces original-video bounds and the 30–60 second output range', () => {
     expect(rangeError(10, 40, 100)).toBeUndefined();
@@ -34,6 +41,10 @@ describe('time and subtitle export', () => {
     expect(srt).toContain('00:00:00,000 --> 00:00:02,000');
     expect(srt).toContain('00:00:02,000 --> 00:00:10,000');
     expect(srt).not.toContain('범위 밖'); expect(srt).not.toContain('-00');
+  });
+  it('produces no SRT when a clip only touches utterance boundaries', () => {
+    const transcript = [{ id: 'a', start: 0, end: 10, text: '앞 발화', speaker: 'A' }, { id: 'b', start: 40, end: 55, text: '뒤 발화', speaker: 'B' }];
+    expect(buildSrt(transcript, { start: 10, end: 40 })).toBe('');
   });
 });
 describe('shared fixture contract', () => {

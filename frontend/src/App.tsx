@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useWorkspace } from './store';
 import { WorkspaceShell } from './components/lucian/WorkspaceShell';
@@ -13,6 +13,12 @@ import { ProjectHub } from './pages/ProjectHub';
 import { AnalyticsPage, JobsPage, LibraryPage, PublishingPage, SettingsPage, TeamPage } from './pages/WorkspacePages';
 import { CommandPalette } from './components/lucian/CommandPalette';
 import { AdminPage } from './pages/Admin';
+
+function LoginRoute({ hasServerSession }: { hasServerSession: boolean }) {
+  // Keep an already-mounted login form long enough to finish its success animation.
+  const alreadySignedIn = useRef(hasServerSession);
+  return alreadySignedIn.current && hasServerSession ? <Navigate to="/projects" replace /> : <Login />;
+}
 
 function WorkspaceLoadError({ message, reloadWorkspace, logout }: {
   message: string; reloadWorkspace: () => Promise<void>; logout: () => Promise<void>;
@@ -50,7 +56,7 @@ export function App() {
   }
   const administrator = serverAuth && !user?.guest && user?.role === 'admin';
   return <><Routes>
-    <Route path="/login" element={<Login />} />
+    <Route path="/login" element={<LoginRoute hasServerSession={serverAuth && !!user && !user.guest} />} />
     <Route element={user ? <WorkspaceShell /> : <Navigate to="/login" replace />}>
       <Route path="/projects" element={<Dashboard />} />
       <Route path="/projects/new" element={<NewProject />} />
