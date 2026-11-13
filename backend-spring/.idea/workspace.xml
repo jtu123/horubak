@@ -6,12 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="a81b7064-e402-450e-a168-e0ac482246eb" name="변경" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/entity/VideoClip.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/entity/VideoClip.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/VideoController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/VideoController.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/entity/VideoClip.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/entity/VideoClip.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Editor.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Editor.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Results.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Results.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -111,7 +105,7 @@
       <workItem from="1794355160659" duration="3569000" />
       <workItem from="1794477249837" duration="9201000" />
       <workItem from="1794496956861" duration="9691000" />
-      <workItem from="1794539536153" duration="1667000" />
+      <workItem from="1794539536153" duration="2856000" />
     </task>
     <servers />
   </component>
