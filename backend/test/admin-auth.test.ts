@@ -140,7 +140,7 @@ test('실제 인증과 관리자 API의 권한·저장·복구', async t => {
     await t.test('관리자 회원 검색·페이지·비밀정보 제외·자기 보호', async () => {
       const users = await admin.send('/api/admin/users?q=member');
       assert.equal(users.data.total, 1); assert.equal(users.data.items[0].id, memberId); assert.equal(users.data.items[0].projectCount, 1);
-      assert.ok(!JSON.stringify(users.data).includes('password')); assert.ok(!JSON.stringify(users.data).includes('token'));
+      assert.doesNotMatch(JSON.stringify(users.data), /password_hash|passwordHash|token_hash|tokenHash|scrypt\$/);
       assert.equal((await admin.send('/api/admin/users?page=-1')).response.status, 400);
       assert.equal((await admin.send('/api/admin/users/' + adminId, 'PATCH', { role: 'user', reason: '자신의 권한 제거' })).response.status, 409);
       assert.equal((await admin.send('/api/admin/users/' + adminId, 'PATCH', { status: 'suspended', reason: '자신의 이용 정지' })).response.status, 409);

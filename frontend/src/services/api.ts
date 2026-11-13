@@ -87,8 +87,23 @@ export const workspaceApi = {
     }
   },
 };
-export interface AdminOverview { users: number; activeUsers: number; admins: number; projects: number; archivedProjects: number; database: string; analysis: string; rendering: string }
-export interface Member { id: string; name: string; email: string; role: 'user' | 'admin'; status: 'active' | 'suspended'; createdAt: string; lastLoginAt: string | null; projectCount: number }
-export interface AdminProject { id: string; ownerId: string; ownerName: string; ownerEmail: string; archivedAt: string | null; title: string; status: string; updatedAt: string; clipCount: number }
-export interface Activity { id: string; action: string; targetId: string; reason: string; createdAt: string; actorName: string | null; actorEmail: string | null }
+export interface AdminOverview {
+  users: number; activeUsers: number; admins: number; projects: number; archivedProjects: number;
+  database: string; analysis: string; rendering: string; checkedAt: string; recentFrom: string; recentSignups: number;
+}
+export type AdminLoginMethod = 'password' | 'google' | 'naver' | 'apple' | 'legacy';
+export const ADMIN_LOGIN_METHOD_LABELS: Record<AdminLoginMethod, string> = {
+  password: '아이디·비밀번호', google: '구글', naver: '네이버', apple: '애플', legacy: '기존 이메일 계정',
+};
+export interface Member {
+  id: string; name: string; email: string; username: string | null; loginMethods: AdminLoginMethod[];
+  role: 'user' | 'admin'; status: 'active' | 'suspended'; createdAt: string; lastLoginAt: string | null; projectCount: number;
+}
+export interface AdminMemberDetail extends Member { archivedProjectCount: number }
+export interface AdminProject { id: string; ownerId: string; ownerName: string; ownerEmail: string; archivedAt: string | null; title: string; status: string; updatedAt: string | null; clipCount: number }
+export interface AdminProjectDetail extends AdminProject { source: string | null; duration: number | null; createdAt: string | null }
+export interface Activity {
+  id: string; action: string; targetId: string; targetKind: 'user' | 'project' | null; reason: string; createdAt: string;
+  actorId: string | null; actorName: string | null; actorEmail: string | null;
+}
 export interface Page<T> { items: T[]; total: number; page: number; size: number }
