@@ -35,7 +35,13 @@ public class VideoClipService {
                 "-ss", String.valueOf(startSeconds),
                 "-i", inputPath.toAbsolutePath().toString(),
                 "-t", String.valueOf(durationSeconds),
+                // 9:16 세로 영상 변환 (1080x1920)
+                "-vf",
+                "scale=1080:1920:force_original_aspect_ratio=increase,"
+                        + "crop=1080:1920,setsar=1",
+
                 "-c:v", "libx264",
+                "-pix_fmt", "yuv420p",
                 "-c:a", "aac",
                 outputPath.toAbsolutePath().toString()
         );

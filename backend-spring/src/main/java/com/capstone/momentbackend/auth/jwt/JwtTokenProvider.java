@@ -62,7 +62,15 @@ public class JwtTokenProvider {
         try {
             getUserId(token);
             return true;
+
         } catch (RuntimeException e) {
+            System.out.println(
+                    "[JWT 인증 실패] "
+                            + e.getClass().getSimpleName()
+                            + ": "
+                            + e.getMessage()
+            );
+
             return false;
         }
     }

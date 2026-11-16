@@ -17,6 +17,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import com.fasterxml.jackson.databind.JsonNode;
 import com.capstone.momentbackend.video.entity.VideoClip;
 import com.capstone.momentbackend.video.repository.VideoClipRepository;
+import com.capstone.momentbackend.job.VideoJob;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.*;
@@ -24,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.List;
 import java.util.LinkedHashMap;
+import com.capstone.momentbackend.job.VideoJobService;
 
 
 @RestController
@@ -35,19 +37,24 @@ public class VideoController {
     private final VideoMetadataService videoMetadataService;
     private final VideoClipService videoClipService;
     private final VideoClipRepository videoClipRepository;
+    private final VideoJobService videoJobService;
     private final Path uploadDir =
             Paths.get("uploads").toAbsolutePath().normalize();
+
 
     public VideoController(
             ProjectService projectService,
             VideoMetadataService videoMetadataService,
             VideoClipService videoClipService,
-            VideoClipRepository videoClipRepository
+            VideoClipRepository videoClipRepository,
+            VideoJobService videoJobService
+
     ) {
         this.projectService = projectService;
         this.videoMetadataService = videoMetadataService;
         this.videoClipService = videoClipService;
         this.videoClipRepository = videoClipRepository;
+        this.videoJobService = videoJobService;
     }
 
 
@@ -413,6 +420,120 @@ public class VideoController {
 
         return ResponseEntity.ok(result);
     }
+
+
+    @PostMapping("/projects/{projectId}/clips/async")
+    public ResponseEntity<Map<String, String>> createClipAsync(
+            @PathVariable("projectId") UUID projectId,
+            @RequestParam("start") double start,
+            @RequestParam("duration") double duration,
+            @RequestParam(value = "editorClipId", required = false)
+            String editorClipId
+    ) throws IOException, InterruptedException {
+
+        // 1. 시작 시간 및 길이 검사
+        if (!Double.isFinite(start)
+                || !Double.isFinite(duration)
+                || start < 0
+                || duration <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "올바른 시작 시간과 길이를 입력해야 합니다."
+            );
+        }
+
+        // 2. 프로젝트 원본 영상 조회
+        String fileName = projectService.getVideoFileName(projectId);
+
+        Path inputPath = uploadDir.resolve(fileName).normalize();
+
+        if (!inputPath.startsWith(uploadDir)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "잘못된 영상 경로입니다."
+            );
+        }
+
+        if (!Files.isRegularFile(inputPath)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "원본 영상 파일을 찾을 수 없습니다."
+            );
+        }
+
+        // 3. 영상 길이 검사
+        VideoMetadataDto metadata =
+                videoMetadataService.extractMetadata(inputPath);
+
+        if (start >= metadata.duration()
+                || duration > metadata.duration() - start) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "추출 구간이 원본 영상 길이를 초과합니다."
+            );
+        }
+
+        // 4. 결과 영상 저장 경로 생성
+        Path clipsDir = uploadDir.resolve("clips");
+        Files.createDirectories(clipsDir);
+
+        String clipFileName = UUID.randomUUID() + ".mp4";
+        Path outputPath = clipsDir.resolve(clipFileName);
+
+        // 5. 비동기 작업 등록 및 실행 요청
+        String jobId = videoJobService.createJob(
+                projectId,
+                inputPath,
+                outputPath,
+                start,
+                duration,
+                editorClipId
+        );
+
+        // 6. 영상 생성 완료를 기다리지 않고 응답
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(
+                Map.of(
+                        "jobId", jobId,
+                        "projectId", projectId.toString(),
+                        "clipFileName", clipFileName,
+                        "status", "PENDING",
+                        "message", "영상 생성 작업이 등록되었습니다."
+                )
+        );
+    }
+
+
+    @GetMapping("/jobs/{jobId}")
+    public ResponseEntity<Map<String, Object>> getVideoJobStatus(
+            @PathVariable("jobId") String jobId
+    ) {
+        // 1. MySQL에서 작업 조회
+        VideoJob job;
+
+        try {
+            job = videoJobService.getJob(jobId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "영상 생성 작업을 찾을 수 없습니다."
+            );
+        }
+
+        // 2. 응답 데이터 생성
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        result.put("jobId", job.getId());
+        result.put("projectId", job.getProjectId());
+        result.put("status", job.getStatus().name());
+        result.put("outputPath", job.getOutputPath());
+        result.put("errorMessage", job.getErrorMessage());
+        result.put("createdAt", job.getCreatedAt());
+        result.put("completedAt", job.getCompletedAt());
+
+        // 3. 클라이언트에 반환
+        return ResponseEntity.ok(result);
+    }
+
 
 
 }

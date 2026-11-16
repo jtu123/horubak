@@ -228,15 +228,15 @@ const generateMp4Clip = async () => {
   try {
     // Spring Boot 클립 생성 API 호출
     const url = new URL(
-      `http://localhost:8080/api/videos/projects/${project.id}/clips`
-    );
+  `http://localhost:8080/api/videos/projects/${project.id}/clips/async`
+);
 
     url.searchParams.set('start', String(start));
     url.searchParams.set('duration', String(duration));
     url.searchParams.set('editorClipId', clip.id);
 
     const response = await apiFetch(
-  `/api/videos/projects/${project.id}/clips?${url.searchParams.toString()}`,
+  `/api/videos/projects/${project.id}/clips/async?${url.searchParams.toString()}`,
   {
     method: 'POST',
   }
@@ -246,15 +246,62 @@ const generateMp4Clip = async () => {
       throw new Error(`클립 생성 실패 (HTTP ${response.status})`);
     }
 
-    const result: { clipFileName: string } = await response.json();
+   // 1. 비동기 작업 등록 결과 받기
+const result: {
+  jobId: string;
+  clipFileName: string;
+  status: string;
+} = await response.json();
 
-    // 생성된 MP4 재생 주소 저장
-    const clipUrl =
-      `http://localhost:8080/api/videos/clips/${encodeURIComponent(result.clipFileName)}`;
+notify('영상 생성 시작', '서버에서 MP4 영상을 생성하고 있습니다.');
 
-    setGeneratedClipUrl(clipUrl);
+// 2. 작업 상태를 주기적으로 확인
+let completed = false;
 
-    notify('클립 생성 완료', 'MP4 영상이 생성되었습니다.');
+for (let attempt = 0; attempt < 120; attempt++) {
+  // 2초 기다리기
+  await new Promise<void>(resolve => {
+    setTimeout(resolve, 2000);
+  });
+
+  // 3. 작업 상태 조회 API 호출
+  const jobResponse = await apiFetch(
+    `/api/videos/jobs/${encodeURIComponent(result.jobId)}`
+  );
+
+  if (!jobResponse.ok) {
+    throw new Error(`작업 상태 조회 실패 (HTTP ${jobResponse.status})`);
+  }
+
+  const job: {
+    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    errorMessage: string | null;
+  } = await jobResponse.json();
+
+  // 4. 작업 실패 시
+  if (job.status === 'FAILED') {
+    throw new Error(job.errorMessage || '영상 생성 작업이 실패했습니다.');
+  }
+
+  // 5. 작업 완료 시
+  if (job.status === 'COMPLETED') {
+    completed = true;
+    break;
+  }
+}
+
+// 6. 제한 시간 초과
+if (!completed) {
+  throw new Error('영상 생성 대기 시간이 초과되었습니다. 작업 상태를 확인해 주세요.');
+}
+
+// 7. 완료된 MP4 재생 주소 설정
+const clipUrl =
+  `http://localhost:8080/api/videos/clips/${encodeURIComponent(result.clipFileName)}`;
+
+setGeneratedClipUrl(clipUrl);
+
+notify('클립 생성 완료', 'MP4 영상이 정상적으로 생성되었습니다.');
   } catch (error) {
     const message =
       error instanceof Error ? error.message : '알 수 없는 오류';
