@@ -5,22 +5,49 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a81b7064-e402-450e-a168-e0ac482246eb" name="변경" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/config/AsyncConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/job/VideoJob.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/job/VideoJobRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/job/VideoJobService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/job/VideoJobStatus.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/job/VideoJobWorker.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/audio/AiSttService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/audio/AudioController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/audio/AudioExtractionService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/transcript/controller/TranscriptController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/transcript/dto/SttResponse.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/transcript/entity/TranscriptSegment.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/transcript/repository/TranscriptSegmentRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/transcript/service/TranscriptService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/MomentBackendApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/MomentBackendApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/auth/jwt/JwtTokenProvider.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/auth/jwt/JwtTokenProvider.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoClipService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoClipService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/MomentBackendApplication.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/MomentBackendApplication.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController$ErrorResponse.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController$ErrorResponse.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController$LoginRequest.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController$LoginRequest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController$LoginResponse.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController$LoginResponse.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController$SignupRequest.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController$SignupRequest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController$SignupResponse.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController$SignupResponse.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/controller/AuthController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/entity/User.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/entity/User.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/jwt/JwtAuthenticationFilter.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/jwt/JwtAuthenticationFilter.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/jwt/JwtTokenProvider.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/jwt/JwtTokenProvider.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/repository/UserRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/repository/UserRepository.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/service/AuthService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/auth/service/AuthService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/config/AsyncConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/config/AsyncConfig.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/config/CorsConfig$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/config/CorsConfig$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/config/CorsConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/config/CorsConfig.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/config/SecurityConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/config/SecurityConfig.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/controller/HealthController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/controller/HealthController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/job/VideoJob.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/job/VideoJob.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/job/VideoJobRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/job/VideoJobRepository.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/job/VideoJobService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/job/VideoJobService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/job/VideoJobStatus.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/job/VideoJobStatus.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/job/VideoJobWorker.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/job/VideoJobWorker.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/controller/ProjectController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/controller/ProjectController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/dto/CreateProjectRequest.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/dto/CreateProjectRequest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/dto/ProjectResponse.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/dto/ProjectResponse.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/entity/Project.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/entity/Project.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/repository/ProjectRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/repository/ProjectRepository.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/service/ProjectService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/project/service/ProjectService.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/VideoClipService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/VideoClipService.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/VideoController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/VideoController.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Editor.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Editor.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/VideoMetadataDto.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/VideoMetadataDto.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/VideoMetadataService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/VideoMetadataService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/entity/VideoClip.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/entity/VideoClip.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/repository/VideoClipRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/capstone/momentbackend/video/repository/VideoClipRepository.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -122,6 +149,8 @@
       <workItem from="1794477249837" duration="9201000" />
       <workItem from="1794496956861" duration="9691000" />
       <workItem from="1794539536153" duration="9329000" />
+      <workItem from="1794836659699" duration="5883000" />
+      <workItem from="1794873702983" duration="3086000" />
     </task>
     <servers />
   </component>

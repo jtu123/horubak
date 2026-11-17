@@ -1,10 +1,43 @@
+
+# Frontend (React)
 node_modules/
 dist/
 .cache/
-.env
-.env.*
-!.env.example
-*.log
 *.tsbuildinfo
 playwright-report/
 test-results/
+
+# Python AI Server
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# AI model files
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Spring Boot
+target/
+build/
+.gradle/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Generated media files
+uploads/
+*.wav
+
+# IDE
+.idea/
+.vscode/
