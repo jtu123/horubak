@@ -16,6 +16,7 @@ import { getOutputProfile } from '../output-profile';
 import { EMPTY_EDIT_HISTORY, rememberEdit, stepEditHistory } from '../edit-history';
 import type { EditHistories } from '../edit-history';
 import { apiFetch } from '../api';
+//import { HighlightPanel } from '../components/HighlightPanel';
 import '../styles/editor-v3.css';
 import '../styles/editor-history.css';
 

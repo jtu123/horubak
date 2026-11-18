@@ -19,6 +19,11 @@ export function Results() {
   const clips = project ? getProjectClips(project) : [];
   const clip = clips.find(item => item.id === params.get('clip')) ?? (project ? getActiveClip(project) : undefined);
   const clipId = clip?.id;
+  const projectId = project?.id;
+  const editStart = clip?.edit.start;
+  const editEnd = clip?.edit.end;
+  const [creatingMp4, setCreatingMp4] = useState(false);
+  const [mp4Revision, setMp4Revision] = useState(0);
   const [time, setTime] = useState(clip?.edit.start ?? 0);
   const [playing, setPlaying] = useState(false);
   const [savedClipUrl, setSavedClipUrl] = useState<string | null>(null);
@@ -28,7 +33,7 @@ export function Results() {
   const onPlaying = useCallback((value: boolean) => setPlaying(value), []);
 
 useEffect(() => {
-  if (!project?.id) {
+  if (!projectId || !clipId || editStart == null || editEnd == null) {
     setSavedClipUrl(null);
     setLoadingMp4(false);
     return;
@@ -51,13 +56,18 @@ useEffect(() => {
       const savedClips: {
   editorClipId: string | null;
   clipFileName: string;
+  start: number;
+  duration: number;
 }[] = await response.json();
 
 if (cancelled) return;
 
 // 현재 선택한 클립 ID와 일치하는 MP4 검색
-const matchedClip = savedClips.find(
-  item => item.editorClipId === clipId
+const duration = editEnd - editStart;
+const matchedClip = savedClips.find(item =>
+  item.editorClipId === clipId
+  && Math.abs(Number(item.start) - editStart) < 0.001
+  && Math.abs(Number(item.duration) - duration) < 0.001
 );
 
 if (matchedClip) {
@@ -83,7 +93,7 @@ if (matchedClip) {
   return () => {
     cancelled = true;
   };
-}, [project?.id, clipId]);
+}, [projectId, clipId, editStart, editEnd, mp4Revision]);
 
 
 useEffect(() => {
@@ -155,6 +165,40 @@ useEffect(() => {
     notify('이 클립 구간의 샘플 자막을 내려받았어요');
   };
 
+    const createMp4 = async () => {
+  if (creatingMp4 || loadingMp4 || info.rangeIssue) return;
+
+  const query = new URLSearchParams({
+    start: String(edit.start),
+    duration: String(edit.end - edit.start),
+    editorClipId: clip.id,
+  });
+
+  setCreatingMp4(true);
+
+  try {
+    const response = await apiFetch(
+      `/api/videos/projects/${encodeURIComponent(project.id)}/clips?${query}`,
+      { method: 'POST' },
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.detail || body?.message || `HTTP ${response.status}`);
+    }
+
+    setMp4Revision(value => value + 1);
+    notify('MP4가 생성됐어요', '미리보기에서 재생할 수 있어요.');
+  } catch (error) {
+    notify(
+      'MP4 생성 실패',
+      error instanceof Error ? error.message : '영상 생성 요청에 실패했어요.',
+      'error',
+    );
+  } finally {
+    setCreatingMp4(false);
+  }
+};
 const downloadMp4 = async () => {
   if (!savedClipUrl) return;
 
@@ -222,6 +266,17 @@ const response = await apiFetch(url.pathname);
   <b>{savedClipUrl ? '생성 완료' : '생성된 영상 없음'}</b>
 </span></div>
         {info.rangeIssue && <p className="field-error" role="alert">{info.rangeIssue} 편집 화면에서 수정해 주세요.</p>}
+        {!savedClipUrl && (
+  <button
+    type="button"
+    className="btn primary"
+    onClick={createMp4}
+    disabled={creatingMp4 || loadingMp4 || Boolean(info.rangeIssue)}
+  >
+    <Film size={17} />
+    {creatingMp4 ? 'MP4 생성 중…' : '편집한 구간으로 MP4 만들기'}
+  </button>
+)}
         <div className="download-list"><button onClick={json} disabled={!info.canDownloadJson}><span className="download-icon"><FileJson size={19} /></span><span><b>편집 정보</b><small>JSON · 선택한 클립</small></span><Download size={17} /></button><button onClick={srt} disabled={!canSrt}><span className="download-icon"><FileText size={19} /></span><span><b>샘플 자막</b><small>{transcript.length ? 'SRT · 샘플 전사 기준' : '전사 없음 · 생성 불가'}</small></span><Download size={17} /></button>
 <button
   onClick={downloadMp4}

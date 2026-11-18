@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from faster_whisper import WhisperModel
+from highlight import router as highlight_router
 
 import os
 import tempfile
@@ -10,6 +11,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.include_router(highlight_router)
 # Whisper 모델은 CPU에서 실행
 # 최초 실행 시 모델 파일이 다운로드될 수 있음
 model = WhisperModel(

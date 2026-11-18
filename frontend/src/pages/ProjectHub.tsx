@@ -13,6 +13,7 @@ import { Modal } from '../components/Modal';
 import { PillTabs } from '../components/lucian/PillTabs';
 import { Poster } from '../components/Poster';
 import { SourceReconnect, VideoPreview } from '../components/VideoPreview';
+import { apiFetch } from '../api';
 import '../styles/editor-v3.css';
 import '../styles/candidate-explorer.css';
 
@@ -21,6 +22,18 @@ const HUB_TABS: Array<{ value: HubTab; label: string }> = [
   { value: 'candidates', label: '추천 후보' }, { value: 'clips', label: '내 클립' },
   { value: 'source', label: '원본 탐색' }, { value: 'jobs', label: '작업·출력' },
 ];
+type HighlightGenre = 'lecture' | 'speech' | 'podcast';
+
+type HighlightResponse = {
+  highlights: {
+    startSegmentIndex: number;
+    endSegmentIndex: number;
+    startSeconds: number;
+    endSeconds: number;
+    title: string;
+    reason: string;
+  }[];
+};
 
 export function ProjectHub() {
   const { id } = useParams();
@@ -44,11 +57,16 @@ export function ProjectHub() {
   useEffect(() => { setPreview(null); setPlaying(false); setTime(0); setRename(null); setRemove(null); }, [id, tab]);
   useEffect(() => { setFilters(DEFAULT_CANDIDATE_FILTERS); setSelectedIds([]); setSelectionNotice(''); }, [id]);
   useEffect(() => { setSelectedIds([]); setSelectionNotice(''); }, [tab]);
+  const [highlightGenre, setHighlightGenre] = useState<HighlightGenre>('lecture');
+  const [loadingHighlights, setLoadingHighlights] = useState(false);
+  const [highlightError, setHighlightError] = useState('');
+  const [aiCandidatesByProject, setAiCandidatesByProject] =
+  useState<Record<string, Candidate[]>>({});
   if (!project) return <div className="empty-state"><h1>프로젝트를 찾을 수 없어요</h1><Link className="btn primary" to="/projects">프로젝트 목록</Link></div>;
   const clips = getProjectClips(project);
   const active = getActiveClip(project);
-  const candidates = getProjectCandidates(project);
-  const transcript = getProjectTranscript(project);
+  const candidates =
+    aiCandidatesByProject[project.id] ?? getProjectCandidates(project);  const transcript = getProjectTranscript(project);
   const evidence = getProjectEvidence(project);
   const hidden = project.dismissedCandidateIds ?? [];
   const available = candidates.filter(c => !hidden.includes(c.id));
@@ -68,6 +86,56 @@ export function ProjectHub() {
     if (!clipId) return;
     navigate('/projects/' + project.id + '/editor?clip=' + encodeURIComponent(clipId));
   };
+  async function loadAiCandidates(projectId: string) {
+  setLoadingHighlights(true);
+  setHighlightError('');
+
+  try {
+    const response = await apiFetch(
+      `/api/transcripts/projects/${encodeURIComponent(projectId)}/highlights?genre=${highlightGenre}`,
+      { method: 'POST' },
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(
+        typeof body?.detail === 'string'
+          ? body.detail
+          : `추천 요청에 실패했어요 (${response.status}).`,
+      );
+    }
+
+    const result: HighlightResponse = await response.json();
+
+    const nextCandidates: Candidate[] = result.highlights.map(item => ({
+      id: `ai-${highlightGenre}-${item.startSegmentIndex}-${item.endSegmentIndex}`,
+      title: item.title,
+      summary: item.reason,
+      reason: item.reason,
+      start: item.startSeconds,
+      end: item.endSeconds,
+      evidenceKind: 'speech',
+      evidenceIds: [],
+      score: 0,
+    }));
+
+    setAiCandidatesByProject(previous => ({
+      ...previous,
+      [projectId]: nextCandidates,
+    }));
+    setFilters(DEFAULT_CANDIDATE_FILTERS);
+    setSelectedIds([]);
+    setSelectionNotice('');
+    setPreview(null);
+    setPlaying(false);
+  } catch (cause) {
+    setHighlightError(
+      cause instanceof Error ? cause.message : '추천을 불러오지 못했어요.',
+    );
+  } finally {
+    setLoadingHighlights(false);
+  }
+}
   const changeFilters = (patch: Partial<CandidateFilters>) => {
     if ('query' in patch || 'kind' in patch || 'length' in patch) {
       setSelectionNotice(selectedIds.length ? '검색·필터가 바뀌어 선택을 해제했어요.' : '');
@@ -106,7 +174,34 @@ export function ProjectHub() {
     <PillTabs label="프로젝트 탐색" value={tab} options={HUB_TABS} onChange={value => { const next = new URLSearchParams(params); next.set('tab', value); setParams(next); }} panelId="project-hub-panel" />
     <div id="project-hub-panel" role="tabpanel" className="v3-hub-panel">
       {tab === 'candidates' && <>
-        <div className="v3-section-heading"><div><h2>어떤 순간을 남길까요?</h2><p>{sample ? '원본 근거를 확인하고, 원하는 후보를 클립으로 만드세요.' : '분석 결과를 연결하면 이곳에 추천 후보가 표시됩니다.'}</p></div><span className="v3-count">{visible.length}개 후보</span></div>
+        <div className="v3-section-heading"><div><h2>어떤 순간을 남길까요?</h2>{!sample && (
+  <div className="candidate-explorer">
+    <div className="candidate-explorer-fields">
+      <select
+        aria-label="추천에 사용할 영상 장르"
+        value={highlightGenre}
+        disabled={loadingHighlights}
+        onChange={event => {
+          setHighlightGenre(event.target.value as HighlightGenre);
+        }}
+      >
+        <option value="lecture">강의</option>
+        <option value="speech">연설</option>
+        <option value="podcast">팟캐스트</option>
+      </select>
+
+      <button
+        className="btn primary"
+        type="button"
+        disabled={loadingHighlights}
+        onClick={() => loadAiCandidates(project.id)}
+      >
+        {loadingHighlights ? '추천 구간 찾는 중…' : 'AI 추천 받기'}
+      </button>
+    </div>
+    {highlightError && <p role="alert">{highlightError}</p>}
+  </div>
+)}<p>{sample ? '원본 근거를 확인하고, 원하는 후보를 클립으로 만드세요.' : '분석 결과를 연결하면 이곳에 추천 후보가 표시됩니다.'}</p></div><span className="v3-count">{visible.length}개 후보</span></div>
         {candidates.length > 0 && <section className="candidate-explorer" aria-label="후보 찾기"><div className="candidate-explorer-fields">
           <label className="candidate-explorer-search"><Search size={15} /><span className="sr-only">후보 검색</span><input aria-label="후보 검색" placeholder="후보 검색" value={filters.query} onChange={event => changeFilters({ query: event.target.value })} />{filters.query && <button className="icon-button" aria-label="후보 검색 지우기" onClick={() => changeFilters({ query: '' })}><X size={13} /></button>}</label>
           <select aria-label="후보 근거 유형" value={filters.kind} onChange={event => changeFilters({ kind: event.target.value as CandidateKind })}><option value="all">모든 근거</option><option value="speech">발화</option><option value="scene">장면</option><option value="sound">소리</option></select>

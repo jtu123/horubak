@@ -11,6 +11,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -126,5 +131,64 @@ public class TranscriptController {
                 transcriptService.getSegments(projectId);
 
         return ResponseEntity.ok(segments);
+    }
+    @Value("${app.ai.url:http://127.0.0.1:8000}")
+    private String aiServerUrl;
+
+    @PostMapping("/projects/{projectId}/highlights")
+    public ResponseEntity<String> recommendHighlights(
+            @PathVariable("projectId") UUID projectId,
+            @RequestParam("genre") String genre
+    ) {
+        if (!List.of("lecture", "speech", "podcast").contains(genre)) {
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"detail\":\"지원하지 않는 장르입니다.\"}");
+        }
+
+        projectService.getProject(projectId);
+        List<TranscriptSegment> segments =
+                transcriptService.getSegments(projectId);
+
+        if (segments.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"detail\":\"먼저 영상의 자막을 분석해 저장하세요.\"}");
+        }
+
+        var subtitles = segments.stream()
+                .map(segment -> Map.of(
+                        "segmentIndex", segment.getSegmentIndex(),
+                        "startSeconds", segment.getStartSeconds(),
+                        "endSeconds", segment.getEndSeconds(),
+                        "text", segment.getText()
+                ))
+                .toList();
+
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(75000);
+
+        RestClient client = RestClient.builder()
+                .baseUrl(aiServerUrl)
+                .requestFactory(factory)
+                .build();
+
+        try {
+            return client.post()
+                    .uri("/api/highlights/recommend")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("genre", genre, "segments", subtitles))
+                    .retrieve()
+                    .toEntity(String.class);
+        } catch (RestClientResponseException e) {
+            return ResponseEntity.status(e.getStatusCode())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(e.getResponseBodyAsString());
+        } catch (RestClientException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"detail\":\"FastAPI 연결에 실패했거나 응답 시간이 초과됐습니다.\"}");
+        }
     }
 }
