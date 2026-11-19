@@ -125,7 +125,80 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
         }} onEnded={() => { onPlaying(false); onTime(edit.start); }} onError={() => { setError(true); onPlaying(false); }} /> : match || stillSample ? <div className="sample-visual" style={stillSample ? { transform: 'translate(' + (50 - edit.cropX) * .5 + '%, ' + (50 - edit.cropY) * .5 + '%)' } : undefined}><Poster project={project} candidateId={edit.candidateId} vertical /></div> : <div className="no-video"><FileVideo size={32} /><b>원본을 연결해 주세요</b><p>이 브라우저에서 영상을 재생합니다.</p></div>}
       </div>
       <span className="preview-watermark">{match ? '경기 샘플' : stillSample ? '샘플 이미지' : '원본 미리보기'}</span>
-      {edit.subtitleVisible && edit.subtitle && <div className="subtitle-overlay" style={{ fontSize: edit.subtitleSize + 'px', color: edit.subtitleColor }}><span>{edit.subtitle}</span></div>}
+     {edit.subtitleVisible && edit.subtitle && (
+  <div
+    className={
+      'subtitle-overlay subtitle-' +
+      edit.subtitlePosition
+    }
+    style={{
+      fontSize: edit.subtitleSize + 'px',
+      color: edit.subtitleColor,
+      fontWeight: edit.subtitleBold
+        ? 700
+        : 400,
+    }}
+  >
+    <span>
+      {(() => {
+        const keywords =
+          edit.subtitleHighlightKeywords
+            .filter(Boolean)
+            .sort(
+              (a, b) => b.length - a.length
+            );
+
+        if (keywords.length === 0) {
+          return edit.subtitle;
+        }
+
+        const escaped = keywords.map(keyword =>
+          keyword.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            '\\$&'
+          )
+        );
+
+        const regex = new RegExp(
+          `(${escaped.join('|')})`,
+          'gi'
+        );
+
+        const parts =
+          edit.subtitle.split(regex);
+
+        return parts.map(
+          (part, index) => {
+            const isKeyword =
+              keywords.some(
+                keyword =>
+                  part.toLowerCase() ===
+                  keyword.toLowerCase()
+              );
+
+            return isKeyword ? (
+              <mark
+                key={index}
+                style={{
+                  color:
+                    edit.subtitleHighlightColor,
+                  fontWeight: 800,
+                  background: 'transparent',
+                }}
+              >
+                {part}
+              </mark>
+            ) : (
+              <span key={index}>
+                {part}
+              </span>
+            );
+          }
+        );
+      })()}
+    </span>
+  </div>
+)}
       {edit.showSafeArea && <div className="preview-safe-area" aria-label="일반 안전영역 가이드"><span>일반 안전영역</span></div>}
       {stillSample && <span className="sample-frame-tag">이미지·구간 조작 예시</span>}
       {match && !url && !mediaError && <span className="sample-frame-tag" role="status">경기 영상 불러오는 중…</span>}

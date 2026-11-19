@@ -18,14 +18,28 @@ export interface Candidate {
   warning?: { title: string; description: string; evidence: string; correctedStart: number; correctedEnd: number };
 }
 export interface VisualEvidence { id: string; start: number; end: number; title: string; description: string; kind: 'scene' | 'sound' }
+export type SubtitlePosition = 'top' | 'center' | 'bottom';
+
 export interface EditState {
   candidateId: string;
   start: number;
   end: number;
+
+  // 자막
   subtitle: string;
   subtitleSize: number;
   subtitleColor: string;
   subtitleVisible: boolean;
+
+  // SFR-011 자막 강조
+  subtitleHighlightKeywords: string[];
+  subtitleHighlightColor: string;
+  subtitleBold: boolean;
+
+  // SFR-012 자막 스타일
+  subtitlePosition: SubtitlePosition;
+
+  // 화면 구도
   cropX: number;
   cropY: number;
   scale: number;

@@ -10,7 +10,32 @@ const finite = (value: unknown, fallback: number) => typeof value === 'number' &
 const text = (value: unknown, fallback = '') => typeof value === 'string' ? value : fallback;
 
 export function manualEdit(duration: number, title = ''): EditState {
-  return { candidateId: 'manual', start: 0, end: Math.min(60, Math.max(0, duration)), subtitle: title, subtitleSize: 26, subtitleColor: '#ffffff', subtitleVisible: true, cropX: 50, cropY: 50, scale: 1, contextApplied: false, layout: 'full' };
+  return {
+    candidateId: 'manual',
+    start: 0,
+    end: Math.min(60, Math.max(0, duration)),
+
+    // 자막
+    subtitle: title,
+    subtitleSize: 26,
+    subtitleColor: '#ffffff',
+    subtitleVisible: true,
+
+    // SFR-011 자막 강조
+    subtitleHighlightKeywords: [],
+    subtitleHighlightColor: '#ffe18b',
+    subtitleBold: true,
+
+    // SFR-012 자막 위치
+    subtitlePosition: 'bottom',
+
+    // 화면 구도
+    cropX: 50,
+    cropY: 50,
+    scale: 1,
+    contextApplied: false,
+    layout: 'full',
+  };
 }
 
 function normalizeEdit(value: unknown, duration: number, title: string): EditState {
@@ -20,11 +45,42 @@ function normalizeEdit(value: unknown, duration: number, title: string): EditSta
     ...value,
     candidateId: text(value.candidateId, fallback.candidateId),
     start: finite(value.start, fallback.start), end: finite(value.end, fallback.end),
-    subtitle: text(value.subtitle, fallback.subtitle), subtitleSize: finite(value.subtitleSize, 26),
-    subtitleColor: text(value.subtitleColor, '#ffffff'),
-    subtitleVisible: typeof value.subtitleVisible === 'boolean' ? value.subtitleVisible : true,
-    cropX: finite(value.cropX, 50), cropY: finite(value.cropY, 50), scale: finite(value.scale, 1),
-    contextApplied: value.contextApplied === true, layout: value.layout === 'speaker' ? 'speaker' : 'full',
+    subtitle: text(value.subtitle, fallback.subtitle),
+subtitleSize: finite(value.subtitleSize, 26),
+subtitleColor: text(value.subtitleColor, '#ffffff'),
+subtitleVisible: typeof value.subtitleVisible === 'boolean'
+  ? value.subtitleVisible
+  : true,
+
+subtitleHighlightKeywords: Array.isArray(value.subtitleHighlightKeywords)
+  ? value.subtitleHighlightKeywords.filter(
+      (keyword): keyword is string =>
+        typeof keyword === 'string' && keyword.trim().length > 0
+    )
+  : [],
+
+subtitleHighlightColor: text(
+  value.subtitleHighlightColor,
+  '#ffe18b'
+),
+
+subtitleBold: typeof value.subtitleBold === 'boolean'
+  ? value.subtitleBold
+  : true,
+
+subtitlePosition:
+  value.subtitlePosition === 'top' ||
+  value.subtitlePosition === 'center' ||
+  value.subtitlePosition === 'bottom'
+    ? value.subtitlePosition
+    : 'bottom',
+
+cropX: finite(value.cropX, 50),
+cropY: finite(value.cropY, 50),
+scale: finite(value.scale, 1),
+
+contextApplied: value.contextApplied === true,
+layout: value.layout === 'speaker' ? 'speaker' : 'full',
     ...(Object.hasOwn(value, 'aspectRatio') ? { aspectRatio: getOutputProfile(value.aspectRatio).ratio } : {}),
     ...(Object.hasOwn(value, 'showSafeArea') ? { showSafeArea: value.showSafeArea === true } : {}),
   };

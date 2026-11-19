@@ -104,7 +104,220 @@ export function Editor() {
         <section className="timeline editor-panel v3-timeline"><div className="timeline-heading"><h2>원본 구간</h2><span>{formatTime(edit.start)} — {formatTime(edit.end)}<b>{Math.max(0, edit.end - edit.start).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}초</b></span></div><div className="timeline-ruler">{Array.from({ length: 5 }, (_, index) => <span key={index}>{formatTime(windowStart + span * index / 4)}</span>)}</div><div className="v3-interval-track"><div className="v3-interval-selection" style={{ left: Math.max(0, (edit.start - windowStart) / span * 100) + '%', width: Math.max(0, Math.min(100, (edit.end - edit.start) / span * 100)) + '%' }}><span>선택 구간</span></div><div className="v3-playhead" style={{ left: Math.max(0, Math.min(100, (time - windowStart) / span * 100)) + '%' }} /><input type="range" aria-label="원본 영상 탐색" min={windowStart} max={windowEnd} step={.1} value={Math.min(windowEnd, Math.max(windowStart, time))} onChange={event => seek(Number(event.target.value))} /></div><div className="range-inputs"><label>시작<input aria-label="클립 시작 초" type="number" min={0} max={Math.max(0, edit.end - 1)} value={edit.start} step={1} onChange={event => { const start = Number(event.target.value); commit({ start, contextApplied: false }); seek(start); }} /><span>초</span></label><span>—</span><label>종료<input aria-label="클립 종료 초" type="number" min={edit.start + 1} max={project.duration} value={edit.end} step={1} onChange={event => commit({ end: Number(event.target.value), contextApplied: false })} /><span>초</span></label><span className={'range-validation' + (error ? ' invalid' : '')}>{error ? <><Info size={13} />{error}</> : <><Check size={13} />30~60초 기본 프로필</>}</span></div></section>
       </div>
       <aside className="inspector-panel editor-panel v3-inspector"><div className="inspector-heading"><SlidersHorizontal size={16} /><h2>클립 설정</h2></div><PillTabs label="클립 설정" value={rightTab} onChange={setRightTab} options={[{ value: 'subtitles', label: '자막' }, { value: 'crop', label: '구도' }, { value: 'ai', label: 'AI 검토' }]} /><div className="inspector-body">
-        {rightTab === 'subtitles' && <><div className="control-title"><h3>자막 표시</h3><button className={'toggle' + (edit.subtitleVisible ? ' on' : '')} role="switch" aria-checked={edit.subtitleVisible} aria-label="자막 표시" onClick={() => commit({ subtitleVisible: !edit.subtitleVisible })}><span /></button></div><label className="field-label" htmlFor="subtitle">미리보기 문구</label><textarea id="subtitle" className="text-input subtitle-text" maxLength={120} value={edit.subtitle} onChange={event => commit({ subtitle: event.target.value })} /><label className="range-label" htmlFor="subtitle-size">글자 크기<b>{edit.subtitleSize}px</b></label><input id="subtitle-size" type="range" min={16} max={38} value={edit.subtitleSize} onChange={event => commit({ subtitleSize: Number(event.target.value) })} /><span className="field-label v3-control-label">강조 색상</span><div className="color-swatches">{['#ffffff', '#ffe18b', '#a7edcf', '#b8caff', '#ffb3a5'].map(color => <button key={color} aria-label={'자막 색상 ' + color} aria-pressed={color === edit.subtitleColor} style={{ background: color }} onClick={() => commit({ subtitleColor: color })}>{color === edit.subtitleColor && <Check size={15} />}</button>)}</div><div className="settings-note"><Info size={14} />현재는 단일 문구 미리보기입니다. 시간별 자막 편집·합성은 연결 전입니다.</div></>}
+       {rightTab === 'subtitles' && <>
+  <div className="control-title">
+    <h3>자막 표시</h3>
+
+    <button
+      className={'toggle' + (edit.subtitleVisible ? ' on' : '')}
+      role="switch"
+      aria-checked={edit.subtitleVisible}
+      aria-label="자막 표시"
+      onClick={() =>
+        commit({ subtitleVisible: !edit.subtitleVisible })
+      }
+    >
+      <span />
+    </button>
+  </div>
+
+  <label className="field-label" htmlFor="subtitle">
+    자막 문구
+  </label>
+
+  <textarea
+    id="subtitle"
+    className="text-input subtitle-text"
+    maxLength={120}
+    value={edit.subtitle}
+    onChange={event =>
+      commit({ subtitle: event.target.value })
+    }
+    placeholder="자막 내용을 입력하세요."
+  />
+
+  <label
+    className="range-label"
+    htmlFor="subtitle-size"
+  >
+    글자 크기
+    <b>{edit.subtitleSize}px</b>
+  </label>
+
+  <input
+    id="subtitle-size"
+    type="range"
+    min={16}
+    max={48}
+    value={edit.subtitleSize}
+    onChange={event =>
+      commit({
+        subtitleSize: Number(event.target.value)
+      })
+    }
+  />
+
+  <span className="field-label v3-control-label">
+    자막 위치
+  </span>
+
+  <div className="subtitle-position-picker">
+    <button
+      className={
+        edit.subtitlePosition === 'top'
+          ? 'selected'
+          : ''
+      }
+      onClick={() =>
+        commit({ subtitlePosition: 'top' })
+      }
+    >
+      상단
+    </button>
+
+    <button
+      className={
+        edit.subtitlePosition === 'center'
+          ? 'selected'
+          : ''
+      }
+      onClick={() =>
+        commit({ subtitlePosition: 'center' })
+      }
+    >
+      중앙
+    </button>
+
+    <button
+      className={
+        edit.subtitlePosition === 'bottom'
+          ? 'selected'
+          : ''
+      }
+      onClick={() =>
+        commit({ subtitlePosition: 'bottom' })
+      }
+    >
+      하단
+    </button>
+  </div>
+
+  <div className="control-title">
+    <h3>강조 효과</h3>
+
+    <button
+      className={
+        'toggle' +
+        (edit.subtitleBold ? ' on' : '')
+      }
+      role="switch"
+      aria-checked={edit.subtitleBold}
+      aria-label="자막 굵게"
+      onClick={() =>
+        commit({
+          subtitleBold: !edit.subtitleBold
+        })
+      }
+    >
+      <span />
+    </button>
+  </div>
+
+  <label
+    className="field-label"
+    htmlFor="subtitle-keywords"
+  >
+    강조할 핵심어
+  </label>
+
+  <input
+    id="subtitle-keywords"
+    className="text-input"
+    placeholder="예: AI, 데이터, 핵심"
+    value={edit.subtitleHighlightKeywords.join(', ')}
+    onChange={event => {
+      const keywords = event.target.value
+        .split(',')
+        .map(keyword => keyword.trim())
+        .filter(Boolean);
+
+      commit({
+        subtitleHighlightKeywords: keywords
+      });
+    }}
+  />
+
+  <span className="field-label v3-control-label">
+    자막 색상
+  </span>
+
+  <div className="color-swatches">
+    {[
+      '#ffffff',
+      '#ffe18b',
+      '#a7edcf',
+      '#b8caff',
+      '#ffb3a5'
+    ].map(color => (
+      <button
+        key={color}
+        aria-label={'자막 색상 ' + color}
+        aria-pressed={
+          color === edit.subtitleColor
+        }
+        style={{
+          background: color
+        }}
+        onClick={() =>
+          commit({
+            subtitleColor: color
+          })
+        }
+      >
+        {color === edit.subtitleColor && (
+          <Check size={15} />
+        )}
+      </button>
+    ))}
+  </div>
+
+  <span className="field-label v3-control-label">
+    강조 색상
+  </span>
+
+  <div className="color-swatches">
+    {[
+      '#ffe18b',
+      '#ff8f8f',
+      '#8fd3ff',
+      '#a7edcf'
+    ].map(color => (
+      <button
+        key={color}
+        aria-label={'강조 색상 ' + color}
+        aria-pressed={
+          color === edit.subtitleHighlightColor
+        }
+        style={{
+          background: color
+        }}
+        onClick={() =>
+          commit({
+            subtitleHighlightColor: color
+          })
+        }
+      >
+        {color === edit.subtitleHighlightColor && (
+          <Check size={15} />
+        )}
+      </button>
+    ))}
+  </div>
+
+  <div className="settings-note">
+    <Info size={14} />
+    핵심어를 쉼표로 구분하면 미리보기에서 강조됩니다.
+  </div></>}
         {rightTab === 'crop' && <><OutputControls edit={edit} onChange={commit} /><div className="control-title"><h3>화면 구성</h3><span className="tiny-tag">수동</span></div><div className="layout-picker"><button className={edit.layout === 'speaker' ? 'selected' : ''} onClick={() => commit({ layout: 'speaker' })}><span className="layout-glyph portrait" /><b>피사체 중심</b></button><button className={edit.layout === 'full' ? 'selected' : ''} onClick={() => commit({ layout: 'full' })}><span className="layout-glyph landscape" /><b>원본 전체</b></button></div>{([{ label: '가로 위치', key: 'cropX', min: 0, max: 100, step: 1 }, { label: '세로 위치', key: 'cropY', min: 0, max: 100, step: 1 }, { label: '확대', key: 'scale', min: 1, max: 2, step: .05 }] as const).map(control => <div key={control.key}><label className="range-label" htmlFor={control.key}>{control.label}<b>{control.key === 'scale' ? edit[control.key].toFixed(2) + '×' : edit[control.key] + '%'}</b></label><input id={control.key} type="range" min={control.min} max={control.max} step={control.step} value={edit[control.key]} onChange={event => commit({ [control.key]: Number(event.target.value) })} /></div>)}<button className="text-link v3-reset-crop" onClick={() => commit({ cropX: 50, cropY: 50, scale: 1 })}><Undo2 size={13} />구도 초기화</button><div className="settings-note"><ScanLine size={15} />화자·피사체 자동 추적과 시간별 크롭은 연결 전입니다.</div></>}
         {rightTab === 'ai' && <><div className="v3-ai-modes" role="group" aria-label="AI 기능"><button aria-pressed={aiMode === 'context'} onClick={() => setAiMode('context')}>맥락</button><button aria-pressed={aiMode === 'command'} onClick={() => setAiMode('command')}>자연어</button><button aria-pressed={aiMode === 'screen'} onClick={() => setAiMode('screen')}>화면 보존</button></div>{aiMode === 'context' ? <div className="v3-ai-content"><ShieldCheck size={26} /><h3>{selected?.warning ? edit.contextApplied ? '보정안을 적용했어요' : '앞뒤 맥락을 확인해요' : '원본 근거와 함께 확인해요'}</h3><p>{selected?.warning?.description ?? (sample ? '샘플에 표시된 원본 근거를 확인하고 구간을 결정해 주세요.' : '자동 맥락 분석은 연결 전입니다. 원본을 확인하며 직접 구간을 조정할 수 있어요.')}</p>{selected?.warning && <button className="btn secondary full" onClick={() => setReview(selected)}>보정 전후 비교<ArrowRight size={14} /></button>}<button className="text-link" onClick={() => setLeftTab('source')}>원본 근거 열기<ArrowRight size={13} /></button></div> : aiMode === 'command' ? <div className="v3-ai-content"><MessageSquare size={26} /><h3>말로 편집하기</h3><p>구간·자막·스타일·구도를 요청하고 변경 내용을 확인하는 기능입니다.</p><label className="field-label" htmlFor="natural-command">편집 요청</label><textarea id="natural-command" className="text-input" rows={3} disabled placeholder="질문부터 포함하고 자막을 작게 바꿔줘" /><button className="btn secondary full" disabled>명령 해석 연결 전</button></div> : <div className="v3-ai-content"><ScanLine size={26} /><h3>핵심 화면 보존</h3><p>화면 글자·자료·중요 영역을 보존하는 자동 레이아웃은 연결 전입니다.</p><button className="btn secondary full" onClick={() => { setRightTab('crop'); commit({ layout: 'full' }); }}>원본 전체 화면 적용</button><span className="v3-tool-footnote">수동 구도로 중요한 영역을 유지할 수 있어요.</span></div>}</>}
       </div></aside>
