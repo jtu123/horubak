@@ -8,7 +8,8 @@ describe('input boundaries', () => {
     expect(validateVideo({ name: 'lecture.MP4', size: 2000 })).toBeUndefined();
     expect(validateVideo({ name: 'lecture.exe', size: 2000 })).toBeTruthy();
     expect(validateVideo({ name: 'lecture.mp4', size: 0 })).toBeTruthy();
-    expect(validateVideo({ name: 'lecture.mov', size: 4 * 1024 ** 3 + 1 })).toBeTruthy();
+    expect(validateVideo({ name: 'lecture.mov', size: 2000 })).toBeTruthy();
+    expect(validateVideo({ name: 'lecture.mp4', size: 500 * 1024 ** 2 + 1 })).toBeTruthy();
   });
   it('accepts HTTPS but does not treat arbitrary strings or embedded credentials as media URLs', () => {
     expect(validateSourceUrl('https://example.com/video.mp4')).toBeUndefined();
@@ -24,11 +25,11 @@ describe('time and subtitle export', () => {
   it('formats minutes and hour boundaries without wrapping the hour', () => {
     expect(formatTime(59.9)).toBe('0:59'); expect(formatTime(3601)).toBe('1:00:01'); expect(formatTime(-2)).toBe('0:00');
   });
-  it('converts source time to clip time and clips overlapping utterances at both ends', () => {
-    const srt = buildSrt([{ id: 'a', start: 5, end: 12, text: '앞 경계', speaker: 'A' }, { id: 'b', start: 12, end: 22, text: '뒤 경계', speaker: 'B' }, { id: 'c', start: 25, end: 30, text: '범위 밖', speaker: 'A' }], { start: 10, end: 20 });
-    expect(srt).toContain('00:00:00,000 --> 00:00:02,000');
-    expect(srt).toContain('00:00:02,000 --> 00:00:10,000');
-    expect(srt).not.toContain('범위 밖'); expect(srt).not.toContain('-00');
+  it('exports complete utterances and omits text that extends beyond the video cut', () => {
+    const srt = buildSrt([{ id: 'a', start: 5, end: 12, text: '앞 경계', speaker: 'A' }, { id: 'b', start: 12, end: 18, text: '완전한 문장', speaker: 'B' }, { id: 'c', start: 19, end: 25, text: '뒤 경계', speaker: 'A' }], { start: 10, end: 20 });
+    expect(srt).toContain('00:00:02,000 --> 00:00:08,000');
+    expect(srt).toContain('완전한 문장');
+    expect(srt).not.toContain('앞 경계'); expect(srt).not.toContain('뒤 경계');
   });
 });
 describe('shared fixture contract', () => {

@@ -17,6 +17,11 @@ public class TranscriptService {
     private final ProjectRepository projectRepository;
     private final TranscriptSegmentRepository transcriptSegmentRepository;
 
+    @Transactional
+    public void invalidate(UUID projectId) {
+        transcriptSegmentRepository.deleteByProjectId(projectId);
+    }
+
     public TranscriptService(
             ProjectRepository projectRepository,
             TranscriptSegmentRepository transcriptSegmentRepository

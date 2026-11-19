@@ -60,6 +60,34 @@ export function ProjectHub() {
   const [highlightGenre, setHighlightGenre] = useState<HighlightGenre>('lecture');
   const [loadingHighlights, setLoadingHighlights] = useState(false);
   const [highlightError, setHighlightError] = useState('');
+  const [transcriptReady, setTranscriptReady] = useState<boolean | null>(null);
+  const [analyzingTranscript, setAnalyzingTranscript] = useState(false);
+  useEffect(() => {
+    if (!project || project.source === 'sample') { setTranscriptReady(null); return; }
+    let active = true;
+    setTranscriptReady(null);
+    void apiFetch(`/api/transcripts/projects/${encodeURIComponent(project.id)}`)
+      .then(async response => {
+        if (!response.ok) throw new Error(`자막 조회 실패 (${response.status})`);
+        const items: unknown = await response.json();
+        if (active) setTranscriptReady(Array.isArray(items) && items.length > 0);
+      })
+      .catch(error => { if (active) setHighlightError(error instanceof Error ? error.message : '자막을 확인하지 못했어요.'); });
+    return () => { active = false; };
+  }, [project?.id, project?.source]);
+  async function analyzeTranscript(projectId: string) {
+    if (analyzingTranscript) return;
+    setAnalyzingTranscript(true);
+    setHighlightError('');
+    try {
+      const response = await apiFetch(`/api/transcripts/projects/${encodeURIComponent(projectId)}/analyze`, { method: 'POST' });
+      if (!response.ok) throw new Error(`자막 분석 실패 (${response.status})`);
+      setAiCandidatesByProject(previous => { const next = { ...previous }; delete next[projectId]; return next; });
+      setTranscriptReady(true);
+    } catch (error) {
+      setHighlightError(error instanceof Error ? error.message : '자막 분석에 실패했어요.');
+    } finally { setAnalyzingTranscript(false); }
+  }
   const [aiCandidatesByProject, setAiCandidatesByProject] =
   useState<Record<string, Candidate[]>>({});
   if (!project) return <div className="empty-state"><h1>프로젝트를 찾을 수 없어요</h1><Link className="btn primary" to="/projects">프로젝트 목록</Link></div>;
@@ -180,7 +208,7 @@ export function ProjectHub() {
       <select
         aria-label="추천에 사용할 영상 장르"
         value={highlightGenre}
-        disabled={loadingHighlights}
+        disabled={loadingHighlights || analyzingTranscript || (!sample && transcriptReady !== true)}
         onChange={event => {
           setHighlightGenre(event.target.value as HighlightGenre);
         }}
@@ -198,6 +226,8 @@ export function ProjectHub() {
       >
         {loadingHighlights ? '추천 구간 찾는 중…' : 'AI 추천 받기'}
       </button>
+      {!sample && transcriptReady === false && <button className="btn secondary" type="button" disabled={analyzingTranscript} onClick={() => void analyzeTranscript(project.id)}>{analyzingTranscript ? '자막 분석 중…' : '자막 분석 시작'}</button>}
+      {!sample && transcriptReady === null && <span role="status">자막 확인 중…</span>}
     </div>
     {highlightError && <p role="alert">{highlightError}</p>}
   </div>

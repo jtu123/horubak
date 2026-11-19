@@ -7,7 +7,7 @@ import { useWorkspace } from '../store';
 import { getActiveClip, getProjectClips } from '../workspace-model';
 import { describeProject } from '../project-presentation';
 import { formatTime, rangeError } from '../lib';
-import type { Candidate, EditState } from '../types';
+import type { Candidate, EditState, Utterance } from '../types';
 import { PillTabs } from '../components/lucian/PillTabs';
 import { SourceReconnect, VideoPreview } from '../components/VideoPreview';
 import { Modal } from '../components/Modal';
@@ -16,9 +16,26 @@ import { getOutputProfile } from '../output-profile';
 import { EMPTY_EDIT_HISTORY, rememberEdit, stepEditHistory } from '../edit-history';
 import type { EditHistories } from '../edit-history';
 import { apiFetch } from '../api';
-//import { HighlightPanel } from '../components/HighlightPanel';
 import '../styles/editor-v3.css';
 import '../styles/editor-history.css';
+
+type SavedTranscriptSegment = {
+  id: string;
+  segmentIndex: number;
+  startSeconds: number;
+  endSeconds: number;
+  text: string;
+};
+
+type ContextResult = {
+  status: 'keep' | 'expand' | 'review';
+  reason: string;
+  originalStartSeconds: number;
+  originalEndSeconds: number;
+  suggestion: { startSeconds: number; endSeconds: number; durationSeconds: number } | null;
+};
+type ContextReview = { projectId: string; clipId: string; result: ContextResult };
+
 
 export function Editor() {
   const { id } = useParams();
@@ -30,6 +47,8 @@ export function Editor() {
   const requestedClip = clips.find(item => item.id === params.get('clip'));
   const clip = requestedClip ?? (project ? getActiveClip(project) : undefined);
   const clipId = clip?.id;
+  const editStart = clip?.edit.start;
+  const editEnd = clip?.edit.end;
   const [leftTab, setLeftTab] = useState<'clips' | 'source'>('clips');
   const [rightTab, setRightTab] = useState<'subtitles' | 'crop' | 'ai'>('subtitles');
   const [aiMode, setAiMode] = useState<'context' | 'command' | 'screen'>('context');
@@ -37,22 +56,102 @@ export function Editor() {
   const [time, setTime] = useState(clip?.edit.start ?? 0);
   const [histories, setHistories] = useState<EditHistories>({});
   const [review, setReview] = useState<Candidate | null>(null);
+  const [checkingContext, setCheckingContext] = useState(false);
+  const [contextReview, setContextReview] = useState<ContextReview | null>(null);
+  const contextRequestRef = useRef(0);
+  const [savedTranscript, setSavedTranscript] = useState<{
+  projectId: string;
+  items: Utterance[];
+} | null>(null);
+
+const [transcriptLoading, setTranscriptLoading] = useState(false);
+const [transcriptError, setTranscriptError] = useState('');
+
+useEffect(() => {
+  const projectId = project?.id;
+
+  setSavedTranscript(null);
+  setTranscriptError('');
+
+  if (!projectId || project?.source === 'sample') {
+    setTranscriptLoading(false);
+    return;
+  }
+
+  let cancelled = false;
+  setTranscriptLoading(true);
+
+  async function loadTranscript() {
+    try {
+      const response = await apiFetch(
+        `/api/transcripts/projects/${encodeURIComponent(projectId!)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          response.status === 401
+            ? '로그인 후 자막을 다시 확인해 주세요.'
+            : `자막 조회 실패 (${response.status})`,
+        );
+      }
+
+      const segments: SavedTranscriptSegment[] = await response.json();
+
+      const items: Utterance[] = [...segments]
+        .sort((a, b) => a.segmentIndex - b.segmentIndex)
+        .map(segment => ({
+          id: segment.id,
+          start: segment.startSeconds,
+          end: segment.endSeconds,
+          text: segment.text,
+          speaker: '',
+        }));
+
+      if (!cancelled) {
+        setSavedTranscript({ projectId: projectId!, items });
+      }
+    } catch (cause) {
+      if (!cancelled) {
+        setTranscriptError(
+          cause instanceof Error ? cause.message : '자막을 불러오지 못했어요.',
+        );
+      }
+    } finally {
+      if (!cancelled) setTranscriptLoading(false);
+    }
+  }
+
+  void loadTranscript();
+
+  return () => {
+    cancelled = true;
+  };
+}, [project?.id, project?.source]);
+
+  // 클립이나 시간 범위가 바뀌면 이전 요청 결과를 무효화한다.
+  useEffect(() => {
+    contextRequestRef.current += 1;
+    setCheckingContext(false);
+    setContextReview(null);
+    return () => { contextRequestRef.current += 1; };
+  }, [project?.id, clip?.id, clip?.edit.start, clip?.edit.end]);
+
   const [exporting, setExporting] = useState(false);
   const [clipGenerating, setClipGenerating] = useState(false);
+  const [generatedClipPath, setGeneratedClipPath] = useState<string | null>(null);
   const [generatedClipUrl, setGeneratedClipUrl] = useState<string | null>(null);
-  const generatedBlobUrlRef = useRef<string | null>(null);
 
 
 useEffect(() => {
-  if (!generatedClipUrl) return;
-  if (generatedClipUrl.startsWith('blob:')) return;
+  setGeneratedClipUrl(null);
+  if (!generatedClipPath) return;
 
   let cancelled = false;
+  let objectUrl: string | null = null;
 
   const loadVideo = async () => {
     try {
-      const url = new URL(generatedClipUrl);
-      const response = await apiFetch(url.pathname);
+      const response = await apiFetch(generatedClipPath);
 
       if (!response.ok) {
         throw new Error(`영상 조회 실패 (HTTP ${response.status})`);
@@ -62,14 +161,8 @@ useEffect(() => {
 
       if (cancelled) return;
 
-      const objectUrl = URL.createObjectURL(blob);
-
-if (generatedBlobUrlRef.current) {
-  URL.revokeObjectURL(generatedBlobUrlRef.current);
-}
-
-generatedBlobUrlRef.current = objectUrl;
-setGeneratedClipUrl(objectUrl);
+      objectUrl = URL.createObjectURL(blob);
+      setGeneratedClipUrl(objectUrl);
 
     } catch (error) {
       if (!cancelled) {
@@ -82,23 +175,18 @@ setGeneratedClipUrl(objectUrl);
 
   return () => {
     cancelled = true;
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
   };
-}, [generatedClipUrl]);
-
-useEffect(() => {
-  return () => {
-    if (generatedBlobUrlRef.current) {
-      URL.revokeObjectURL(generatedBlobUrlRef.current);
-      generatedBlobUrlRef.current = null;
-    }
-  };
-}, []);
+}, [generatedClipPath]);
 
 
 
 useEffect(() => {
-  if (!project?.id) {
-    setGeneratedClipUrl(null);
+  setGeneratedClipPath(null);
+  setGeneratedClipUrl(null);
+
+  if (!project?.id || !clipId
+      || editStart == null || editEnd == null) {
     return;
   }
 
@@ -117,28 +205,31 @@ useEffect(() => {
       const savedClips: {
   editorClipId: string | null;
   clipFileName: string;
+  start: number;
+  duration: number;
 }[] = await response.json();
 
 if (cancelled) return;
 
-// 현재 선택한 편집 클립 ID와 일치하는 MP4 검색
-  const matchedClip = savedClips.find(
-    item => item.editorClipId === clipId
-  );
+const matchedClip = savedClips.find(item =>
+  item.editorClipId === clipId
+  && Math.abs(Number(item.start) - editStart) < 0.001
+  && Math.abs(Number(item.duration) - (editEnd - editStart)) < 0.001
+);
 
   if (matchedClip) {
-    setGeneratedClipUrl(
-      `http://localhost:8080/api/videos/clips/${encodeURIComponent(matchedClip.clipFileName)}`
+    setGeneratedClipPath(
+      `/api/videos/clips/${encodeURIComponent(matchedClip.clipFileName)}`
     );
   } else {
     // 해당 클립의 MP4가 아직 생성되지 않은 경우
-    setGeneratedClipUrl(null);
+    setGeneratedClipPath(null);
   }
     } catch (error) {
       if (cancelled) return;
 
       console.error('저장된 MP4 조회 실패:', error);
-      setGeneratedClipUrl(null);
+      setGeneratedClipPath(null);
     }
   };
 
@@ -147,7 +238,7 @@ if (cancelled) return;
   return () => {
     cancelled = true;
   };
-}, [project?.id,clipId]);
+}, [project?.id, clipId, editStart, editEnd]);
 
   const [shortcuts, setShortcuts] = useState(false);
   const onPlaying = useCallback((value: boolean) => setPlaying(value), []);
@@ -193,7 +284,11 @@ if (cancelled) return;
   const edit = clip.edit;
   const output = getOutputProfile(edit.aspectRatio);
   const candidates = getProjectCandidates(project);
-  const transcript = getProjectTranscript(project);
+  const transcript = project.source === 'sample'
+  ? getProjectTranscript(project)
+  : savedTranscript?.projectId === project.id
+    ? savedTranscript.items
+    : [];
   const evidence = getProjectEvidence(project);
   const selected = candidates.find(item => item.id === edit.candidateId);
   const sample = project.source === 'sample';
@@ -205,6 +300,74 @@ if (cancelled) return;
   const seek = (value: number) => { setTime(value); setPlaying(false); };
   const switchClip = (nextId: string) => { selectClip(project.id, nextId); setParams({ clip: nextId }); };
   
+
+  async function checkCurrentContext() {
+     if (!project || !clip) return;
+    if (checkingContext) return;
+    const start = edit.start;
+    const end = edit.end;
+    const invalid = rangeError(start, end, project.duration);
+    if (invalid || end - start < 30 || end - start > 60) {
+      notify('구간을 확인해 주세요', invalid || '30~60초 구간을 선택해 주세요.', 'error');
+      return;
+    }
+
+    const requestId = ++contextRequestRef.current;
+    setCheckingContext(true);
+    setContextReview(null);
+    setReview(null);
+    const query = new URLSearchParams({ start: String(start), end: String(end) });
+
+    try {
+      const response = await apiFetch(
+        `/api/transcripts/projects/${encodeURIComponent(project.id)}/context-check?${query}`,
+        { method: 'POST' },
+      );
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(typeof body?.detail === 'string'
+          ? body.detail : `맥락 확인 실패 (HTTP ${response.status})`);
+      }
+      const result: ContextResult = await response.json();
+      if (requestId !== contextRequestRef.current) return;
+      if (!['keep', 'expand', 'review'].includes(result.status)
+          || typeof result.reason !== 'string'
+          || result.originalStartSeconds !== start || result.originalEndSeconds !== end) {
+        throw new Error('맥락 확인 응답이 현재 편집 구간과 일치하지 않습니다.');
+      }
+      setPlaying(false);
+      setContextReview({ projectId: project.id, clipId: clip.id, result });
+    } catch (cause) {
+      if (requestId === contextRequestRef.current) {
+        notify('맥락 확인 실패', cause instanceof Error ? cause.message : '다시 시도해 주세요.', 'error');
+      }
+    } finally {
+      if (requestId === contextRequestRef.current) setCheckingContext(false);
+    }
+  }
+
+  function applyContextSuggestion() {
+    if (!project || !clip) return;
+    if (!contextReview || contextReview.projectId !== project.id
+        || contextReview.clipId !== clip.id || contextReview.result.status !== 'expand'
+        || contextReview.result.originalStartSeconds !== edit.start
+        || contextReview.result.originalEndSeconds !== edit.end) return;
+    const suggestion = contextReview.result.suggestion;
+    if (!suggestion) return;
+    const duration = suggestion.endSeconds - suggestion.startSeconds;
+    const invalid = rangeError(suggestion.startSeconds, suggestion.endSeconds, project.duration);
+    if (invalid || !Number.isFinite(duration) || duration < 30 || duration > 60
+        || suggestion.startSeconds > edit.start || suggestion.endSeconds < edit.end
+        || (suggestion.startSeconds === edit.start && suggestion.endSeconds === edit.end)) {
+      notify('보정안 확인 필요', invalid || '유효한 30~60초 확장 구간이 아닙니다.', 'error');
+      return;
+    }
+    commit({ start: suggestion.startSeconds, end: suggestion.endSeconds, contextApplied: true });
+    seek(suggestion.startSeconds);
+    setContextReview(null);
+    notify('맥락 보정안을 적용했어요');
+  }
+
 const generateMp4Clip = async () => {
   if (!project || !clip) return;
 
@@ -224,6 +387,7 @@ const generateMp4Clip = async () => {
   }
 
   setClipGenerating(true);
+  setGeneratedClipPath(null);
   setGeneratedClipUrl(null);
 
   try {
@@ -297,10 +461,7 @@ if (!completed) {
 }
 
 // 7. 완료된 MP4 재생 주소 설정
-const clipUrl =
-  `http://localhost:8080/api/videos/clips/${encodeURIComponent(result.clipFileName)}`;
-
-setGeneratedClipUrl(clipUrl);
+setGeneratedClipPath(`/api/videos/clips/${encodeURIComponent(result.clipFileName)}`);
 
 notify('클립 생성 완료', 'MP4 영상이 정상적으로 생성되었습니다.');
   } catch (error) {
@@ -315,11 +476,22 @@ notify('클립 생성 완료', 'MP4 영상이 정상적으로 생성되었습니
 
   return <div className="editor-page v3-editor">
     <div className="v3-editor-heading"><div><Link to={'/projects/' + project.id + '?tab=clips'} className="back-link"><ArrowLeft size={15} />{project.title}</Link><div className="v3-editor-title"><h1>{clip.title}</h1><span className="v3-count">{formatTime(Math.max(0, edit.end - edit.start))}</span></div><div className="v3-editor-meta"><span>{getProjectLabel(project)}</span><span>·</span><span className={storageError ? 'v3-save-status is-error' : 'v3-save-status'}>{storageError ? '저장 실패' : '브라우저에 저장됨'}</span></div></div><div className="v3-editor-actions"><label className="v3-clip-switch"><Layers3 size={15} /><span className="sr-only">편집할 클립</span><select aria-label="편집할 클립" value={clip.id} onChange={event => switchClip(event.target.value)}>{clips.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><div className="v3-history-actions" role="group" aria-label="편집 이력"><button className="icon-button" aria-label="되돌리기" title="되돌리기 (Ctrl/⌘ Z)" disabled={!history.past.length} onClick={() => stepHistory('undo')}><Undo2 size={16} /></button><button className="icon-button" aria-label="다시 실행" title="다시 실행 (Ctrl/⌘ Shift Z)" disabled={!history.future.length} onClick={() => stepHistory('redo')}><Redo2 size={16} /></button></div><button className="icon-button v3-shortcut-help" aria-label="편집 단축키" title="편집 단축키" onClick={() => setShortcuts(true)}><Keyboard size={16} /></button><button className="btn primary" disabled={false} onClick={() => setExporting(true)}>결과 확인<ArrowRight size={15} /></button></div></div>
-    <div className="v3-demo-strip"><Info size={14} /><span>{match ? '경기 샘플 영상 · 미리 정한 후보 · MP4 출력 연결 전' : sample ? '샘플 분석·이미지입니다. 실제 AI 분석과 MP4 출력은 연결 전입니다.' : '원본 미리보기 · 분석과 MP4 출력은 연결 전입니다.'}</span></div>
+    <div className="v3-demo-strip"><Info size={14} /><span>{match ? '경기 샘플 영상 · 미리 정한 후보 · MP4 출력 연결 전' : sample ? '샘플 분석·이미지입니다. 실제 AI 분석과 MP4 출력은 연결 전입니다.' : '원본 자막을 확인하고 선택 구간을 편집하세요.'}</span></div>
     <div className="editor-layout">
       <aside className="candidate-panel editor-panel v3-editor-explorer">
         <PillTabs label="편집 탐색" value={leftTab} onChange={setLeftTab} options={[{ value: 'clips', label: '내 클립' }, { value: 'source', label: '원본 근거' }]} />
-        {leftTab === 'clips' ? <><div className="panel-subheading"><span>저장한 클립</span><b>{clips.length}</b></div><div className="v3-editor-clips">{clips.map((item, index) => <button key={item.id} className={'v3-editor-clip' + (item.id === clip.id ? ' selected' : '')} aria-pressed={item.id === clip.id} onClick={() => switchClip(item.id)}><span className="v3-editor-clip-index">{String(index + 1).padStart(2, '0')}</span><span><b>{item.title}</b><small>{formatTime(item.edit.start)} — {formatTime(item.edit.end)}</small></span>{item.id === clip.id && <Check size={14} />}</button>)}</div><Link className="v3-explorer-link" to={'/projects/' + project.id + '?tab=candidates'}><Plus size={14} />다른 후보에서 클립 만들기<ArrowRight size={14} /></Link></> : <><div className="panel-subheading"><span>{transcript.length ? '발화 근거' : '장면·이벤트 근거'}</span><b>{transcript.length || evidence.length}</b></div><div className="v3-editor-evidence">{transcript.length ? transcript.map(item => <button key={item.id} className={'v3-evidence-row' + (time >= item.start && time < item.end ? ' is-current' : '')} onClick={() => seek(item.start)}><span>{formatTime(item.start)}<b>{item.speaker}</b></span><p>{item.text}</p></button>) : evidence.length ? evidence.map(item => <button key={item.id} className={'v3-evidence-row' + (time >= item.start && time < item.end ? ' is-current' : '')} onClick={() => seek(item.start)}><span>{formatTime(item.start)}<b>{item.kind === 'sound' ? '소리' : '장면'}</b></span><h3>{item.title}</h3><p>{item.description}</p></button>) : <div className="v3-evidence-empty"><ScanLine size={26} /><h3>분석 연결 전</h3><p>원본을 보며 구간을 직접 지정할 수 있어요.</p></div>}</div>{sample && !transcript.length && <div className="v3-inline-note"><Info size={13} />음성 없는 영상의 샘플입니다.</div>}</>}
+        {leftTab === 'clips' ? <><div className="panel-subheading"><span>저장한 클립</span><b>{clips.length}</b></div><div className="v3-editor-clips">{clips.map((item, index) => <button key={item.id} className={'v3-editor-clip' + (item.id === clip.id ? ' selected' : '')} aria-pressed={item.id === clip.id} onClick={() => switchClip(item.id)}><span className="v3-editor-clip-index">{String(index + 1).padStart(2, '0')}</span><span><b>{item.title}</b><small>{formatTime(item.edit.start)} — {formatTime(item.edit.end)}</small></span>{item.id === clip.id && <Check size={14} />}</button>)}</div><Link className="v3-explorer-link" to={'/projects/' + project.id + '?tab=candidates'}><Plus size={14} />다른 후보에서 클립 만들기<ArrowRight size={14} /></Link></> : <><div className="panel-subheading"><span>{transcript.length ? '발화 근거' : '장면·이벤트 근거'}</span><b>{transcript.length || evidence.length}</b></div><div className="v3-editor-evidence">{transcriptLoading && (
+  <p role="status">자막을 불러오는 중…</p>
+)}
+
+{transcriptError && (
+  <p className="field-error" role="alert">{transcriptError}</p>
+)}{transcript.length ? transcript.map(item => <button key={item.id} className={'v3-evidence-row' + (time >= item.start && time < item.end ? ' is-current' : '')} onClick={() => seek(item.start)}><span>{formatTime(item.start)}<b>{item.speaker}</b></span><p>{item.text}</p></button>) : evidence.length ? evidence.map(item => <button key={item.id} className={'v3-evidence-row' + (time >= item.start && time < item.end ? ' is-current' : '')} onClick={() => seek(item.start)}><span>{formatTime(item.start)}<b>{item.kind === 'sound' ? '소리' : '장면'}</b></span><h3>{item.title}</h3><p>{item.description}</p></button>) : <div className="v3-evidence-empty"><ScanLine size={26} />{!transcriptLoading && !transcriptError && (
+  <>
+    <h3>저장된 자막이 없어요</h3>
+    <p>영상의 음성 분석을 완료하면 발화가 표시됩니다.</p>
+  </>
+)}</div>}</div>{sample && !transcript.length && <div className="v3-inline-note"><Info size={13} />음성 없는 영상의 샘플입니다.</div>}</>}
       </aside>
       <div className="editor-center">
         <section className="preview-panel"><div className="preview-toolbar"><span>클립 미리보기</span><span>{output.ratio}<ChevronRight size={12} />{output.label}</span></div><VideoPreview project={project} edit={edit} time={time} playing={playing} onTime={onTime} onPlaying={onPlaying} /><SourceReconnect project={project} />{selected && <div className="v3-reason"><div><span>{selected.evidenceKind === 'scene' ? <ScanLine size={14} /> : <FileText size={14} />}선정 이유</span><button className="text-link" onClick={() => { setLeftTab('source'); seek(selected.start); }}>원본 근거<ArrowRight size={13} /></button></div><p>{selected.reason}</p>{selected.warning && <button className="v3-context-open" onClick={() => { setReview(selected); setPlaying(false); }}><ShieldCheck size={15} /><span>{edit.contextApplied ? '맥락 보정 적용됨' : selected.warning.title}</span><ChevronRight size={14} /></button>}</div>}</section>
@@ -362,11 +534,52 @@ notify('클립 생성 완료', 'MP4 영상이 정상적으로 생성되었습니
       <aside className="inspector-panel editor-panel v3-inspector"><div className="inspector-heading"><SlidersHorizontal size={16} /><h2>클립 설정</h2></div><PillTabs label="클립 설정" value={rightTab} onChange={setRightTab} options={[{ value: 'subtitles', label: '자막' }, { value: 'crop', label: '구도' }, { value: 'ai', label: 'AI 검토' }]} /><div className="inspector-body">
         {rightTab === 'subtitles' && <><div className="control-title"><h3>자막 표시</h3><button className={'toggle' + (edit.subtitleVisible ? ' on' : '')} role="switch" aria-checked={edit.subtitleVisible} aria-label="자막 표시" onClick={() => commit({ subtitleVisible: !edit.subtitleVisible })}><span /></button></div><label className="field-label" htmlFor="subtitle">미리보기 문구</label><textarea id="subtitle" className="text-input subtitle-text" maxLength={120} value={edit.subtitle} onChange={event => commit({ subtitle: event.target.value })} /><label className="range-label" htmlFor="subtitle-size">글자 크기<b>{edit.subtitleSize}px</b></label><input id="subtitle-size" type="range" min={16} max={38} value={edit.subtitleSize} onChange={event => commit({ subtitleSize: Number(event.target.value) })} /><span className="field-label v3-control-label">강조 색상</span><div className="color-swatches">{['#ffffff', '#ffe18b', '#a7edcf', '#b8caff', '#ffb3a5'].map(color => <button key={color} aria-label={'자막 색상 ' + color} aria-pressed={color === edit.subtitleColor} style={{ background: color }} onClick={() => commit({ subtitleColor: color })}>{color === edit.subtitleColor && <Check size={15} />}</button>)}</div><div className="settings-note"><Info size={14} />현재는 단일 문구 미리보기입니다. 시간별 자막 편집·합성은 연결 전입니다.</div></>}
         {rightTab === 'crop' && <><OutputControls edit={edit} onChange={commit} /><div className="control-title"><h3>화면 구성</h3><span className="tiny-tag">수동</span></div><div className="layout-picker"><button className={edit.layout === 'speaker' ? 'selected' : ''} onClick={() => commit({ layout: 'speaker' })}><span className="layout-glyph portrait" /><b>피사체 중심</b></button><button className={edit.layout === 'full' ? 'selected' : ''} onClick={() => commit({ layout: 'full' })}><span className="layout-glyph landscape" /><b>원본 전체</b></button></div>{([{ label: '가로 위치', key: 'cropX', min: 0, max: 100, step: 1 }, { label: '세로 위치', key: 'cropY', min: 0, max: 100, step: 1 }, { label: '확대', key: 'scale', min: 1, max: 2, step: .05 }] as const).map(control => <div key={control.key}><label className="range-label" htmlFor={control.key}>{control.label}<b>{control.key === 'scale' ? edit[control.key].toFixed(2) + '×' : edit[control.key] + '%'}</b></label><input id={control.key} type="range" min={control.min} max={control.max} step={control.step} value={edit[control.key]} onChange={event => commit({ [control.key]: Number(event.target.value) })} /></div>)}<button className="text-link v3-reset-crop" onClick={() => commit({ cropX: 50, cropY: 50, scale: 1 })}><Undo2 size={13} />구도 초기화</button><div className="settings-note"><ScanLine size={15} />화자·피사체 자동 추적과 시간별 크롭은 연결 전입니다.</div></>}
-        {rightTab === 'ai' && <><div className="v3-ai-modes" role="group" aria-label="AI 기능"><button aria-pressed={aiMode === 'context'} onClick={() => setAiMode('context')}>맥락</button><button aria-pressed={aiMode === 'command'} onClick={() => setAiMode('command')}>자연어</button><button aria-pressed={aiMode === 'screen'} onClick={() => setAiMode('screen')}>화면 보존</button></div>{aiMode === 'context' ? <div className="v3-ai-content"><ShieldCheck size={26} /><h3>{selected?.warning ? edit.contextApplied ? '보정안을 적용했어요' : '앞뒤 맥락을 확인해요' : '원본 근거와 함께 확인해요'}</h3><p>{selected?.warning?.description ?? (sample ? '샘플에 표시된 원본 근거를 확인하고 구간을 결정해 주세요.' : '자동 맥락 분석은 연결 전입니다. 원본을 확인하며 직접 구간을 조정할 수 있어요.')}</p>{selected?.warning && <button className="btn secondary full" onClick={() => setReview(selected)}>보정 전후 비교<ArrowRight size={14} /></button>}<button className="text-link" onClick={() => setLeftTab('source')}>원본 근거 열기<ArrowRight size={13} /></button></div> : aiMode === 'command' ? <div className="v3-ai-content"><MessageSquare size={26} /><h3>말로 편집하기</h3><p>구간·자막·스타일·구도를 요청하고 변경 내용을 확인하는 기능입니다.</p><label className="field-label" htmlFor="natural-command">편집 요청</label><textarea id="natural-command" className="text-input" rows={3} disabled placeholder="질문부터 포함하고 자막을 작게 바꿔줘" /><button className="btn secondary full" disabled>명령 해석 연결 전</button></div> : <div className="v3-ai-content"><ScanLine size={26} /><h3>핵심 화면 보존</h3><p>화면 글자·자료·중요 영역을 보존하는 자동 레이아웃은 연결 전입니다.</p><button className="btn secondary full" onClick={() => { setRightTab('crop'); commit({ layout: 'full' }); }}>원본 전체 화면 적용</button><span className="v3-tool-footnote">수동 구도로 중요한 영역을 유지할 수 있어요.</span></div>}</>}
+        {rightTab === 'ai' && <><div className="v3-ai-modes" role="group" aria-label="AI 기능"><button aria-pressed={aiMode === 'context'} onClick={() => setAiMode('context')}>맥락</button><button aria-pressed={aiMode === 'command'} onClick={() => setAiMode('command')}>자연어</button><button aria-pressed={aiMode === 'screen'} onClick={() => setAiMode('screen')}>화면 보존</button></div>{aiMode === 'context' ? <div className="v3-ai-content">
+          <ShieldCheck size={26} />
+          <h3>{edit.contextApplied ? '맥락 보정 적용됨' : '앞뒤 맥락 확인'}</h3>
+          <p>현재 구간의 앞뒤 자막을 확인하고 필요한 경우 확장 구간을 제안합니다.</p>
+          <button type="button" className="btn secondary full" disabled={checkingContext}
+            onClick={checkCurrentContext}>
+            {checkingContext ? '맥락 확인 중…' : '현재 구간 맥락 확인'}
+          </button>
+          {sample && selected?.warning && <button className="text-link"
+            onClick={() => setReview(selected)}>샘플 보정안 보기</button>}
+          <button className="text-link" onClick={() => setLeftTab('source')}>
+            원본 근거 열기<ArrowRight size={13} />
+          </button>
+        </div> : aiMode === 'command' ? <div className="v3-ai-content"><MessageSquare size={26} /><h3>말로 편집하기</h3><p>구간·자막·스타일·구도를 요청하고 변경 내용을 확인하는 기능입니다.</p><label className="field-label" htmlFor="natural-command">편집 요청</label><textarea id="natural-command" className="text-input" rows={3} disabled placeholder="질문부터 포함하고 자막을 작게 바꿔줘" /><button className="btn secondary full" disabled>명령 해석 연결 전</button></div> : <div className="v3-ai-content"><ScanLine size={26} /><h3>핵심 화면 보존</h3><p>화면 글자·자료·중요 영역을 보존하는 자동 레이아웃은 연결 전입니다.</p><button className="btn secondary full" onClick={() => { setRightTab('crop'); commit({ layout: 'full' }); }}>원본 전체 화면 적용</button><span className="v3-tool-footnote">수동 구도로 중요한 영역을 유지할 수 있어요.</span></div>}</>}
       </div></aside>
     </div>
     {shortcuts && <Modal title="편집 단축키" onClose={() => setShortcuts(false)}><table className="v3-shortcut-table"><tbody><tr><th scope="row">되돌리기</th><td><kbd>Ctrl / ⌘ Z</kbd></td></tr><tr><th scope="row">다시 실행</th><td><kbd>Ctrl / ⌘ Shift Z</kbd><br /><kbd>Ctrl Y</kbd></td></tr><tr><th scope="row">대화상자 닫기</th><td><kbd>Esc</kbd></td></tr></tbody></table><p className="v3-shortcut-note">현재 클립의 최근 20개 편집을 이 화면에서 되돌리거나 다시 실행합니다. 새로고침하면 이력은 초기화됩니다. 입력 중에는 브라우저의 글자 되돌리기를 사용합니다.</p><div className="modal-actions"><button className="btn primary" onClick={() => setShortcuts(false)}>확인</button></div></Modal>}
     {review?.warning && <Modal title="맥락 보정 전후 비교" onClose={() => setReview(null)}><span className="modal-kicker">샘플 맥락 검토 · 현재 클립에 적용</span><h3>{review.title}</h3><div className="context-evidence"><Info size={17} /><div><b>{review.warning.title}</b><p>{review.warning.evidence}</p></div></div><div className="comparison-grid"><div><span>보정 전</span><b>{formatTime(edit.start)} — {formatTime(edit.end)}</b><small>{(edit.end - edit.start).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}초</small></div><div><span>제안 구간</span><b>{formatTime(review.warning.correctedStart)} — {formatTime(review.warning.correctedEnd)}</b><small>{(review.warning.correctedEnd - review.warning.correctedStart).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}초</small></div></div><p className="muted">누락된 앞뒤 근거를 포함합니다. 다른 클립은 변경되지 않습니다.</p><div className="modal-actions"><button className="btn secondary" onClick={() => setReview(null)}>취소</button><button className="btn primary" onClick={() => { const warning = review.warning!; const invalid = rangeError(warning.correctedStart, warning.correctedEnd, project.duration); if (invalid) { notify('보정안을 적용할 수 없어요', invalid, 'error'); return; } commit({ start: warning.correctedStart, end: warning.correctedEnd, contextApplied: true }); seek(warning.correctedStart); setReview(null); notify('이 클립에 맥락 보정안을 적용했어요'); }}>확인하고 적용<Check size={15} /></button></div></Modal>}
+
+    {contextReview && contextReview.projectId === project.id && contextReview.clipId === clip.id
+      && contextReview.result.originalStartSeconds === edit.start
+      && contextReview.result.originalEndSeconds === edit.end && (
+      <Modal title="맥락 확인 결과" onClose={() => setContextReview(null)}>
+        <h3>{contextReview.result.status === 'keep' ? '현재 구간 유지'
+          : contextReview.result.status === 'expand' ? '구간 확장 제안' : '직접 확인이 필요해요'}</h3>
+        <div className="context-evidence"><Info size={17} /><p>{contextReview.result.reason}</p></div>
+        <div className="comparison-grid">
+          <div><span>현재 구간</span><b>{formatTime(edit.start)} — {formatTime(edit.end)}</b>
+            <small>{(edit.end - edit.start).toFixed(2)}초</small></div>
+          {contextReview.result.status === 'expand' && contextReview.result.suggestion && (
+            <div><span>보정 제안</span>
+              <b>{formatTime(contextReview.result.suggestion.startSeconds)} — {formatTime(contextReview.result.suggestion.endSeconds)}</b>
+              <small>{(contextReview.result.suggestion.endSeconds - contextReview.result.suggestion.startSeconds).toFixed(2)}초</small>
+            </div>
+          )}
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="btn secondary" onClick={() => setContextReview(null)}>닫기</button>
+          {contextReview.result.status === 'expand' && contextReview.result.suggestion && (
+            <button type="button" className="btn primary" onClick={applyContextSuggestion}>
+              보정안 적용<Check size={15} />
+            </button>
+          )}
+        </div>
+      </Modal>
+    )}
     {exporting && <Modal title="편집 정보 확인" onClose={() => setExporting(false)}><div className="v3-export-summary"><Film size={28} /><h3>{clip.title}</h3><p>편집 JSON{transcript.length ? '과 샘플 SRT' : ''}을 확인합니다. MP4 출력은 연결 전입니다.</p></div><div className="export-spec"><span>원본 구간<b>{formatTime(edit.start)} — {formatTime(edit.end)}</b></span><span>영상 출력 목표<b>{output.ratio} · {output.width} × {output.height}</b></span><span>저장 위치<b>{storageError ? '저장 실패' : '현재 브라우저'}</b></span></div><div className="modal-actions"><button className="btn secondary" onClick={() => setExporting(false)}>계속 편집</button><button className="btn primary" onClick={() => { updateProject(project.id, { status: 'completed' }); navigate('/projects/' + project.id + '/results?clip=' + encodeURIComponent(clip.id)); }}>결과 확인<ArrowRight size={15} /></button></div></Modal>}
   </div>;
 }

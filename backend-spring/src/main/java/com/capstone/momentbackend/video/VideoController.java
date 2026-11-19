@@ -2,6 +2,7 @@
 package com.capstone.momentbackend.video;
 
 import com.capstone.momentbackend.project.service.ProjectService;
+import com.capstone.momentbackend.transcript.service.TranscriptService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,6 +39,7 @@ public class VideoController {
     private final VideoClipService videoClipService;
     private final VideoClipRepository videoClipRepository;
     private final VideoJobService videoJobService;
+    private final TranscriptService transcriptService;
     private final Path uploadDir =
             Paths.get("uploads").toAbsolutePath().normalize();
 
@@ -47,7 +49,8 @@ public class VideoController {
             VideoMetadataService videoMetadataService,
             VideoClipService videoClipService,
             VideoClipRepository videoClipRepository,
-            VideoJobService videoJobService
+            VideoJobService videoJobService,
+            TranscriptService transcriptService
 
     ) {
         this.projectService = projectService;
@@ -55,6 +58,7 @@ public class VideoController {
         this.videoClipService = videoClipService;
         this.videoClipRepository = videoClipRepository;
         this.videoJobService = videoJobService;
+        this.transcriptService = transcriptService;
     }
 
 
@@ -108,6 +112,9 @@ public class VideoController {
                     storedName,
                     metadata
             );
+            // 원본이 교체된 경우 이전 원본의 STT 시간을 재사용하지 않는다.
+            transcriptService.invalidate(projectId);
+            videoClipRepository.deleteByProjectId(projectId);
 
         } catch (IOException | InterruptedException | RuntimeException e) {
 

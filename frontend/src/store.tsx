@@ -6,7 +6,6 @@ import { addProjectClip, getProjectClips, loadProjectCollection, normalizeProjec
 import type { LoadedProjects } from './workspace-model';
 import type { Candidate, DemoAccount, DemoUser, EditState, Project, ToastMessage } from './types';
 import { fetchProjects, renameProject, deleteProjectApi } from './services/projectApi';
-import { apiFetch } from './api';
 
 
 function read<T>(key: string, fallback: T): T {

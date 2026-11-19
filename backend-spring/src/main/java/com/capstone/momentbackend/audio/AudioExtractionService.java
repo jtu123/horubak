@@ -34,6 +34,8 @@ public class AudioExtractionService {
                 "-y",
                 "-i", inputPath.toAbsolutePath().toString(),
                 "-vn",
+                // AAC 입력의 PTS 간격을 무음으로 채워 WAV 시간이 원본 영상과 일치하도록 한다.
+                "-af", "aresample=async=1:first_pts=0",
                 "-ac", "1",
                 "-ar", "16000",
                 "-c:a", "pcm_s16le",

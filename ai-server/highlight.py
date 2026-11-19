@@ -210,6 +210,57 @@ def check_context(request: ContextCheckRequest):
     nearby = before + inside + after
     by_index = {segment.segmentIndex: segment for segment in nearby}
 
+    # 바로 앞 자막과 문장이 이어지는 경계인지 검사
+    if before:
+        previous = before[-1]
+        first = inside[0]
+
+        previous_text = previous.text.rstrip()
+        first_text = first.text.lstrip()
+
+        continues_previous_sentence = (
+            abs(previous.endSeconds - start) <= 0.10
+            and abs(first.startSeconds - start) <= 0.10
+            and first.segmentIndex == previous.segmentIndex + 1
+            and not previous_text.endswith(
+                (".", "?", "!", "。", "？", "！")
+            )
+            and first_text.startswith(
+                ("해야 합니다", "해야 해요")
+            )
+        )
+
+        if continues_previous_sentence:
+            proposed_start = previous.startSeconds
+            duration = round(end - proposed_start, 3)
+
+            reason = (
+                f"자막 {previous.segmentIndex}번의 끝부분과 "
+                f"{first.segmentIndex}번의 시작부분이 이어집니다. "
+                "문장 경계를 확인할 수 있도록 앞 자막을 포함하는 구간을 제안합니다."
+            )
+
+            if 30 <= duration <= 60:
+                return {
+                    "status": "expand",
+                    "reason": reason,
+                    "originalStartSeconds": start,
+                    "originalEndSeconds": end,
+                    "suggestion": {
+                        "startSeconds": proposed_start,
+                        "endSeconds": end,
+                        "durationSeconds": duration,
+                    },
+                }
+
+            return {
+                "status": "review",
+                "reason": reason + " 확장하면 60초를 초과합니다.",
+                "originalStartSeconds": start,
+                "originalEndSeconds": end,
+                "suggestion": None,
+            }
+
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
         raise HTTPException(503, "FastAPI에 GEMINI_API_KEY가 설정되지 않았습니다.")

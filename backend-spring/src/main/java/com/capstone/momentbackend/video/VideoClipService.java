@@ -40,6 +40,9 @@ public class VideoClipService {
                 "scale=1080:1920:force_original_aspect_ratio=increase,"
                         + "crop=1080:1920,setsar=1",
 
+                // STT용 WAV와 같은 시간축을 유지하도록 AAC의 PTS 간격을 무음으로 채운다.
+                "-af", "aresample=async=1:first_pts=0",
+
                 "-c:v", "libx264",
                 "-pix_fmt", "yuv420p",
                 "-c:a", "aac",

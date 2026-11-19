@@ -9,6 +9,7 @@ import { describeProject } from '../project-presentation';
 import { VideoPreview } from '../components/VideoPreview';
 import { getOutputProfile } from '../output-profile';
 import { apiFetch } from '../api';
+import type { Utterance } from '../types';
 import '../styles/editor-v3.css';
 
 export function Results() {
@@ -31,6 +32,14 @@ export function Results() {
   const [loadingMp4, setLoadingMp4] = useState(true);
   const onTime = useCallback((value: number) => setTime(value), []);
   const onPlaying = useCallback((value: boolean) => setPlaying(value), []);
+
+  type SavedTranscriptSegment = {
+  id: string;
+  segmentIndex: number;
+  startSeconds: number;
+  endSeconds: number;
+  text: string;
+};
 
 useEffect(() => {
   if (!projectId || !clipId || editStart == null || editEnd == null) {
@@ -145,13 +154,95 @@ useEffect(() => {
 
   useEffect(() => { setPlaying(false); setTime(clip?.edit.start ?? 0); }, [id, clip?.id]);
   useEffect(() => { if (project && clip && project.activeClipId !== clip.id) selectClip(project.id, clip.id); }, [project?.id, project?.activeClipId, clip?.id, selectClip]);
+  const [savedTranscript, setSavedTranscript] = useState<{
+  projectId: string;
+  items: Utterance[];
+} | null>(null);
+
+const [transcriptLoading, setTranscriptLoading] = useState(false);
+const [transcriptError, setTranscriptError] = useState('');
+
+useEffect(() => {
+  const currentProjectId = project?.id;
+
+  setSavedTranscript(null);
+  setTranscriptError('');
+
+  if (!currentProjectId || project?.source === 'sample') {
+    setTranscriptLoading(false);
+    return;
+  }
+
+  let cancelled = false;
+  setTranscriptLoading(true);
+
+  const loadTranscript = async () => {
+    try {
+      const response = await apiFetch(
+        `/api/transcripts/projects/${encodeURIComponent(currentProjectId)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          response.status === 401
+            ? '다시 로그인한 뒤 자막을 확인해 주세요.'
+            : `자막 조회 실패 (${response.status})`,
+        );
+      }
+
+      const segments: SavedTranscriptSegment[] = await response.json();
+
+      const items: Utterance[] = [...segments]
+        .sort((a, b) => a.segmentIndex - b.segmentIndex)
+        .map(segment => ({
+          id: segment.id,
+          start: segment.startSeconds,
+          end: segment.endSeconds,
+          text: segment.text,
+          speaker: '',
+        }));
+
+      if (!cancelled) {
+        setSavedTranscript({ projectId: currentProjectId, items });
+      }
+    } catch (cause) {
+      if (!cancelled) {
+        setTranscriptError(
+          cause instanceof Error ? cause.message : '자막 조회에 실패했어요.',
+        );
+      }
+    } finally {
+      if (!cancelled) setTranscriptLoading(false);
+    }
+  };
+
+  void loadTranscript();
+
+  return () => {
+    cancelled = true;
+  };
+}, [project?.id, project?.source]);
   if (!project) return <div className="empty-state"><h1>프로젝트를 찾을 수 없어요</h1><Link className="btn primary" to="/projects">프로젝트 목록</Link></div>;
   if (!clip) return <div className="v3-hub-empty"><Layers3 size={32} /><h1>확인할 클립이 없어요</h1><p>프로젝트에서 클립을 먼저 만들어주세요.</p><Link className="btn primary" to={'/projects/' + project.id}>프로젝트로<ArrowRight size={15} /></Link></div>;
   const edit = clip.edit;
   const profile = getOutputProfile(edit.aspectRatio);
   const info = describeProject(project, edit, !!videos[project.id]);
-  const transcript = getProjectTranscript(project);
-  const canSrt = info.canDownloadSrt && transcript.length > 0;
+  const transcript = project.source === 'sample'
+    ? getProjectTranscript(project)
+    : savedTranscript?.projectId === project.id
+      ? savedTranscript.items
+      : [];
+  const srtContent = Number.isFinite(edit.start)
+  && Number.isFinite(edit.end)
+  && edit.start >= 0
+  && edit.end > edit.start
+  && edit.end <= project.duration
+    ? buildSrt(transcript, edit)
+    : '';
+
+const canSrt = !transcriptLoading
+  && !transcriptError
+  && srtContent.trim().length > 0;
   const editorPath = '/projects/' + project.id + '/editor?clip=' + encodeURIComponent(clip.id);
   const json = () => {
     if (!info.canDownloadJson) return;
@@ -160,10 +251,16 @@ useEffect(() => {
     notify('이 클립의 편집 정보를 내려받았어요', 'JSON은 영상 파일이 아닙니다.');
   };
   const srt = () => {
-    if (!canSrt) return;
-    downloadText(clip.title + '_sample.srt', buildSrt(transcript, edit), 'application/x-subrip;charset=utf-8');
-    notify('이 클립 구간의 샘플 자막을 내려받았어요');
-  };
+  if (!canSrt) return;
+
+  downloadText(
+    `${clip.title}_highlight.srt`,
+    srtContent,
+    'application/x-subrip;charset=utf-8',
+  );
+
+  notify('선택 구간의 SRT 자막을 내려받았어요');
+};
 
     const createMp4 = async () => {
   if (creatingMp4 || loadingMp4 || info.rangeIssue) return;
@@ -276,8 +373,30 @@ const response = await apiFetch(url.pathname);
     <Film size={17} />
     {creatingMp4 ? 'MP4 생성 중…' : '편집한 구간으로 MP4 만들기'}
   </button>
+)}    
+        {transcriptError && (
+  <p className="field-error" role="alert">
+    {transcriptError}
+  </p>
 )}
-        <div className="download-list"><button onClick={json} disabled={!info.canDownloadJson}><span className="download-icon"><FileJson size={19} /></span><span><b>편집 정보</b><small>JSON · 선택한 클립</small></span><Download size={17} /></button><button onClick={srt} disabled={!canSrt}><span className="download-icon"><FileText size={19} /></span><span><b>샘플 자막</b><small>{transcript.length ? 'SRT · 샘플 전사 기준' : '전사 없음 · 생성 불가'}</small></span><Download size={17} /></button>
+        <div className="download-list"><button onClick={json} disabled={!info.canDownloadJson}><span className="download-icon"><FileJson size={19} /></span><span><b>편집 정보</b><small>JSON · 선택한 클립</small></span><Download size={17} /></button><button onClick={srt} disabled={!canSrt}>
+  <span className="download-icon">
+    <FileText size={19} />
+  </span>
+  <span>
+    <b>{project.source === 'sample' ? '샘플 자막' : '한국어 자막'}</b>
+    <small>
+      {transcriptLoading
+        ? '자막 불러오는 중…'
+        : transcriptError
+          ? '자막 조회 실패'
+          : canSrt
+            ? 'SRT · 선택 구간 기준'
+            : '선택 구간에 자막 없음'}
+    </small>
+  </span>
+  <Download size={17} />
+</button>
 <button
   onClick={downloadMp4}
   disabled={!savedClipUrl || loadingMp4}

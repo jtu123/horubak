@@ -3,6 +3,7 @@ package com.capstone.momentbackend.config;
 import com.capstone.momentbackend.auth.jwt.JwtAuthenticationFilter;
 import com.capstone.momentbackend.auth.jwt.JwtTokenProvider;
 import com.capstone.momentbackend.auth.repository.UserRepository;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.context.annotation.Bean;
@@ -10,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +35,8 @@ public class SecurityConfig {
                 );
 
         http
+                // 보안 필터보다 먼저 CORS를 처리해 인증 오류에도 CORS 헤더를 돌려준다.
+                .cors(Customizer.withDefaults())
                 // JWT 기반 인증: 세션 사용하지 않음
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -47,6 +51,7 @@ public class SecurityConfig {
 
                 // API 접근 권한 설정
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // 회원가입 및 로그인은 공개

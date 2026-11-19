@@ -6,9 +6,9 @@ export function formatTime(seconds: number): string {
 }
 export function formatSize(bytes: number): string { return bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : `${(bytes / 1024 ** 2).toFixed(1)} MB`; }
 export function validateVideo(file: Pick<File, 'name' | 'size'>): string | undefined {
-  if (!/\.(mp4|mov)$/i.test(file.name)) return 'MP4 또는 MOV 영상을 선택해 주세요.';
+  if (!/\.mp4$/i.test(file.name)) return 'MP4 영상을 선택해 주세요.';
   if (file.size === 0) return '비어 있는 파일은 사용할 수 없어요.';
-  if (file.size > 4 * 1024 ** 3) return '초기 입력 기준은 파일당 최대 4GB예요.';
+  if (file.size > 500 * 1024 ** 2) return '영상 크기는 최대 500MB까지 업로드할 수 있어요.';
 }
 export function validateSourceUrl(input: string): string | undefined {
   try { const url = new URL(input); if (url.protocol !== 'https:') return 'https로 시작하는 주소를 입력해 주세요.'; if (url.username || url.password) return '인증 정보가 포함된 주소는 사용할 수 없어요.'; }
@@ -23,7 +23,9 @@ function srtTime(sec: number) {
   return `${String(Math.floor(ms / 3600000)).padStart(2, '0')}:${String(Math.floor(ms / 60000) % 60).padStart(2, '0')}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')},${String(ms % 1000).padStart(3, '0')}`;
 }
 export function buildSrt(utterances: Utterance[], edit: Pick<EditState, 'start' | 'end'>): string {
-  return utterances.filter(u => u.end > edit.start && u.start < edit.end).map((u, i) => `${i + 1}\n${srtTime(Math.max(0, u.start - edit.start))} --> ${srtTime(Math.min(edit.end, u.end) - edit.start)}\n${u.text}\n`).join('\n');
+  // STT 문장에 단어별 시간이 없으므로 잘린 문장의 전체 텍스트를 내보내지 않는다.
+  return utterances.filter(u => u.start >= edit.start && u.end <= edit.end && u.end > u.start && u.text.trim())
+    .map((u, i) => `${i + 1}\n${srtTime(u.start - edit.start)} --> ${srtTime(u.end - edit.start)}\n${u.text}\n`).join('\n');
 }
 export function downloadText(name: string, content: string, type = 'text/plain;charset=utf-8') {
   const url = URL.createObjectURL(new Blob([content], { type }));

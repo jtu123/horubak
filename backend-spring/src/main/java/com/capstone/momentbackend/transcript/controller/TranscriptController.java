@@ -191,4 +191,70 @@ public class TranscriptController {
                     .body("{\"detail\":\"FastAPI 연결에 실패했거나 응답 시간이 초과됐습니다.\"}");
         }
     }
+    @PostMapping("/projects/{projectId}/context-check")
+    public ResponseEntity<String> checkContext(
+            @PathVariable("projectId") UUID projectId,
+            @RequestParam("start") double start,
+            @RequestParam("end") double end
+    ) {
+        if (!Double.isFinite(start)
+                || !Double.isFinite(end)
+                || start < 0
+                || end - start < 30
+                || end - start > 60) {
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"detail\":\"검토할 구간은 30~60초여야 합니다.\"}");
+        }
+
+        projectService.getProject(projectId);
+
+        List<TranscriptSegment> segments =
+                transcriptService.getSegments(projectId);
+
+        if (segments.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"detail\":\"먼저 자막 분석을 완료해 주세요.\"}");
+        }
+
+        var subtitles = segments.stream()
+                .map(segment -> Map.of(
+                        "segmentIndex", segment.getSegmentIndex(),
+                        "startSeconds", segment.getStartSeconds(),
+                        "endSeconds", segment.getEndSeconds(),
+                        "text", segment.getText()
+                ))
+                .toList();
+
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(75000);
+
+        RestClient client = RestClient.builder()
+                .baseUrl(aiServerUrl)
+                .requestFactory(factory)
+                .build();
+
+        try {
+            return client.post()
+                    .uri("/api/highlights/context-check")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of(
+                            "startSeconds", start,
+                            "endSeconds", end,
+                            "segments", subtitles
+                    ))
+                    .retrieve()
+                    .toEntity(String.class);
+        } catch (RestClientResponseException e) {
+            return ResponseEntity.status(e.getStatusCode())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(e.getResponseBodyAsString());
+        } catch (RestClientException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"detail\":\"FastAPI 연결에 실패했거나 응답 시간이 초과됐습니다.\"}");
+        }
+    }
 }

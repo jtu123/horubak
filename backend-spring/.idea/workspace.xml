@@ -5,10 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a81b7064-e402-450e-a168-e0ac482246eb" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/../ai-server/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/../ai-server/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../ai-server/test_openai.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/audio/AudioExtractionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/audio/AudioExtractionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/config/SecurityConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/transcript/controller/TranscriptController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/transcript/controller/TranscriptController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/transcript/service/TranscriptService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/transcript/service/TranscriptService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoClipService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoClipService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/VideoController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/repository/VideoClipRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/capstone/momentbackend/video/repository/VideoClipRepository.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -113,6 +117,8 @@
       <workItem from="1794836659699" duration="5883000" />
       <workItem from="1794873702983" duration="3086000" />
       <workItem from="1794917774015" duration="2875000" />
+      <workItem from="1794973590253" duration="518000" />
+      <workItem from="1794988976217" duration="9574000" />
     </task>
     <servers />
   </component>

@@ -7,6 +7,7 @@ import type { EditState, Project } from '../types';
 import { getOutputProfile } from '../output-profile';
 import { getSportsSample } from '../sports-samples';
 import { apiFetch } from '../api';
+import { uploadProjectVideo } from '../services/projectApi';
 import '../styles/output-profile.css';
 
 const sampleVideos = new Map<string, Promise<Blob>>();
@@ -30,9 +31,10 @@ function loadSampleVideo(source: string): Promise<Blob> {
 
 export function SourceReconnect({ project }: { project: Project }) {
   const input = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   const { attachVideo, updateProject, videos, notify } = useWorkspace();
   if (project.source === 'sample') return null;
-  return <div className="v3-source-reconnect"><button className="btn secondary" onClick={() => input.current?.click()}><Link2 size={15} />{videos[project.id] ? '원본 교체' : '원본 다시 연결'}</button><span>편집 구간과 스타일은 유지됩니다.</span><input ref={input} type="file" className="sr-only" accept="video/mp4,video/quicktime,.mp4,.mov" aria-label="원본 다시 연결" onChange={event => {
+  return <div className="v3-source-reconnect"><button className="btn secondary" disabled={uploading} onClick={() => input.current?.click()}><Link2 size={15} />{uploading ? '원본 교체 중…' : videos[project.id] ? '원본 교체' : '원본 다시 연결'}</button><span>원본을 교체하면 자막도 다시 분석합니다.</span><input ref={input} type="file" className="sr-only" accept="video/mp4,.mp4" aria-label="원본 다시 연결" onChange={event => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
@@ -41,13 +43,22 @@ export function SourceReconnect({ project }: { project: Project }) {
     const metadata = document.createElement('video');
     const temporaryUrl = URL.createObjectURL(file);
     metadata.preload = 'metadata';
-    metadata.onloadedmetadata = () => {
+    metadata.onloadedmetadata = async () => {
       const duration = Number.isFinite(metadata.duration) ? metadata.duration : 0;
       URL.revokeObjectURL(temporaryUrl);
       if (duration <= 0) { notify('영상 길이를 확인할 수 없어요', '기존 원본과 편집 정보는 유지됩니다.', 'error'); return; }
-      attachVideo(project.id, file);
-      updateProject(project.id, { duration, sourceName: file.name, source: 'file', fileSize: file.size });
-      notify('원본을 연결했어요', '기존 편집 구간이 새 길이에 맞는지 확인해 주세요.');
+      setUploading(true);
+      try {
+        await uploadProjectVideo(project.id, file);
+        attachVideo(project.id, file);
+        updateProject(project.id, { duration, sourceName: file.name, source: 'file', fileSize: file.size });
+        const response = await apiFetch(`/api/transcripts/projects/${encodeURIComponent(project.id)}/analyze`, { method: 'POST' });
+        if (!response.ok) throw new Error(`새 원본의 자막 분석 실패 (${response.status})`);
+        notify('원본과 자막을 교체했어요', '이전 추천 후보와 MP4는 새 원본에 적용되지 않습니다.');
+        window.location.reload();
+      } catch (error) {
+        notify('원본 교체를 확인해 주세요', error instanceof Error ? error.message : '업로드 또는 분석에 실패했어요.', 'error');
+      } finally { setUploading(false); }
     };
     metadata.onerror = () => { URL.revokeObjectURL(temporaryUrl); notify('영상을 읽을 수 없어요', '기존 원본과 편집 정보는 유지됩니다.', 'error'); };
     metadata.src = temporaryUrl;
