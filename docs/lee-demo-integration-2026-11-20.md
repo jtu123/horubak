@@ -7,7 +7,7 @@
 - 인증·프로젝트 API Worker: `horubak-auth-test`, 버전 `c8908528-68f9-4f7f-aa8f-5af71e1dde4e`
 - 기준 소스: 데모 `08c936fd540f686f1f01af764abe0bb3abec5060`, lee 참조 `cb0c0c9243c55145d752fc5ee7d29cd13e99bff7`
 
-화면과 API 연결부를 배포했다. **Python 클라우드 서버는 아직 생성하지 않았으며 실제 STT·Gemini 연결은 활성화되지 않았다.** 최종 배포 대상은 Google Cloud Run으로 확정했다. 현재 Google Cloud 프로젝트의 결제 계정 연결과 Gemini 키 준비가 남아 있다. Render 서비스나 Cloudflare Containers는 생성하지 않았다.
+화면과 API 연결부를 배포했다. **Python 클라우드 서버는 아직 생성하지 않았으며 실제 STT·Gemini 연결은 활성화되지 않았다.** 최종 배포 대상은 Google Cloud Run으로 확정했다. 사용자가 결제 계정을 준비한 뒤 새 프로젝트 `My First Project` / `project-a778c6bf-6bf0-47d2-b9a`(프로젝트 번호 `356591580717`)를 확인했다. Gemini 키 준비는 아직 남아 있다. Render 서비스나 Cloudflare Containers는 생성하지 않았다.
 
 ## 구현한 연결
 
@@ -35,7 +35,9 @@ lee 소스에는 자연어 편집 패널과 해석 API가 구현되어 있지 �
 
 분석 서버는 `ai-server`를 빌드 소스로 사용해 Google Cloud Run에 배포한다. Cloud Build가 Docker 이미지와 공개 Whisper 모델 파일을 준비한다. 최소 인스턴스 0·최대 1·동시 요청 1·CPU 1·메모리 2GiB·요청 기한 900초 프로필을 준비했다. 현재 모델은 `small` CPU INT8이며 실제 메모리·속도·한국어 품질은 측정하지 않았다.
 
-배포 소스는 `codex/demo-analysis-cloud-20261120` 브랜치에 올렸으며, 최초 업로드 커밋은 `956726240739cfefd4a9e6e5ac3047efc6a02645`다. 후속 Cloud Run 설정과 롤백 도구는 같은 브랜치로 관리한다. 기존 데모 운영 브랜치에 자동 병합하지 않는다. `ai-server/render.yaml`은 이전 선택지의 참고 설정이며 현재 배포 대상이 아니다.
+배포 소스는 `codex/demo-analysis-cloud-20261120` 브랜치에 올렸으며, 최초 업로드 커밋은 `956726240739cfefd4a9e6e5ac3047efc6a02645`, Cloud Run 설정·롤백 준비 커밋은 `00c8396838685d4d5de09530451c88f3abb448fe`다. 후속 Cloud Run 설정과 롤백 도구도 같은 브랜치로 관리한다. 기존 데모 운영 브랜치에 자동 병합하지 않는다. `ai-server/render.yaml`은 이전 선택지의 참고 설정이며 현재 배포 대상이 아니다.
+
+Google Cloud Shell에서 배포 프로젝트 ID와 번호를 읽어 위 프로젝트를 확인했고, Cloud Shell의 기본 gcloud로 배포한다. 소스 업로드는 Docker 빌드 입력과 배포 스크립트, 서버 간 인증 전달에 사용할 공개 RSA 키로 제한한다. 로컬의 암호화된 비밀키, 기존 회원 데이터, API 키는 소스 묶음에 넣지 않는다.
 
 | 위치 | 설정 |
 | --- | --- |
