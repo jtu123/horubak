@@ -11,13 +11,13 @@ async function csrfToken() {
   if (!pendingCsrf) pendingCsrf = request<{ csrfToken: string }>('/api/auth/csrf').then(result => { csrf = result.csrfToken; }).finally(() => { pendingCsrf = undefined; });
   await pendingCsrf;
 }
-export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestInit = {}, timeoutMs?: number): Promise<T> {
   const mutating = !!options.method && !['GET', 'HEAD'].includes(options.method);
   if (mutating) await csrfToken();
   let response: Response;
   try {
     const multipart = options.body instanceof FormData;
-    const timeout = AbortSignal.timeout(multipart ? 6 * 60 * 1000 : 15000);
+    const timeout = AbortSignal.timeout(timeoutMs ?? (multipart ? 6 * 60 * 1000 : 15000));
     const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
     const headers = new Headers(options.headers);
     if (mutating) {
@@ -27,10 +27,11 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     response = await fetch(path, { ...options, signal, credentials: 'same-origin', headers });
   } catch (error) {
     if (options.signal?.aborted) throw error;
+    if (error instanceof DOMException && error.name === 'TimeoutError') throw new ApiError(408, 'REQUEST_TIMEOUT', '처리 시간이 초과됐어요. 잠시 후 저장된 결과를 다시 확인해 주세요.');
     throw new ApiError(0, 'UNREACHABLE', '서버에 연결하지 못했어요. 서버 실행 상태를 확인해 주세요.');
   }
   const type = response.headers.get('content-type') ?? '';
-  if (!type.includes('application/json')) throw new ApiError(response.status, 'API_UNAVAILABLE', '인증 서버가 연결되지 않았어요. 샘플은 별도로 이용할 수 있어요.');
+  if (!type.includes('application/json')) throw new ApiError(response.status, 'API_UNAVAILABLE', '서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.');
   let body;
   try { body = await response.json(); } catch { throw new ApiError(response.status, 'INVALID_RESPONSE', '서버 응답을 읽지 못했어요. 다시 시도해 주세요.'); }
   if (!response.ok) {

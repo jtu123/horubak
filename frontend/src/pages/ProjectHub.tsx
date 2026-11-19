@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Clapperboard, Copy, Eye, FileText, Film, Info, Layers3, Pencil, Play, Plus, RotateCcw, ScanLine, Search, Trash2, Volume2, X } from 'lucide-react';
-import { getProjectCandidates, getProjectEvidence, getProjectLabel, getProjectTranscript, initialEdit } from '../data';
+import { getProjectCandidates, getProjectEvidence, getProjectLabel, initialEdit } from '../data';
 import { formatTime } from '../lib';
 import { useWorkspace } from '../store';
 import { getSportsSample, SPORTS_SAMPLE_CREDITS } from '../sports-samples';
@@ -13,6 +13,8 @@ import { Modal } from '../components/Modal';
 import { PillTabs } from '../components/lucian/PillTabs';
 import { Poster } from '../components/Poster';
 import { SourceReconnect, VideoPreview } from '../components/VideoPreview';
+import { useProjectTranscript } from '../services/useProjectTranscript';
+import { TranscriptAnalysis } from '../components/TranscriptAnalysis';
 import '../styles/editor-v3.css';
 import '../styles/candidate-explorer.css';
 
@@ -26,10 +28,12 @@ export function ProjectHub() {
   const { id } = useParams();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const { projects, createClip, createClips, selectClip, duplicateClip, renameClip, deleteClip, updateProject, notify, storageError: localStorageError, user, serverAuth, syncStatus } = useWorkspace();
+  const { projects, createClip, createClips, selectClip, duplicateClip, renameClip, deleteClip, updateProject, notify, storageError: localStorageError, user, serverAuth, syncStatus, videos } = useWorkspace();
   const storageError = localStorageError || ['error', 'conflict'].includes(syncStatus);
   const saveLabel = storageError ? '저장 실패' : serverAuth && !user?.guest ? syncStatus === 'saving' ? '서버 저장 중…' : '서버에 저장됨' : '브라우저에 저장됨';
   const project = projects.find(p => p.id === id);
+  const canAnalyze = serverAuth && !!user && !user.guest;
+  const transcriptState = useProjectTranscript(project, canAnalyze, user?.id);
   const requested = params.get('tab');
   const tab: HubTab = HUB_TABS.some(t => t.value === requested) ? requested as HubTab : 'candidates';
   const [preview, setPreview] = useState<Candidate | null>(null);
@@ -50,7 +54,7 @@ export function ProjectHub() {
   const clips = getProjectClips(project);
   const active = getActiveClip(project);
   const candidates = getProjectCandidates(project);
-  const transcript = getProjectTranscript(project);
+  const transcript = transcriptState.items;
   const evidence = getProjectEvidence(project);
   const hidden = project.dismissedCandidateIds ?? [];
   const available = candidates.filter(c => !hidden.includes(c.id));
@@ -104,7 +108,7 @@ export function ProjectHub() {
       </div>
       <div className="v3-hub-heading-actions"><span className={'v3-save-status' + (storageError ? ' is-error' : '')}>{saveLabel}</span><button className="btn primary" disabled={!editable} onClick={() => adopt()} title={!editable ? '30초 이상의 원본과 편집 준비 상태가 필요합니다.' : undefined}><Plus size={16} />직접 클립 만들기</button></div>
     </div>
-    <div className="v3-hub-summary"><div><Film size={17} /><span>원본 1개</span></div><div><Layers3 size={17} /><span>내 클립 <b>{clips.length}</b></span></div><div><Info size={16} /><span>{match ? '실제 경기 영상 · 미리 정한 후보 구간' : sample ? '후보·근거는 제작 흐름을 위한 샘플입니다.' : '분석 연결 전 · 원본을 보며 직접 편집할 수 있어요.'}</span></div></div>
+    <div className="v3-hub-summary"><div><Film size={17} /><span>원본 1개</span></div><div><Layers3 size={17} /><span>내 클립 <b>{clips.length}</b></span></div><div><Info size={16} /><span>{match ? '실제 경기 영상 · 미리 정한 후보 구간' : sample ? '후보·근거는 제작 흐름을 위한 샘플입니다.' : '한국어 전사·맥락 검토 · 직접 구간 편집'}</span></div></div>
     <PillTabs label="프로젝트 탐색" value={tab} options={HUB_TABS} onChange={value => { const next = new URLSearchParams(params); next.set('tab', value); setParams(next); }} panelId="project-hub-panel" />
     <div id="project-hub-panel" role="tabpanel" className="v3-hub-panel">
       {tab === 'candidates' && <>
@@ -132,13 +136,13 @@ export function ProjectHub() {
           <VideoPreview project={project} edit={sourceEdit} time={time} playing={playing} onTime={onTime} onPlaying={onPlaying} />
           <SourceReconnect project={project} />
         </section>
-        <section className="v3-source-evidence">
+        <section className="v3-source-evidence"><TranscriptAnalysis project={project} videoUrl={videos[project.id]} enabled={canAnalyze} ownerId={user?.id} transcript={transcriptState} />
           <div className="v3-panel-caption"><h2>{transcript.length ? '원본 발화' : '장면·이벤트'}</h2><span>{transcript.length || evidence.length}개 근거</span></div>
-          {transcript.length ? transcript.map(item => <button key={item.id} className="v3-evidence-row" onClick={() => { setTime(item.start); setPlaying(false); }}><span>{formatTime(item.start)}<b>{item.speaker}</b></span><p>{item.text}</p></button>) : evidence.length ? evidence.map(item => <button key={item.id} className="v3-evidence-row" onClick={() => { setTime(item.start); setPlaying(false); }}><span>{formatTime(item.start)}<b>{item.kind === 'sound' ? '소리' : '장면'}</b></span><h3>{item.title}</h3><p>{item.description}</p></button>) : <div className="v3-evidence-empty"><FileText size={28} /><h3>원본에서 직접 찾아보세요</h3><p>분석 결과는 연결 전입니다. 직접 구간과 자막을 편집할 수 있어요.</p></div>}
+          {transcript.length ? transcript.map(item => <button key={item.id} className="v3-evidence-row" onClick={() => { setTime(item.start); setPlaying(false); }}><span>{formatTime(item.start)}<b>{item.speaker}</b></span><p>{item.text}</p></button>) : evidence.length ? evidence.map(item => <button key={item.id} className="v3-evidence-row" onClick={() => { setTime(item.start); setPlaying(false); }}><span>{formatTime(item.start)}<b>{item.kind === 'sound' ? '소리' : '장면'}</b></span><h3>{item.title}</h3><p>{item.description}</p></button>) : <div className="v3-evidence-empty"><FileText size={28} /><h3>{transcriptState.loading ? '전사 불러오는 중…' : '저장된 전사가 없어요'}</h3><p>한국어 전사를 시작하거나 원본에서 직접 구간을 지정하세요.</p></div>}
           {sample && !transcript.length && <div className="v3-inline-note"><Info size={14} />{match ? '표시 시간은 샘플 영상 기준입니다.' : '음성 없는 영상의 장면 근거 예시입니다.'}</div>}
         </section>
       </div>}
-      {tab === 'jobs' && <><div className="v3-section-heading"><div><h2>작업·출력</h2><p>편집 저장과 영상 출력은 별도의 단계입니다.</p></div></div><div className="v3-project-job"><div className="v3-job-icon"><Layers3 size={21} /></div><div><h3>클립 편집 정보</h3><p>{clips.length}개 클립 · {saveLabel}</p></div><button className="btn secondary" onClick={() => setParams({ tab: 'clips' })}>클립 보기<ArrowRight size={14} /></button></div><div className="v3-project-job"><div className="v3-job-icon"><ScanLine size={21} /></div><div><h3>{sample ? '샘플 분석 자료' : '실제 영상 분석'}</h3><p>{sample ? '제작 흐름 확인용 · 실제 AI 분석 결과가 아닙니다.' : '분석 API 연결 전입니다.'}</p></div><span className="tiny-tag">{sample ? '샘플' : '미연결'}</span></div><div className="v3-project-job"><div className="v3-job-icon"><Film size={21} /></div><div><h3>MP4 영상 출력</h3><p>렌더 서버 연결 후 클립별 결과와 실패 이력을 표시합니다.</p></div><span className="tiny-tag">미연결</span></div></>}
+      {tab === 'jobs' && <><div className="v3-section-heading"><div><h2>작업·출력</h2><p>편집 저장과 영상 출력은 별도의 단계입니다.</p></div></div><div className="v3-project-job"><div className="v3-job-icon"><Layers3 size={21} /></div><div><h3>클립 편집 정보</h3><p>{clips.length}개 클립 · {saveLabel}</p></div><button className="btn secondary" onClick={() => setParams({ tab: 'clips' })}>클립 보기<ArrowRight size={14} /></button></div><div className="v3-project-job"><div className="v3-job-icon"><ScanLine size={21} /></div><div><h3>{sample ? '샘플 분석 자료' : '한국어 전사'}</h3><p>{sample ? '제작 흐름 확인용 · 실제 AI 분석 결과가 아닙니다.' : transcriptState.analyzing ? '원본을 전사하고 있어요.' : transcript.length ? '저장된 발화 ' + transcript.length + '개 · 편집에서 맥락 검토 가능' : '원본 탐색에서 전사를 생성해 주세요.'}</p></div>{!sample ? <button className="btn secondary" onClick={() => setParams({ tab: 'source' })}>전사 보기<ArrowRight size={14} /></button> : <span className="tiny-tag">샘플</span>}</div><div className="v3-project-job"><div className="v3-job-icon"><Film size={21} /></div><div><h3>MP4 영상 출력</h3><p>렌더 서버 연결 후 클립별 결과와 실패 이력을 표시합니다.</p></div><span className="tiny-tag">미연결</span></div></>}
     </div>
     {preview && <Modal title="후보 살펴보기" onClose={() => { setPreview(null); setPlaying(false); }}><div className="v3-candidate-modal"><VideoPreview project={project} edit={{ ...initialEdit(project.genre), candidateId: preview.id, start: preview.start, end: preview.end, subtitle: preview.title }} time={time} playing={playing} onTime={onTime} onPlaying={onPlaying} /><h3>{preview.title}</h3><p>{preview.reason}</p>{preview.warning && <div className="v3-inline-note"><Info size={14} />{preview.warning.title}</div>}<div className="modal-actions"><button className="btn secondary" onClick={() => setPreview(null)}>닫기</button><button className="btn primary" disabled={!editable} onClick={() => adopt(preview)}>클립 만들기<ArrowRight size={15} /></button></div></div></Modal>}
     {rename && <Modal title="클립 이름 변경" onClose={() => setRename(null)}><form onSubmit={event => { event.preventDefault(); if (!name.trim()) return; if (!renameClip(project.id, rename.id, name.trim())) return; setRename(null); notify('클립 이름을 변경했어요'); }}><label className="field-label" htmlFor="clip-name">클립 이름</label><input className="text-input" id="clip-name" maxLength={160} value={name} onChange={event => setName(event.target.value)} autoFocus required /><div className="modal-actions"><button type="button" className="btn secondary" onClick={() => setRename(null)}>취소</button><button className="btn primary" disabled={!name.trim()}>저장</button></div></form></Modal>}

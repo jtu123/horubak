@@ -1,0 +1,5 @@
+.transcript-analysis { padding: 14px; border-bottom: 1px solid var(--border, #e8ebef); }
+.transcript-analysis-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.transcript-analysis p { margin: 10px 0 0; font-size: 12px; line-height: 1.6; }
+.v3-source-evidence .transcript-analysis { margin-bottom: 14px; padding: 0 0 16px; }
+.comparison-grid p { margin: 12px 0; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }

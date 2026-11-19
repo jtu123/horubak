@@ -1,0 +1,31 @@
+# Optional paid, always-on cloud target. Provisioning requires account/plan approval.
+services:
+  - type: web
+    name: horubak-analysis
+    runtime: docker
+    plan: 1c-2g
+    region: singapore
+    rootDir: ai-server
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    numInstances: 1
+    envVars:
+      - key: ANALYSIS_SERVICE_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: WHISPER_MODEL
+        value: small
+      - key: WHISPER_LOCAL_FILES_ONLY
+        value: "true"
+      - key: WHISPER_DEVICE
+        value: cpu
+      - key: WHISPER_COMPUTE_TYPE
+        value: int8
+      - key: WHISPER_CPU_THREADS
+        value: "1"
+      - key: WHISPER_LANGUAGE
+        value: ko
