@@ -1,9 +1,9 @@
-# Optional paid, always-on cloud target. Provisioning requires account/plan approval.
+# Optional legacy target. The current deployment uses Cloud Run; this file does not create a service.
 services:
   - type: web
     name: horubak-analysis
     runtime: docker
-    plan: 1c-2g
+    plan: standard
     region: singapore
     rootDir: ai-server
     dockerfilePath: ./Dockerfile

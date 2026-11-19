@@ -9,7 +9,7 @@ interface ProjectSource { source: string; sourceName: string; duration: number; 
 interface TranscriptSegment { id: string; segmentIndex: number; startSeconds: number; endSeconds: number; text: string }
 interface TranscriptRow { source_revision: string; source_sha256: string; segments: string }
 type Security = ReturnType<typeof createSecurity>;
-const MAX_REQUEST_BYTES = 95 * 1024 * 1024;
+const MAX_REQUEST_BYTES = 26 * 1024 * 1024;
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const MAX_STORED_BYTES = 750 * 1024;
 
@@ -92,7 +92,7 @@ async function multipartStream(req: Request, filename: string) {
   const boundary = /multipart\/form-data\s*;\s*boundary=(?:"([^"]+)"|([^;\s]+))/i.exec(contentType);
   if (!boundary || (boundary[1] ?? boundary[2]!).length > 200) throw new HttpError(415, 'MULTIPART_REQUIRED', '원본 영상 파일을 선택해 주세요.');
   const length = Number(req.get('content-length'));
-  if (Number.isFinite(length) && length > MAX_REQUEST_BYTES) throw new HttpError(413, 'FILE_TOO_LARGE', '데모에서는 94MB 이하 파일을 분석할 수 있습니다.');
+  if (Number.isFinite(length) && length > MAX_REQUEST_BYTES) throw new HttpError(413, 'FILE_TOO_LARGE', '데모에서는 25MiB 이하 파일을 분석할 수 있습니다.');
   const iterator = req[Symbol.asyncIterator](); const initial: Uint8Array[] = []; let bytes = 0; let header = Buffer.alloc(0);
   try {
     while (!header.includes('\r\n\r\n')) {
@@ -100,7 +100,7 @@ async function multipartStream(req: Request, filename: string) {
       if (part.done) throw new HttpError(400, 'INVALID_UPLOAD', '원본 영상 파일이 비어 있습니다.');
       const chunk = Buffer.isBuffer(part.value) ? part.value : Buffer.from(part.value);
       bytes += chunk.byteLength;
-      if (bytes > MAX_REQUEST_BYTES) throw new HttpError(413, 'FILE_TOO_LARGE', '데모에서는 94MB 이하 파일을 분석할 수 있습니다.');
+      if (bytes > MAX_REQUEST_BYTES) throw new HttpError(413, 'FILE_TOO_LARGE', '데모에서는 25MiB 이하 파일을 분석할 수 있습니다.');
       initial.push(chunk); header = Buffer.concat([header, chunk]);
       const headerEnd = header.indexOf('\r\n\r\n');
       if ((headerEnd < 0 && header.length > 16 * 1024) || headerEnd > 16 * 1024) throw new HttpError(400, 'INVALID_UPLOAD', '파일 요청 형식을 확인해 주세요.');
@@ -122,7 +122,7 @@ async function multipartStream(req: Request, filename: string) {
         if (part.done) { controller.close(); return; }
         const chunk = Buffer.isBuffer(part.value) ? part.value : Buffer.from(part.value);
         bytes += chunk.byteLength;
-        if (bytes > MAX_REQUEST_BYTES) throw new HttpError(413, 'FILE_TOO_LARGE', '데모에서는 94MB 이하 파일을 분석할 수 있습니다.');
+        if (bytes > MAX_REQUEST_BYTES) throw new HttpError(413, 'FILE_TOO_LARGE', '데모에서는 25MiB 이하 파일을 분석할 수 있습니다.');
         controller.enqueue(chunk);
       } catch (error) { if (error instanceof HttpError) failure = error; controller.error(error); req.resume(); }
     },

@@ -23,7 +23,7 @@ The Worker creates `project_transcripts` through its existing additive schema in
 ## API contract
 
 - `GET /api/transcripts/projects/:id` returns owned transcript segments, or an empty array when no current transcript exists.
-- `POST /api/transcripts/projects/:id/analyze` accepts multipart `file` as the **first** part, with the filename exactly matching the project's `sourceName`. The source must be a file project and at most 60 minutes. The incoming request body is capped at 95 MiB; the browser and Python default upload limit is 90 MiB. The private request timeout is 15 minutes.
+- `POST /api/transcripts/projects/:id/analyze` accepts multipart `file` as the **first** part, with the filename exactly matching the project's `sourceName`. The source must be a file project and at most 60 minutes. For the Cloud Run demo, the incoming multipart request body is capped at 26 MiB; the browser file limit and Python `MAX_UPLOAD_BYTES` deployment setting are 25 MiB (26,214,400 bytes). The private request timeout is 15 minutes.
 - `POST /api/transcripts/projects/:id/context-check?start=...&end=...` accepts JSON `{}` and only allows 30–60 second ranges within the original source. The private timeout is 120 seconds. It forwards stored, owned transcript segments rather than accepting caller-supplied transcript text.
 - Segment shape is `{ id, segmentIndex, startSeconds, endSeconds, text }`. All times refer to the original source in seconds.
 - Context responses use `{ status: "keep" | "expand" | "review", reason, originalStartSeconds, originalEndSeconds, suggestion: { startSeconds, endSeconds, durationSeconds } | null }`.

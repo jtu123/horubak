@@ -30,7 +30,7 @@ export function TranscriptAnalysis({ project, videoUrl, enabled, ownerId, transc
     preparingAbort.current?.abort();
     const abort = new AbortController(); preparingAbort.current = abort;
     try {
-      if (project.fileSize && project.fileSize > 90 * 1024 * 1024) throw new Error('데모 전사는 90MB 이하의 원본을 지원해요.');
+      if (project.fileSize && project.fileSize > 25 * 1024 * 1024) throw new Error('데모 전사는 25MiB 이하의 원본을 지원해요.');
       if (!file) {
         const source = videoUrl?.startsWith('blob:') ? videoUrl : project.sourceUploaded ? `/api/projects/${encodeURIComponent(project.id)}/source` : null;
         if (!source) { input.current?.click(); return; }
@@ -50,6 +50,6 @@ export function TranscriptAnalysis({ project, videoUrl, enabled, ownerId, transc
     {!enabled && <p className="muted">로그인 후 원본을 전사할 수 있어요.</p>}
     {transcript.analyzing && <p className="muted" role="status">영상 길이에 따라 시간이 걸려요. 완료될 때까지 이 화면을 유지해 주세요.</p>}
     {(error || transcript.error) && <p className="field-error" role="alert">{error || transcript.error}</p>}
-    {!busy && !transcript.items.length && !error && !transcript.error && <p className="muted">등록한 원본 파일 · 90MB 이하</p>}
+    {!busy && !transcript.items.length && !error && !transcript.error && <p className="muted">등록한 원본 파일 · 25MiB 이하</p>}
   </div>;
 }

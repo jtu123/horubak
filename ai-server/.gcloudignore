@@ -1,0 +1,11 @@
+# Upload only the Docker build inputs; no local secrets or provider settings.
+*
+!Dockerfile
+!requirements.txt
+!main.py
+!highlight.py
+!settings.py
+!subtitles.py
+!stt_worker.py
+!preload_model.py
+!.dockerignore

@@ -2,7 +2,7 @@ FROM python:3.12-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     HF_HOME=/home/analysis/.cache/huggingface WHISPER_DOWNLOAD_ROOT=/home/analysis/.cache/whisper \
-    WHISPER_MODEL=small WHISPER_LOCAL_FILES_ONLY=true HF_HUB_DISABLE_TELEMETRY=1
+    WHISPER_MODEL=small WHISPER_CPU_THREADS=1 WHISPER_LOCAL_FILES_ONLY=true HF_HUB_DISABLE_TELEMETRY=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libgomp1 \
     && rm -rf /var/lib/apt/lists/* \

@@ -26,7 +26,7 @@ export function useProjectTranscript(project: Project | undefined, enabled: bool
   const analyze = useCallback(async (file: File) => {
     if (!project || !enabled || sample) return;
     if (file.name !== project.sourceName) throw new Error('등록한 원본과 같은 이름의 파일을 선택해 주세요.');
-    if (file.size > 90 * 1024 * 1024) throw new Error('데모 전사는 90MB 이하의 원본을 지원해요.');
+    if (file.size > 25 * 1024 * 1024) throw new Error('데모 전사는 25MiB 이하의 원본을 지원해요.');
     if (project.fileSize && project.fileSize !== file.size) throw new Error('등록한 원본과 파일 크기가 달라요. 같은 파일을 선택해 주세요.');
     controller.current?.abort();
     const abort = new AbortController(); controller.current = abort;
