@@ -22,7 +22,7 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 source_dir="$(cd -- "$script_dir/.." && pwd -P)"
 printf 'Target: %s / %s / %s\n' "$project" "$region" "$service"
 printf 'CPU1 memory2Gi, minimum0 maximum1, concurrency1, timeout900s. Cloud Build source deployment.\n'
-printf 'Builder: horubak-analysis-build; project role roles/run.builder.\n'
+printf 'Builder: horubak-analysis-build; project build and API usage roles.\n'
 printf 'Runtime: horubak-analysis-runtime; read only the two app secrets.\n'
 printf 'Public HTTPS ingress; Python requires bearer authentication for analysis.\n'
 if (( ! apply )); then printf 'Plan only; pass --apply to enable APIs, configure app accounts/secrets and deploy.\n'; exit 0; fi
@@ -43,6 +43,7 @@ for kind in build runtime; do
 done
 # Official source-build role, scoped to this project and dedicated builder.
 gc projects add-iam-policy-binding "$project" --member="serviceAccount:$builder" --role=roles/run.builder --condition=None --format='value(etag)' >/dev/null
+gc projects add-iam-policy-binding "$project" --member="serviceAccount:$builder" --role=roles/serviceusage.serviceUsageConsumer --condition=None --format='value(etag)' >/dev/null
 token_secret=horubak-analysis-service-token
 gemini_secret=horubak-gemini-api-key
 for secret in "$token_secret" "$gemini_secret"; do
