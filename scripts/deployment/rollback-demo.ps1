@@ -4,7 +4,7 @@ param(
     [switch]$Apply,
     [string]$WranglerPath,
     [ValidatePattern('^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$')]
-    [string]$ExpectedCurrentWorkerVersion = 'c8908528-68f9-4f7f-aa8f-5af71e1dde4e'
+    [string]$ExpectedCurrentWorkerVersion = '28b5b036-8d5d-45ad-a748-5b325abd47aa'
 )
 
 Set-StrictMode -Version Latest
@@ -16,7 +16,7 @@ $rollbackProject = 'horubak'
 $rollbackPagesId = '516945b0-7122-485c-8b40-293ae0078395'
 $rollbackWorker = 'horubak-auth-test'
 $rollbackWorkerVersion = 'a89a827b-4bcd-468f-857e-8755542f5cd5'
-$rollbackExpectedPagesId = '99a55ffe-ffa9-4daf-be28-592682773246'
+$rollbackExpectedPagesId = '6d3fb91c-72cf-4d3d-90f7-69f914ab7c11'
 $rollbackEndpoint = [Uri]"https://api.cloudflare.com/client/v4/accounts/$rollbackAccountId/pages/projects/$rollbackProject/deployments/$rollbackPagesId/rollback"
 $rollbackProjectEndpoint = [Uri]"https://api.cloudflare.com/client/v4/accounts/$rollbackAccountId/pages/projects/$rollbackProject"
 $rollbackDashboard = "https://dash.cloudflare.com/$rollbackAccountId/pages/view/$rollbackProject"

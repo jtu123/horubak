@@ -48,7 +48,7 @@ if (Test-Path -LiteralPath $connectTool -PathType Leaf) {
     $connectCommand = $connectResolved.Source
 }
 
-$connectEnvironmentNames = @('CLOUDFLARE_ACCOUNT_ID', 'WRANGLER_LOG_SANITIZE', 'WRANGLER_LOG', 'WRANGLER_SEND_METRICS')
+$connectEnvironmentNames = @('CLOUDFLARE_ACCOUNT_ID', 'WRANGLER_LOG_SANITIZE', 'WRANGLER_LOG', 'WRANGLER_SEND_METRICS', 'WRANGLER_WRITE_LOGS')
 $connectPreviousEnvironment = @{}
 foreach ($connectName in $connectEnvironmentNames) {
     $connectPreviousEnvironment[$connectName] = [Environment]::GetEnvironmentVariable($connectName, 'Process')
@@ -62,8 +62,11 @@ $connectPayload = $null
 try {
     $env:CLOUDFLARE_ACCOUNT_ID = $connectAccount
     $env:WRANGLER_LOG_SANITIZE = 'true'
-    $env:WRANGLER_LOG = 'info'
+    # deployments status --json uses Wrangler's "log" output level.
+    # "info" suppresses its JSON output even when the command succeeds.
+    $env:WRANGLER_LOG = 'log'
     $env:WRANGLER_SEND_METRICS = 'false'
+    $env:WRANGLER_WRITE_LOGS = 'false'
     try {
         $connectArguments = @('deployments', 'status', '--name', $connectWorker, '--json')
         $global:LASTEXITCODE = 0

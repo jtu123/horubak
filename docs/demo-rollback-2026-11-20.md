@@ -14,7 +14,7 @@
 | 인증 Worker | `horubak-auth-test` |
 | Worker 운영 버전 | `a89a827b-4bcd-468f-857e-8755542f5cd5` |
 
-이번 새 배포의 Pages ID는 `99a55ffe-ffa9-4daf-be28-592682773246`, Worker 버전은 `c8908528-68f9-4f7f-aa8f-5af71e1dde4e`이며 Worker에는 트래픽 100%가 연결돼 있다. 복구 스크립트는 이 배포 또는 이미 복구된 기준 버전만 허용한다. 그 이후 다른 버전이 운영 중이면 자동으로 과거 배포를 덮어쓰지 않고 중단한다.
+이번 최종 배포의 Pages ID는 `6d3fb91c-72cf-4d3d-90f7-69f914ab7c11`, Worker 버전은 `28b5b036-8d5d-45ad-a748-5b325abd47aa`이며 단일 Worker 버전에 트래픽 100%가 연결돼 있다. 복구 스크립트의 현재 배포 guard를 이 값으로 갱신했다. 위 표의 이전 Pages·Worker 복구 목표는 변경하지 않았다. 스크립트는 이번 배포 또는 이미 복구된 기준 버전만 허용하며, 이후 다른 버전이 운영 중이면 중단한다.
 
 복구는 **Pages 화면을 먼저 되돌리고, 확인된 뒤 인증 Worker를 되돌리는 순서**로 진행한다. 새 화면이 이전 API를 호출하는 조합을 피하기 위한 순서다. 두 플랫폼의 변경은 하나의 트랜잭션이 아니므로 Pages 성공 후 Worker 실패 시 부분 복구 상태로 중단한다.
 
@@ -60,7 +60,7 @@ Wrangler `4.160.1`에는 `pages rollback` 명령이 없으므로 Pages에는 공
 
 ## 클라우드 분석만 일시 중단
 
-최종 분석 서버 대상은 Google Cloud Run이다. Cloudflare 인증 Worker는 Cloud Run의 `*.run.app` HTTPS 주소와 서버 간 Bearer 토큰으로 Python 분석 서버를 호출한다. Cloudflare Containers 서비스 바인딩은 현재 인증 Worker 설정에 추가하지 않는다. 이 문서 갱신 시점에는 Cloud Run 분석 연결을 아직 활성화하지 않았다.
+Google Cloud Run 분석 연결을 활성화했다. 프로젝트는 `project-a778c6bf-6bf0-47d2-b9a`(번호 `356591580717`), 서울 `asia-northeast3` 리전의 `horubak-analysis`이며 URL은 `https://horubak-analysis-fpkxpig7da-du.a.run.app`이다. Cloudflare 인증 Worker는 HTTPS 주소와 서버 간 Bearer 토큰으로 이 서버를 호출한다. Cloudflare Containers 바인딩은 사용하지 않는다.
 
 [connect-analysis.ps1](../scripts/deployment/connect-analysis.ps1)은 Cloud Run 주소만 허용하는 연결 준비 도구다. 기본 실행에서는 암호화된 파일을 읽거나 네트워크를 호출하지 않는다. 실제 연결은 `-Apply`와 예상 Worker 버전을 지정할 때 수행하며, 보호된 비밀값을 Wrangler 표준입력으로 전달한다. Render 전용 주소나 임시 Containers 바인딩을 이 경로에 사용하지 않는다.
 
@@ -78,11 +78,15 @@ pwsh -File ./scripts/deployment/disable-analysis.ps1 -Apply -ExpectedCurrentWork
 
 Wrangler `4.160.1`의 `secret delete`에는 `--yes` 옵션이 없으므로 대화형 실행에서는 Wrangler의 삭제 확인이 표시될 수 있다. 삭제 이후에는 비밀값 이름이 사라졌는지와 새 활성 Worker 버전만 확인한다. 이것은 분석 기능을 실행하는 테스트가 아니다.
 
-**분석 연결 활성화와 중단은 Worker의 새 버전을 만들 수 있다.** 실제 변경 후 활성 버전을 배포 기록에 남기고 전체 복구 스크립트의 예상 Worker 버전도 갱신하거나 `-ExpectedCurrentWorkerVersion`으로 지정해야 한다. 위에 기록한 이전 Pages·Worker 복구 대상은 유지한다. 이 준비 과정에서는 현재 운영 중인 Worker 버전을 변경하지 않았다.
+**분석 연결 활성화와 중단은 Worker의 새 버전을 만들 수 있다.** 현재 연결에 따른 Worker 버전은 위의 `28b5b036-8d5d-45ad-a748-5b325abd47aa`다. 이후 중단 작업을 실제 실행하면 새 활성 버전을 배포 기록에 남기고 전체 복구 스크립트의 예상 Worker 버전도 갱신하거나 `-ExpectedCurrentWorkerVersion`으로 지정해야 한다. 이전 Pages·Worker 복구 목표는 유지한다.
 
-별도 Python 클라우드 서비스와 Gemini 키는 삭제하지 않는다. 분석 요청을 끊어도 클라우드 서버 요금은 계속될 수 있으므로 제공자 화면에서 서버 일시 중지·재개를 별도로 결정한다. 다시 연결하려면 보관된 HTTPS 주소를 Cloudflare의 `ANALYSIS_BASE_URL` 비밀값으로 등록하고 새 Worker 버전을 기록한다.
+별도 Python 클라우드 서비스와 Gemini 비밀값은 삭제하지 않는다. 분석 요청을 끊어도 이미지 저장·비밀 보관 등 클라우드 사용료가 생길 수 있다. 현재 Cloud Run은 최소 0·최대 1·동시 요청 1·CPU 1·메모리 2GiB·요청 기한 900초다. 최소 0은 강제 요금 상한이 아니다. 다시 연결하려면 보관된 HTTPS 주소를 Cloudflare의 `ANALYSIS_BASE_URL` 비밀값으로 등록하고 새 Worker 버전을 기록한다.
 
-Cloud Run 자체의 장애 복구가 필요하면 이전 정상 리비전으로 트래픽을 되돌리거나 새 리비전 배포를 중단한다. 최초 배포에는 이전 정상 리비전이 없으므로 Cloudflare의 분석 연결을 해제해 기존 웹 기능을 유지한다. 구체적인 서비스·리비전 ID는 실제 생성 후 기록한다. Cloud Run의 공개 네트워크 접근 허용은 별도 생성 단계에서 확인하며, Python의 `/api/*`는 서버 간 Bearer 인증을 계속 요구한다.
+현재 준비 완료 리비전은 `horubak-analysis-00004-j72`이며 트래픽 100%다. 이미지 다이제스트는 `sha256:2f27e803bbec1ce4bed6882abe3d9d08b2f2e811cb5ba188d27f64318e4ebd45`, Docker Cloud Build 작업은 `d207d850-3da9-4ccf-ac6d-15ea8cfce96d`다. `/health`의 `status: ok`는 프로세스 상태만 확인한다. **기능 동작이 검증된 이전 Cloud Run 리비전은 없다.** 이전 리비전을 임의로 정상 복구본으로 삼지 않고, 문제가 생기면 먼저 Cloudflare의 분석 URL을 제거해 분석 요청을 중단한다. Cloud Run의 공개 HTTPS 접근은 허용되지만 Python의 모든 `/api/*`에는 서버 간 Bearer 인증이 필요하다.
+
+현재 Cloud Run 비밀 참조는 `horubak-analysis-service-token:1`과 `horubak-gemini-api-key:2`다. Gemini 버전 1은 현재 참조하지 않으며 삭제·폐기하지 않았다. 롤백을 이유로 버전 1을 자동 사용하거나 비밀값을 다시 만들지 않는다. 기존 `GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET` 항목은 이름으로 보존을 확인했다. 비밀값 내용은 이 문서·로그·Git에 넣지 않는다.
+
+Cloudflare 연결 도구는 메타데이터 조회 시 `WRANGLER_LOG=log`, 비밀 전송 시 오류 수준 로그와 `write_logs=false` 보호를 적용해 연결했다. 실제 STT·Gemini 분석 호출과 추가 기능 테스트는 사용자 지시로 실행하지 않았다. 따라서 모델 품질·성능·키 권한·할당량을 확인한 복구본으로 표시하지 않는다.
 
 ## 데이터와 소스의 복구 범위
 
@@ -92,4 +96,6 @@ Cloud Run 자체의 장애 복구가 필요하면 이전 정상 리비전으로 
 
 분석 서버의 새 클라우드 서비스와 Gemini 비밀값도 이 스크립트의 삭제 대상이 아니다. 이전 Worker로 복구한 뒤 별도 서버가 남아 있다면 비용과 사용 여부를 확인해 운영 상태를 결정한다. 기존 Google 로그인 등의 비밀값을 임의로 교체하지 않는다.
 
-기준 소스 ZIP과 새 작업 소스 ZIP, SHA-256 목록은 작업 폴더의 `.cache/demo-release-2026-11-20`에 보관했다. `baseline-source-08c936f.zip`은 이전 소스, `integration-source.zip`은 새 소스이며 `manifest.json`에 파일별 해시와 배포 ID를 기록했다. ZIP은 코드 보관용이며 운영 DB·로그인 비밀값 백업을 의미하지 않는다. 복구 명령 실행 후에는 Pages 배포 대상과 Worker 활성 버전이 위 기준에 맞는지 Cloudflare 배포 상태에서 확인한다.
+기존 소스 ZIP과 SHA-256 목록은 `.cache/demo-release-2026-11-20`에 보관돼 있으며 이 묶음은 변경하지 않았다. `baseline-source-08c936f.zip`은 이전 소스, `integration-source.zip`은 첫 연동 시점의 소스로 이번 최종 클라우드 배포 소스를 의미하지 않는다. 최신 배포 자료는 `.cache/cloudrun-demo-release-20261120`에 별도 보관하며, `manifest.json`·`worker-deployment.json`·`pages/staging-manifest.json`으로 추적한다. 배포 소스 커밋은 `6e9ea825afa5e6df40cdb4849f343b094db26aa2`이고 문서 정리는 후속 커밋으로 관리한다.
+
+소스 보관은 운영 DB·로그인 비밀값 백업을 의미하지 않는다. 새 DB 스냅샷은 만들지 않았고 회원·프로젝트 데이터를 초기화하지 않았다. 복구 명령 실행 후에는 Pages 배포 대상과 Worker 활성 버전이 위 기준에 맞는지 Cloudflare 배포 상태에서 확인한다.
