@@ -1,0 +1,20 @@
+name = "horubak-auth-test"
+account_id = "2eb0b2e89370b1d4f23f4f98fbee4ce6"
+compatibility_date = "2026-11-10"
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+redact_query_string = true
+
+[observability.logs]
+enabled = false
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+[observability.traces]
+enabled = false
+
+[observability.issues]
+enabled = false
