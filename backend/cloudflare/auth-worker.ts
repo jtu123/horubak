@@ -11,6 +11,8 @@ interface Env {
   APP_ORIGIN: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  ANALYSIS_BASE_URL?: string;
+  ANALYSIS_SERVICE_TOKEN?: string;
   AUTH_STORE: DurableObjectNamespace<HorubakAuthStore>;
 }
 
@@ -40,6 +42,7 @@ export class HorubakAuthStore extends DurableObject<Env> {
         origin: env.APP_ORIGIN,
         secureCookies: new URL(env.APP_ORIGIN).protocol === 'https:',
         trustProxy: true,
+        analysis: { baseUrl: env.ANALYSIS_BASE_URL, serviceToken: env.ANALYSIS_SERVICE_TOKEN },
         socialProviders: configureSocialProviders(env.APP_ORIGIN, new URL(env.APP_ORIGIN).protocol === 'https:', {
           GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
         }),
