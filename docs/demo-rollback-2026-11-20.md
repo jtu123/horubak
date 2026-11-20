@@ -14,7 +14,9 @@
 | 인증 Worker | `horubak-auth-test` |
 | Worker 운영 버전 | `a89a827b-4bcd-468f-857e-8755542f5cd5` |
 
-이번 최종 배포의 Pages ID는 `6d3fb91c-72cf-4d3d-90f7-69f914ab7c11`, Worker 버전은 `28b5b036-8d5d-45ad-a748-5b325abd47aa`이며 단일 Worker 버전에 트래픽 100%가 연결돼 있다. 복구 스크립트의 현재 배포 guard를 이 값으로 갱신했다. 위 표의 이전 Pages·Worker 복구 목표는 변경하지 않았다. 스크립트는 이번 배포 또는 이미 복구된 기준 버전만 허용하며, 이후 다른 버전이 운영 중이면 중단한다.
+현재 Pages ID는 `f4ae3fd7-35da-4558-8675-e39d3e765506`, Worker 버전은 `28b5b036-8d5d-45ad-a748-5b325abd47aa`이며 단일 Worker 버전에 트래픽 100%가 연결돼 있다. 복구 스크립트의 현재 배포 guard를 이 값으로 갱신했다. 위 표의 이전 Pages·Worker 복구 목표는 변경하지 않았다. 스크립트는 이번 배포 또는 이미 복구된 기준 버전만 허용하며, 이후 다른 버전이 운영 중이면 중단한다.
+
+최신 main 재배포의 화면만 직전 Pages `6d3fb91c-72cf-4d3d-90f7-69f914ab7c11`로 복구하려면 [rollback-latest-demo.ps1](../scripts/deployment/rollback-latest-demo.ps1)과 [별도 안내](releases/main-demo-2026-11-20.md)를 사용한다. 이 경로는 현재 Worker와 Cloud Run·Gemini 설정을 유지한다. 아래의 기존 전체 복구 경로는 최초 연동 전 Pages·Worker로 돌아가는 별도 선택지로 남긴다.
 
 복구는 **Pages 화면을 먼저 되돌리고, 확인된 뒤 인증 Worker를 되돌리는 순서**로 진행한다. 새 화면이 이전 API를 호출하는 조합을 피하기 위한 순서다. 두 플랫폼의 변경은 하나의 트랜잭션이 아니므로 Pages 성공 후 Worker 실패 시 부분 복구 상태로 중단한다.
 
@@ -96,6 +98,6 @@ Cloudflare 연결 도구는 메타데이터 조회 시 `WRANGLER_LOG=log`, 비�
 
 분석 서버의 새 클라우드 서비스와 Gemini 비밀값도 이 스크립트의 삭제 대상이 아니다. 이전 Worker로 복구한 뒤 별도 서버가 남아 있다면 비용과 사용 여부를 확인해 운영 상태를 결정한다. 기존 Google 로그인 등의 비밀값을 임의로 교체하지 않는다.
 
-기존 소스 ZIP과 SHA-256 목록은 `.cache/demo-release-2026-11-20`에 보관돼 있으며 이 묶음은 변경하지 않았다. `baseline-source-08c936f.zip`은 이전 소스, `integration-source.zip`은 첫 연동 시점의 소스로 이번 최종 클라우드 배포 소스를 의미하지 않는다. 최신 배포 자료는 `.cache/cloudrun-demo-release-20261120`에 별도 보관하며, `manifest.json`·`worker-deployment.json`·`pages/staging-manifest.json`으로 추적한다. 배포 소스 커밋은 `6e9ea825afa5e6df40cdb4849f343b094db26aa2`이고 문서 정리는 후속 커밋으로 관리한다.
+기존 소스 ZIP과 SHA-256 목록은 `.cache/demo-release-2026-11-20`에 보관돼 있으며 이 묶음은 변경하지 않았다. `baseline-source-08c936f.zip`은 최초 복구 기준 소스, `integration-source.zip`은 첫 연동 시점의 소스다. 기존 Cloud Run 연동 배포 자료인 `.cache/cloudrun-demo-release-20261120`도 보존한다. 최신 main 재배포 자료는 `.cache/main-demo-release-20261120`에 별도 보관하며 앱 소스 커밋은 `a57b6279c1dc3475e5eca27cb6ffdbbbd55a9639`다. 배포 전후 Pages·Worker 정보와 정적 빌드 해시, 직전 버전 복구 도구를 함께 기록했다. 문서 정리는 후속 커밋으로 관리한다.
 
 소스 보관은 운영 DB·로그인 비밀값 백업을 의미하지 않는다. 새 DB 스냅샷은 만들지 않았고 회원·프로젝트 데이터를 초기화하지 않았다. 복구 명령 실행 후에는 Pages 배포 대상과 Worker 활성 버전이 위 기준에 맞는지 Cloudflare 배포 상태에서 확인한다.

@@ -3,12 +3,14 @@
 ## 현재 배포
 
 - 데모: https://horubak.pages.dev
-- Pages 운영 배포: `6d3fb91c-72cf-4d3d-90f7-69f914ab7c11`
+- Pages 운영 배포: `f4ae3fd7-35da-4558-8675-e39d3e765506`
 - 인증·프로젝트 API Worker: `horubak-auth-test`, 버전 `28b5b036-8d5d-45ad-a748-5b325abd47aa`, 단일 버전에 트래픽 100%
-- 배포 소스: `codex/demo-analysis-cloud-20261120`의 `6e9ea825afa5e6df40cdb4849f343b094db26aa2`이며 최종 배포 기록 문서화는 후속 커밋으로 관리한다.
+- 웹 앱 배포 소스: `main`의 `a57b6279c1dc3475e5eca27cb6ffdbbbd55a9639`. 이후 배포 기록·롤백 도구 문서화는 후속 커밋으로 관리한다.
 - 이전 데모 소스: `08c936fd540f686f1f01af764abe0bb3abec5060`, lee 참조: `cb0c0c9243c55145d752fc5ee7d29cd13e99bff7`
 
 **화면·API·Cloud Run 분석 서버 배포와 Gemini 비밀 설정을 완료했다.** Cloudflare가 Cloud Run을 호출하는 운영 연결을 활성화했다. 프로젝트는 `project-a778c6bf-6bf0-47d2-b9a`(번호 `356591580717`)이며, 사용자가 제공한 lee의 Gemini 키는 Secret Manager 버전 2로 연결했다. 실제 STT·Gemini 분석 요청은 사용자 지시에 따라 실행하지 않았으므로 결과 품질과 계정 권한·할당량을 검증한 상태는 아니다.
+
+최신 `main` 재배포에는 SFR-011·012 자막·강조 효과 편집과 누락된 자막 기본값 보완도 포함했다. 이전 배포와 비교해 Worker·Python 분석 서버의 실행 코드는 같으므로 Pages만 갱신했다. 빌드와 운영 배포 정보·정적 JS/CSS 제공만 확인했고 추가 기능 테스트는 실행하지 않았다. 재배포 직전 Pages `6d3fb91c-72cf-4d3d-90f7-69f914ab7c11`로 돌아가는 별도 [복구 절차](releases/main-demo-2026-11-20.md)를 추가했으며 기존 전체 복구 기준도 유지한다.
 
 ## 구현한 연결
 
@@ -48,7 +50,7 @@ lee 소스에는 자연어 편집 패널과 해석 API가 구현되어 있지 �
 
 현재 모델은 `small` CPU INT8이며 실제 메모리·속도·한국어 품질은 측정하지 않았다. Cloud Run 준비 완료와 프로세스 헬스는 모델 추론·Gemini 응답 성공을 뜻하지 않는다.
 
-배포 소스는 `codex/demo-analysis-cloud-20261120` 브랜치에 올렸으며, 최초 업로드 커밋은 `956726240739cfefd4a9e6e5ac3047efc6a02645`, Cloud Run 설정·롤백 준비 커밋은 `00c8396838685d4d5de09530451c88f3abb448fe`다. 후속 Cloud Run 설정과 롤백 도구도 같은 브랜치로 관리한다. 기존 데모 운영 브랜치에 자동 병합하지 않는다. `ai-server/render.yaml`은 이전 선택지의 참고 설정이며 현재 배포 대상이 아니다.
+초기 배포 소스는 `codex/demo-analysis-cloud-20261120` 브랜치에서 관리했으며, 최초 업로드 커밋은 `956726240739cfefd4a9e6e5ac3047efc6a02645`, Cloud Run 설정·롤백 준비 커밋은 `00c8396838685d4d5de09530451c88f3abb448fe`다. 이후 `kjh`를 거쳐 `main`에 병합했고 원격 `cloudrun`과 로컬 작업 브랜치를 삭제했다. 현재 코드는 `main`에서 관리한다. `ai-server/render.yaml`은 이전 선택지의 참고 설정이며 현재 배포 대상이 아니다.
 
 Google Cloud Shell의 gcloud로 배포했다. 소스 업로드는 Docker 빌드 입력과 배포 스크립트, 서버 간 인증 전달용 공개 RSA 키로 제한했다. 로컬의 암호화된 비밀키, 기존 회원 데이터, API 키는 소스 묶음에 넣지 않았다.
 
@@ -79,10 +81,10 @@ Cloud Run 최소 인스턴스 0·최대 1은 비용을 제한하는 설정이며
 
 [복구 절차](demo-rollback-2026-11-20.md)와 [복구 스크립트](../scripts/deployment/rollback-demo.ps1)를 준비했다. 기존 회원·프로젝트 테이블은 삭제하거나 초기화하지 않는다. 코드 롤백은 이미 저장된 편집 내용을 과거 시점으로 되돌리는 DB 복구가 아니다.
 
-이번 배포 기록과 Pages 스테이징은 `.cache/cloudrun-demo-release-20261120`에 별도로 보관한다. `cloudrun-integration-source.zip`은 최종 문서·연결 도구를 포함한 소스이고 `sha256.json`에 해시를 기록한다. `manifest.json`·`worker-deployment.json`·`cloudrun-deployment.json`·`pages-deployment.json`과 `pages/staging-manifest.json`으로 새 배포를 추적한다. 전체 복구 목표는 이전 Pages `516945b0-7122-485c-8b40-293ae0078395`·Worker `a89a827b-4bcd-468f-857e-8755542f5cd5` 그대로다. 복구 전 현재 배포를 확인하는 스크립트 guard만 이번 최종 배포 값으로 갱신했다.
+이전 Cloud Run 연동 배포 기록과 Pages 스테이징은 `.cache/cloudrun-demo-release-20261120`에 보관한다. `cloudrun-integration-source.zip`은 당시 문서·연결 도구를 포함한 소스이고 `sha256.json`에 해시를 기록했다. 최신 main 재배포 자료는 `.cache/main-demo-release-20261120`에 별도 보관한다. 재배포 직전 Pages `6d3fb91c-72cf-4d3d-90f7-69f914ab7c11`로 복구하는 도구를 추가했고, 기존 전체 복구 목표 Pages `516945b0-7122-485c-8b40-293ae0078395`·Worker `a89a827b-4bcd-468f-857e-8755542f5cd5`도 유지한다. 현재 배포를 확인하는 스크립트 guard만 새 Pages 값으로 갱신했다.
 
 ## 확인 범위
 
-프런트 TypeScript·Vite 빌드, 백엔드 TypeScript 빌드, Worker 번들 빌드, Python 구문 검사를 통과했다. 프런트 JS 번들 531.15kB 경고는 남아 있다. Docker Cloud Build, 의존성 설치, 공개 모델 사전 다운로드가 성공했다. Cloud Run 준비 완료 리비전·트래픽·프로세스 헬스와 Cloudflare 운영 Pages·단일 활성 Worker 버전을 확인했다.
+프런트 TypeScript·Vite 빌드, 백엔드 TypeScript 빌드, Worker 번들 빌드, Python 구문 검사를 통과했다. 최신 main 프런트 JS 번들은 533.91kB이며 500kB 초과 경고는 남아 있다. 기존 Docker Cloud Build, 의존성 설치, 공개 모델 사전 다운로드가 성공했다. Cloud Run 준비 완료 리비전·트래픽·프로세스 헬스와 Cloudflare 운영 Pages·단일 활성 Worker 버전을 확인했다. 이번 Pages 재배포에서 Worker·Cloud Run을 다시 빌드하거나 설정하지 않았다.
 
 사용자 지시에 따라 추가 기능 테스트, 실제 STT 추론, 실제 Gemini 호출은 진행하지 않았다. 전사 품질·성능·모델 이용 권한·할당량과 실제 분석 결과의 편집 적용 과정은 미검증이다. 운영 DB의 새 스냅샷은 만들지 않았고 기존 회원·프로젝트 데이터를 초기화하지 않았다.
