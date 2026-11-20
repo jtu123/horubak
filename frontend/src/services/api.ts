@@ -11,13 +11,13 @@ async function csrfToken() {
   if (!pendingCsrf) pendingCsrf = request<{ csrfToken: string }>('/api/auth/csrf').then(result => { csrf = result.csrfToken; }).finally(() => { pendingCsrf = undefined; });
   await pendingCsrf;
 }
-export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestInit = {}, timeoutMs?: number): Promise<T> {
   const mutating = !!options.method && !['GET', 'HEAD'].includes(options.method);
   if (mutating) await csrfToken();
   let response: Response;
   try {
     const multipart = options.body instanceof FormData;
-    const timeout = AbortSignal.timeout(multipart ? 6 * 60 * 1000 : 15000);
+    const timeout = AbortSignal.timeout(timeoutMs ?? (multipart ? 6 * 60 * 1000 : 15000));
     const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
     const headers = new Headers(options.headers);
     if (mutating) {
@@ -27,10 +27,11 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     response = await fetch(path, { ...options, signal, credentials: 'same-origin', headers });
   } catch (error) {
     if (options.signal?.aborted) throw error;
+    if (error instanceof DOMException && error.name === 'TimeoutError') throw new ApiError(408, 'REQUEST_TIMEOUT', '처리 시간이 초과됐어요. 잠시 후 저장된 결과를 다시 확인해 주세요.');
     throw new ApiError(0, 'UNREACHABLE', '서버에 연결하지 못했어요. 서버 실행 상태를 확인해 주세요.');
   }
   const type = response.headers.get('content-type') ?? '';
-  if (!type.includes('application/json')) throw new ApiError(response.status, 'API_UNAVAILABLE', '인증 서버가 연결되지 않았어요. 샘플은 별도로 이용할 수 있어요.');
+  if (!type.includes('application/json')) throw new ApiError(response.status, 'API_UNAVAILABLE', '서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.');
   let body;
   try { body = await response.json(); } catch { throw new ApiError(response.status, 'INVALID_RESPONSE', '서버 응답을 읽지 못했어요. 다시 시도해 주세요.'); }
   if (!response.ok) {
@@ -87,8 +88,23 @@ export const workspaceApi = {
     }
   },
 };
-export interface AdminOverview { users: number; activeUsers: number; admins: number; projects: number; archivedProjects: number; database: string; analysis: string; rendering: string }
-export interface Member { id: string; name: string; email: string; role: 'user' | 'admin'; status: 'active' | 'suspended'; createdAt: string; lastLoginAt: string | null; projectCount: number }
-export interface AdminProject { id: string; ownerId: string; ownerName: string; ownerEmail: string; archivedAt: string | null; title: string; status: string; updatedAt: string; clipCount: number }
-export interface Activity { id: string; action: string; targetId: string; reason: string; createdAt: string; actorName: string | null; actorEmail: string | null }
+export interface AdminOverview {
+  users: number; activeUsers: number; admins: number; projects: number; archivedProjects: number;
+  database: string; analysis: string; rendering: string; checkedAt: string; recentFrom: string; recentSignups: number;
+}
+export type AdminLoginMethod = 'password' | 'google' | 'naver' | 'apple' | 'legacy';
+export const ADMIN_LOGIN_METHOD_LABELS: Record<AdminLoginMethod, string> = {
+  password: '아이디·비밀번호', google: '구글', naver: '네이버', apple: '애플', legacy: '기존 이메일 계정',
+};
+export interface Member {
+  id: string; name: string; email: string; username: string | null; loginMethods: AdminLoginMethod[];
+  role: 'user' | 'admin'; status: 'active' | 'suspended'; createdAt: string; lastLoginAt: string | null; projectCount: number;
+}
+export interface AdminMemberDetail extends Member { archivedProjectCount: number }
+export interface AdminProject { id: string; ownerId: string; ownerName: string; ownerEmail: string; archivedAt: string | null; title: string; status: string; updatedAt: string | null; clipCount: number }
+export interface AdminProjectDetail extends AdminProject { source: string | null; duration: number | null; createdAt: string | null }
+export interface Activity {
+  id: string; action: string; targetId: string; targetKind: 'user' | 'project' | null; reason: string; createdAt: string;
+  actorId: string | null; actorName: string | null; actorEmail: string | null;
+}
 export interface Page<T> { items: T[]; total: number; page: number; size: number }

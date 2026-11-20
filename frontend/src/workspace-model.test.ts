@@ -8,7 +8,7 @@ const legacy: Project = {
   id: 'saved-source', title: '내가 편집한 영상', genre: 'lecture', status: 'completed',
   duration: 120, source: 'file', sourceName: 'original.mov', sourceUrl: 'https://example.com/original.mov',
   favorite: true, progress: 100, createdAt: '2026-10-22T00:00:00Z', updatedAt: '2026-11-05T00:00:00Z',
-  edit: { candidateId: 'manual', start: 12, end: 58, subtitle: '저장한 문구', subtitleSize: 32, subtitleColor: '#ffffff', subtitleVisible: false, cropX: 23, cropY: 72, scale: 1.4, contextApplied: true, layout: 'speaker' },
+  edit: { candidateId: 'manual', start: 12, end: 58, subtitle: '저장한 문구', subtitleSize: 32, subtitleColor: '#ffffff', subtitleVisible: false, subtitleHighlightKeywords: [], subtitleHighlightColor: '#ffe18b', subtitleBold: true, subtitlePosition: 'bottom', cropX: 23, cropY: 72, scale: 1.4, contextApplied: true, layout: 'speaker' },
 };
 const KEY = 'moment.projects.owner.v1';
 class MemoryStorage implements ProjectStorage {

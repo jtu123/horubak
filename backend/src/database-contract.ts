@@ -67,6 +67,12 @@ export const DATABASE_SCHEMA = `
     PRIMARY KEY(owner_id, project_id),
     FOREIGN KEY(owner_id, project_id) REFERENCES projects(owner_id, id) ON DELETE CASCADE
   );
+  CREATE TABLE IF NOT EXISTS project_transcripts (
+    owner_id TEXT NOT NULL, project_id TEXT NOT NULL, source_revision TEXT NOT NULL,
+    source_sha256 TEXT NOT NULL, segments TEXT NOT NULL CHECK(json_valid(segments)),
+    updated_at TEXT NOT NULL, PRIMARY KEY(owner_id, project_id),
+    FOREIGN KEY(owner_id, project_id) REFERENCES projects(owner_id, id) ON DELETE CASCADE
+  );
   CREATE TABLE IF NOT EXISTS audit_log (
     id TEXT PRIMARY KEY, actor_id TEXT REFERENCES users(id), action TEXT NOT NULL,
     target_id TEXT NOT NULL, reason TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL

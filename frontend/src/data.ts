@@ -47,7 +47,7 @@ export function makeTranscript(genre: Genre): Utterance[] {
 
 export function initialEdit(genre: Genre): EditState {
   const c = CANDIDATES[genre][0];
-  return { candidateId: c.id, start: c.start, end: c.end, subtitle: c.title, subtitleSize: 26, subtitleColor: '#ffe18b', subtitleVisible: true, cropX: 50, cropY: 50, scale: 1, contextApplied: false, layout: genre === 'general' ? 'full' : 'speaker' };
+  return { candidateId: c.id, start: c.start, end: c.end, subtitle: c.title, subtitleSize: 26, subtitleColor: '#ffe18b', subtitleVisible: true, subtitleHighlightKeywords: [], subtitleHighlightColor: '#ffe18b', subtitleBold: true, subtitlePosition: 'bottom', cropX: 50, cropY: 50, scale: 1, contextApplied: false, layout: genre === 'general' ? 'full' : 'speaker' };
 }
 
 export function getProjectCandidates(project: Project): Candidate[] {

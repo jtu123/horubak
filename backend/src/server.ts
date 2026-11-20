@@ -11,11 +11,14 @@ import * as validate from './validation.js';
 import { mountAdmin } from './admin.js';
 import { mountSocialAuth } from './social-auth.js';
 import type { SocialProviders } from './social-providers.js';
+import { analysisConfigured, mountAnalysis } from './analysis.js';
+import type { AnalysisOptions } from './analysis.js';
 
 export interface ServerOptions extends SecurityOptions {
   staticDirectory?: string;
   trustProxy?: boolean;
   socialProviders?: SocialProviders;
+  analysis?: AnalysisOptions;
   mountSources?: (app: Express, security: ReturnType<typeof createSecurity>) => void;
 }
 
@@ -33,8 +36,9 @@ export async function createApp(db: Database, options: ServerOptions) {
   });
   mountSocialAuth(app, db, security, options);
   options.mountSources?.(app, security);
+  mountAnalysis(app, db, security, options.analysis);
   app.use('/api', express.json({ limit: '4mb' }), security.mutation);
-  app.get('/api/health', (_req, res) => res.json({ success: true, database: 'connected', ...(options.mountSources && { sourceUploads: true }) }));
+  app.get('/api/health', (_req, res) => res.json({ success: true, database: 'connected', analysisConfigured: analysisConfigured(options.analysis), ...(options.mountSources && { sourceUploads: true }) }));
   app.get('/api/auth/csrf', (req, res) => {
     const session = security.session(req);
     if (!session) security.rateAnonymousSession(req);
