@@ -14,3 +14,8 @@ backend/data/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+.idea/
+.venv/
+ai-server/.venv/
+__pycache__/
+*.pyc
