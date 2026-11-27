@@ -235,7 +235,8 @@ class GCSStore(SeekableSource):
             raise ValueError("A private GCS bucket must be configured")
         if client is None:
             from google.cloud import storage
-            client = storage.Client()
+            # These credentials also launch Run Jobs and sign playback URLs via IAM.
+            client = storage.Client(client_options={"scopes": ["https://www.googleapis.com/auth/cloud-platform"]})
         self.client = client
         self.bucket = client.bucket(bucket_name)
 

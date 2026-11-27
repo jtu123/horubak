@@ -28,6 +28,10 @@ TRACKING_ALLOWED_ORIGINS=https://horubak.pages.dev
 
 기존 `ANALYSIS_SERVICE_TOKEN`, Gemini 비밀값 및 STT 설정은 기존 Secret Manager 연결을 유지한다. 저장소 URL과 Job API를 호출하는 데 Gemini 키를 사용하지 않는다. 전체 추적 자체도 Gemini API 호출이 필요하지 않다.
 
+GCS 클라이언트의 ADC 자격 증명은 Cloud Run Jobs 실행·상태 조회와 IAM 재생 URL 서명에도 사용한다. `GCSStore`는 클라이언트를 만들 때 `cloud-platform` OAuth 범위를 명시한다. Storage SDK의 기본 Storage 전용 범위로는 이 세 경로를 모두 호출할 수 없다. OAuth 범위는 IAM 역할과 별개이므로 위의 버킷·Job·서명 권한 제한은 유지하며, 서비스 계정 JSON 키를 추가하지 않는다.
+
+이 인증 범위 수정은 Python 이미지에 포함되므로 제어 서비스와 추적 Job을 같은 새 이미지로 업데이트해야 한다. 기존 버킷의 업로드 원본과 작업 상태는 보존한다. 배포 후에는 저장된 원본으로 작업 실행·결과 조회·재생을 확인한다. 로컬 SDK 회귀 테스트 통과만으로 운영 연결까지 완료됐다고 판단하지 않는다.
+
 버킷 CORS 예시:
 
 ```json
@@ -67,3 +71,5 @@ TRACKING_ALLOWED_ORIGINS=https://horubak.pages.dev
 - [Cloud Run Jobs 제한 시간](https://docs.cloud.google.com/run/docs/configuring/task-timeout)
 - [Cloud Run 파일 시스템과 메모리](https://docs.cloud.google.com/run/docs/container-contract)
 - [Python Cloud Storage SDK](https://docs.cloud.google.com/python/docs/reference/storage/latest/google.cloud.storage.blob.Blob)
+- [Cloud Run Jobs 실행 OAuth 범위](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs/run#authorization-scopes)
+- [IAM signBlob OAuth 범위](https://docs.cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/signBlob#authorization-scopes)
