@@ -172,7 +172,7 @@ export function TrackingPanel({ project, clip, enabled, ownerId, videoUrl, onSou
     <div className="control-title"><h3>주요 피사체 추적</h3><span className="tiny-tag">원본 전체</span></div>
     <p className="tracking-help">처음부터 끝까지 대상을 추적하고, 재생 위치에 맞춰 관측 결과를 보여줍니다.</p>
     {!enabled && <p className="tracking-note">로그인 후 전체 추적과 결과 저장을 사용할 수 있어요.</p>}
-    {enabled && configured === false && <p className="tracking-note">전체 영상 추적 서버가 아직 연결되지 않았어요. 서버 설정 후 사용할 수 있습니다.</p>}
+    {enabled && configured === false && <p className="tracking-note">전체 영상 추적 설정이 아직 준비되지 않았어요. 서버 설정 후 사용할 수 있습니다.</p>}
     {!supported && <p className="field-error">최대 10시간의 MP4·MOV 원본 파일로 등록해 주세요. 영상 주소만 등록한 프로젝트는 파일 등록이 필요합니다.</p>}
     {source ? <p className="tracking-file-name"><Check size={13} />{source.filename} · 서버 원본 연결됨</p> : <>
       <label className="tracking-file-label">등록한 원본 파일<input type="file" accept="video/mp4,video/quicktime,.mp4,.mov" aria-label="피사체 분석 원본 파일" disabled={!enabled || busy || loading || !supported || configured !== true}

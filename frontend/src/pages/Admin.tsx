@@ -6,8 +6,8 @@ import { AdminDetailPanel } from '../components/AdminDetails';
 import type { AdminDetailSelection } from '../components/AdminDetails';
 import { Modal } from '../components/Modal';
 import { useWorkspace } from '../store';
-import { ADMIN_LOGIN_METHOD_LABELS, ApiError, request } from '../services/api';
-import type { Activity, AdminOverview, AdminProject, Member, Page } from '../services/api';
+import { ADMIN_LOGIN_METHOD_LABELS, ApiError, checkAnalysisConnectivity, request } from '../services/api';
+import type { Activity, AdminOverview, AdminProject, AnalysisConnectivity, Member, Page } from '../services/api';
 import '../styles/admin.css';
 
 const SECTIONS = [
@@ -82,6 +82,20 @@ function actionLabel(action: string) {
 const PROJECT_STATUS: Record<string, string> = { ready: '편집 준비', processing: '화면 준비 중', completed: '편집 확인됨', failed: '준비 실패', cancelled: '준비 취소' };
 
 function Overview({ data, busy }: Resource<AdminOverview>) {
+  const [connection, setConnection] = useState<{ busy: boolean; result?: AnalysisConnectivity; error?: string }>({ busy: false });
+  const connectionRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => connectionRequest.current?.abort(), []);
+  async function checkConnection() {
+    if (connection.busy) return;
+    const controller = new AbortController(); connectionRequest.current = controller;
+    setConnection({ busy: true });
+    try {
+      const result = await checkAnalysisConnectivity(controller.signal);
+      if (!controller.signal.aborted) setConnection({ busy: false, result });
+    } catch (error) {
+      if (!controller.signal.aborted) setConnection({ busy: false, error: error instanceof ApiError ? error.message : '분석 서버 연결을 확인하지 못했어요.' });
+    }
+  }
   const metrics = [
     { label: '최근 7일 가입', value: data?.recentSignups, href: data?.recentFrom && data.checkedAt ? adminHref('users', { from: data.recentFrom, to: DAY_FORMAT.format(new Date(data.checkedAt)) }) : undefined },
     { label: '전체 회원', value: data?.users, href: adminHref('users') },
@@ -103,6 +117,16 @@ function Overview({ data, busy }: Resource<AdminOverview>) {
           {busy ? '확인 중' : data?.database === 'connected' ? '응답 확인' : '확인 불가'}
         </span>
       </div>
+    </section>
+    <section className="workspace-panel admin-services" aria-label="분석 서버 연결 확인">
+      <div className="section-heading"><h2><ShieldCheck size={17} aria-hidden="true" /> 분석 서버</h2>
+        <button className="btn secondary" type="button" disabled={connection.busy} onClick={() => void checkConnection()}>{connection.busy ? '확인 중…' : '분석 서버 연결 확인'}</button>
+      </div>
+      <div aria-live="polite"><span>{connection.result ? `마지막 확인 ${date(connection.result.checkedAt)}` : '버튼을 눌러 실제 인증 연결을 확인하세요.'}</span>
+        <span className={connection.result ? 'admin-state active' : 'admin-state'}>{connection.busy ? '확인 중' : connection.result ? '인증 연결 확인됨' : connection.error ? '확인 실패' : '미확인'}</span>
+      </div>
+      <p className="workspace-footnote">저장소·추적 실행은 별도 확인</p>
+      {connection.error && <p className="field-error" role="alert">{connection.error}</p>}
     </section>
   </>;
 }

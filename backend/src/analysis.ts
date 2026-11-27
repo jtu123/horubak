@@ -19,7 +19,9 @@ export function analysisConfigured(options?: AnalysisOptions) {
 
 export function service(options?: AnalysisOptions) {
   if (!analysisConfigured(options)) throw new HttpError(503, 'ANALYSIS_NOT_CONFIGURED', '분석 서버가 아직 연결되지 않았습니다.');
-  const url = new URL(options!.baseUrl!);
+  let url: URL;
+  try { url = new URL(options!.baseUrl!); }
+  catch { throw new HttpError(503, 'ANALYSIS_CONFIG_INVALID', '분석 서버 연결 설정을 확인해 주세요.'); }
   if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname))) || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
     throw new HttpError(503, 'ANALYSIS_CONFIG_INVALID', '분석 서버 연결 설정을 확인해 주세요.');
   }
@@ -46,6 +48,13 @@ function dictionary(value: unknown): Record<string, unknown> {
 function finite(value: unknown): value is number { return typeof value === 'number' && Number.isFinite(value); }
 
 async function responseJson(response: globalThis.Response, maximumBytes = MAX_RESPONSE_BYTES) {
+  if (response.status >= 300 && response.status < 400 || response.status === 401 || response.status === 403) {
+    await response.body?.cancel().catch(() => undefined);
+    if (response.status === 401 || response.status === 403) {
+      throw new HttpError(502, 'ANALYSIS_AUTH_FAILED', '분석 서버의 서비스 인증 설정을 확인해 주세요.');
+    }
+    throw new HttpError(502, 'ANALYSIS_REDIRECT_REJECTED', '분석 서버 주소가 다른 주소로 이동했습니다. 연결 설정을 확인해 주세요.');
+  }
   if (!response.ok) {
     const retry = response.headers.get('retry-after');
     const retryAfter = retry && /^\d{1,3}$/.test(retry) && Number(retry) >= 1 && Number(retry) <= 300 ? Number(retry) : undefined;
@@ -105,15 +114,27 @@ async function responseJson(response: globalThis.Response, maximumBytes = MAX_RE
 }
 
 export async function callService(options: AnalysisOptions | undefined, path: string, init: RequestInit, timeout: number, maximumBytes = MAX_RESPONSE_BYTES) {
-  const target = service(options);
+  const requestId = randomUUID();
+  let upstreamStatus: number | undefined;
   try {
+    const target = service(options);
     const headers = new Headers(init.headers); headers.set('Authorization', `Bearer ${target.token}`);
-    const response = await fetch(new URL(path, target.url), { ...init, headers, redirect: 'error', signal: AbortSignal.timeout(timeout) });
+    // Workers supports manual/follow only. Never forward credentials to a redirect.
+    // https://developers.cloudflare.com/workers/runtime-apis/request/#parameters
+    const response = await fetch(new URL(path, target.url), { ...init, headers, redirect: 'manual', signal: AbortSignal.timeout(timeout) });
+    upstreamStatus = response.status;
     return await responseJson(response, maximumBytes);
   } catch (error) {
-    if (error instanceof HttpError) throw error;
-    if (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)) throw new HttpError(504, 'ANALYSIS_TIMEOUT', '분석 시간이 초과됐습니다.');
-    throw new HttpError(502, 'ANALYSIS_UNREACHABLE', '분석 서버에 연결하지 못했습니다.');
+    const errorName = error instanceof Error && ['Error', 'TypeError', 'TimeoutError', 'AbortError'].includes(error.name) ? error.name : 'UnknownError';
+    const failure = error instanceof HttpError ? error
+      : ['TimeoutError', 'AbortError'].includes(errorName)
+        ? new HttpError(504, 'ANALYSIS_TIMEOUT', '분석 시간이 초과됐습니다.')
+        : new HttpError(502, 'ANALYSIS_UNREACHABLE', '분석 서버에 연결하지 못했습니다.');
+    failure.requestId = requestId;
+    // Fixed fields only: request bodies, credentials and signed URLs stay out of logs.
+    console.warn('analysis_request_failed', { requestId, code: failure.code, status: failure.status,
+      ...(upstreamStatus !== undefined && { upstreamStatus }), errorName });
+    throw failure;
   }
 }
 

@@ -92,6 +92,16 @@ export interface AdminOverview {
   users: number; activeUsers: number; admins: number; projects: number; archivedProjects: number;
   database: string; analysis: string; rendering: string; checkedAt: string; recentFrom: string; recentSignups: number;
 }
+export interface AnalysisConnectivity {
+  status: 'verified'; scope: 'authenticated-service'; checkedAt: string;
+}
+export async function checkAnalysisConnectivity(signal?: AbortSignal): Promise<AnalysisConnectivity> {
+  const result = await request<AnalysisConnectivity>('/api/admin/analysis/connectivity', { signal });
+  if (!result || result.status !== 'verified' || result.scope !== 'authenticated-service' || typeof result.checkedAt !== 'string' || !Number.isFinite(Date.parse(result.checkedAt))) {
+    throw new ApiError(502, 'INVALID_ANALYSIS_RESPONSE', '분석 서버의 연결 확인 응답을 확인하지 못했어요.');
+  }
+  return { status: result.status, scope: result.scope, checkedAt: result.checkedAt };
+}
 export type AdminLoginMethod = 'password' | 'google' | 'naver' | 'apple' | 'legacy';
 export const ADMIN_LOGIN_METHOD_LABELS: Record<AdminLoginMethod, string> = {
   password: '아이디·비밀번호', google: '구글', naver: '네이버', apple: '애플', legacy: '기존 이메일 계정',

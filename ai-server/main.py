@@ -79,6 +79,7 @@ app.include_router(create_full_tracking_router())
 
 
 @app.get("/health")
+@app.get("/api/health")
 def health():
     return {"status": "ok"}
 

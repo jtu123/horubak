@@ -13,6 +13,7 @@ import { mountSocialAuth } from './social-auth.js';
 import type { SocialProviders } from './social-providers.js';
 import { analysisConfigured, mountAnalysis, revision } from './analysis.js';
 import type { AnalysisOptions } from './analysis.js';
+import { mountAnalysisConnectivity } from './analysis-connectivity.js';
 import { mountTracking } from './tracking.js';
 import { fullTrackingConfigured, mountFullTracking } from './full-tracking.js';
 
@@ -37,6 +38,7 @@ export async function createApp(db: Database, options: ServerOptions) {
     next();
   });
   mountSocialAuth(app, db, security, options);
+  mountAnalysisConnectivity(app, security, options.analysis);
   mountFullTracking(app, db, security, { analysis: options.analysis, origin: options.origin });
   options.mountSources?.(app, security);
   mountAnalysis(app, db, security, options.analysis);
@@ -176,7 +178,8 @@ export async function createApp(db: Database, options: ServerOptions) {
     if (known && error.retryAfter) res.set('Retry-After', String(error.retryAfter));
     else if (known && error.status === 429) res.set('Retry-After', '900');
     if (!known && !parse && !large) console.error('API error:', error instanceof Error ? error.message : 'unknown');
-    res.status(known ? error.status : parse ? 400 : large ? 413 : 500).json({ code: known ? error.code : 'REQUEST_FAILED', message: known ? error.message : parse ? 'JSON 형식을 확인해 주세요.' : large ? '요청 크기가 너무 큽니다.' : '요청을 처리하지 못했습니다.' });
+    res.status(known ? error.status : parse ? 400 : large ? 413 : 500).json({ code: known ? error.code : 'REQUEST_FAILED', message: known ? error.message : parse ? 'JSON 형식을 확인해 주세요.' : large ? '요청 크기가 너무 큽니다.' : '요청을 처리하지 못했습니다.',
+      ...(known && error.requestId && { requestId: error.requestId }) });
   };
   app.use(errors);
   return app;

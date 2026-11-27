@@ -1,0 +1,15 @@
+name = "isolated-analysis-transport-test"
+main = "analysis-probe.ts"
+compatibility_date = "2026-11-10"
+compatibility_flags = ["nodejs_compat"]
+send_metrics = false
+workers_dev = false
+preview_urls = false
+
+[[durable_objects.bindings]]
+name = "PROBE"
+class_name = "AnalysisProbe"
+
+[[migrations]]
+tag = "test-only-v1"
+new_sqlite_classes = ["AnalysisProbe"]
