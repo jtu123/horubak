@@ -8,4 +8,13 @@
 !subtitles.py
 !stt_worker.py
 !preload_model.py
+!preload_tracking_model.py
+!tracking.py
+!tracking_core.py
+!tracking_model.py
+!tracking_worker.py
+!tracking*.py
+!full_tracking*.py
+!LICENSE-NANODET.txt
+!NOTICE-NANODET.txt
 !.dockerignore

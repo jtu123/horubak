@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { clipPlaybackStart, readVideoDuration } from './video-metadata';
+import { clipPlaybackStart, previewMediaUrl, readVideoDuration } from './video-metadata';
 
 function fakeVideo() {
   return {
@@ -77,7 +77,14 @@ describe('local source metadata', () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledTimes(2);
   });
 
-  it.each([0, Infinity, 7 * 86_400 + 1])('rejects invalid source duration %s', async duration => {
+  it('accepts a video exactly ten hours long', async () => {
+    video.duration = 36000;
+    const result = readVideoDuration(file, new AbortController().signal);
+    video.onloadedmetadata?.();
+    await expect(result).resolves.toBe(36000);
+  });
+
+  it.each([0, Infinity, 36001])('rejects invalid source duration %s', async duration => {
     video.duration = duration;
     const result = readVideoDuration(file, new AbortController().signal);
     video.onloadedmetadata?.();
@@ -91,5 +98,23 @@ describe('clip playback position', () => {
   it('returns to the clip start only when the playhead is outside the interval', () => {
     const edit = { start: 10, end: 40 };
     expect([0, 10, 25, 40, 45, NaN].map(time => clipPlaybackStart(time, edit))).toEqual([10, 10, 25, 10, 10, 10]);
+  });
+});
+
+describe('preview source consistency', () => {
+  it('uses the confirmed analysis source instead of an older local file', () => {
+    expect(previewMediaUrl({ projectId: 'p1', sourceUploaded: true, sourceVersion: 'upload-b', localUrl: 'blob:file-a' }))
+      .toBe('/api/projects/p1/source?version=upload-b');
+  });
+
+  it('accepts the server source while the workspace flag has not been saved', () => {
+    expect(previewMediaUrl({ projectId: 'p/1', sourceUploaded: false, sourceVersion: 'upload b', localUrl: 'blob:file-a' }))
+      .toBe('/api/projects/p%2F1/source?version=upload%20b');
+  });
+
+  it('keeps the local preview until a server analysis source is confirmed', () => {
+    expect(previewMediaUrl({ projectId: 'p1', sourceUploaded: true, localUrl: 'blob:file-a' })).toBe('blob:file-a');
+    expect(previewMediaUrl({ projectId: 'p1', sourceUploaded: true })).toBe('/api/projects/p1/source');
+    expect(previewMediaUrl({ projectId: 'p1', sampleUrl: 'blob:sample' })).toBe('blob:sample');
   });
 });

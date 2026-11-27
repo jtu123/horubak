@@ -73,6 +73,35 @@ export const DATABASE_SCHEMA = `
     updated_at TEXT NOT NULL, PRIMARY KEY(owner_id, project_id),
     FOREIGN KEY(owner_id, project_id) REFERENCES projects(owner_id, id) ON DELETE CASCADE
   );
+  CREATE TABLE IF NOT EXISTS project_tracking (
+    owner_id TEXT NOT NULL, project_id TEXT NOT NULL, analysis_id TEXT NOT NULL,
+    source_revision TEXT NOT NULL, source_sha256 TEXT NOT NULL,
+    result_json TEXT NOT NULL CHECK(json_valid(result_json)),
+    selections_json TEXT NOT NULL CHECK(json_valid(selections_json)), updated_at TEXT NOT NULL,
+    PRIMARY KEY(owner_id, project_id),
+    FOREIGN KEY(owner_id, project_id) REFERENCES projects(owner_id, id) ON DELETE CASCADE
+  );
+  CREATE TABLE IF NOT EXISTS tracking_source_uploads (
+    owner_id TEXT NOT NULL, project_id TEXT NOT NULL, upload_id TEXT PRIMARY KEY NOT NULL,
+    source_revision TEXT NOT NULL, filename TEXT NOT NULL, size INTEGER NOT NULL, content_type TEXT NOT NULL,
+    session_json TEXT NOT NULL CHECK(json_valid(session_json)), source_json TEXT CHECK(source_json IS NULL OR json_valid(source_json)),
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+    FOREIGN KEY(owner_id, project_id) REFERENCES projects(owner_id, id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS tracking_sources_project ON tracking_source_uploads(owner_id,project_id,source_revision);
+  CREATE TABLE IF NOT EXISTS tracking_full_jobs (
+    id TEXT PRIMARY KEY NOT NULL, owner_id TEXT NOT NULL, project_id TEXT NOT NULL,
+    source_revision TEXT NOT NULL, upload_id TEXT NOT NULL,
+    source_json TEXT NOT NULL CHECK(json_valid(source_json)), job_json TEXT NOT NULL CHECK(json_valid(job_json)),
+    provisioned INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+    FOREIGN KEY(owner_id, project_id) REFERENCES projects(owner_id, id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS tracking_jobs_project ON tracking_full_jobs(owner_id,project_id,created_at);
+  CREATE TABLE IF NOT EXISTS tracking_full_selections (
+    job_id TEXT NOT NULL REFERENCES tracking_full_jobs(id) ON DELETE CASCADE,
+    scene_id TEXT NOT NULL, track_id TEXT NOT NULL, updated_at TEXT NOT NULL,
+    PRIMARY KEY(job_id,scene_id)
+  );
   CREATE TABLE IF NOT EXISTS audit_log (
     id TEXT PRIMARY KEY, actor_id TEXT REFERENCES users(id), action TEXT NOT NULL,
     target_id TEXT NOT NULL, reason TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL

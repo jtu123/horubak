@@ -18,7 +18,9 @@ from starlette.datastructures import Headers, UploadFile
 from starlette.formparsers import MultiPartException
 
 from highlight import router as highlight_router
-from settings import FFMPEG_TIMEOUT_SECONDS, MAX_DURATION_SECONDS, MAX_UPLOAD_BYTES, STT_TIMEOUT_SECONDS
+from settings import FFMPEG_TIMEOUT_SECONDS, MAX_DURATION_SECONDS, MAX_UPLOAD_BYTES, STT_TIMEOUT_SECONDS, TRACKING_MAX_UPLOAD_BYTES
+from tracking import create_tracking_router
+from full_tracking_control import create_full_tracking_router
 
 logger = logging.getLogger(__name__)
 _analysis_lock = threading.Lock()
@@ -41,8 +43,9 @@ class ServiceBoundary:
         provided = headers.get("authorization", "")
         if not secrets.compare_digest(provided.encode(), f"Bearer {configured}".encode()):
             return await JSONResponse({"detail": "분석 서비스 인증이 필요합니다."}, 401)(scope, receive, send)
-        upload = scope["path"] == "/api/stt/transcribe"
-        maximum = MAX_UPLOAD_BYTES + 1024 * 1024 if upload else 4 * 1024 * 1024
+        upload = scope["path"] in {"/api/stt/transcribe", "/api/tracking/analyze"}
+        upload_limit = TRACKING_MAX_UPLOAD_BYTES if scope["path"] == "/api/tracking/analyze" else MAX_UPLOAD_BYTES
+        maximum = upload_limit + 1024 * 1024 if upload else 4 * 1024 * 1024
         length = headers.get("content-length")
         if length is not None:
             try:
@@ -71,6 +74,8 @@ class ServiceBoundary:
 app = FastAPI(title="호루박 분석 서버", version="1.1.0", docs_url=None, redoc_url=None, openapi_url=None)
 app.add_middleware(ServiceBoundary)
 app.include_router(highlight_router)
+app.include_router(create_tracking_router(_analysis_lock))
+app.include_router(create_full_tracking_router())
 
 
 @app.get("/health")

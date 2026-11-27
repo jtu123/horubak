@@ -4,8 +4,8 @@ import type { Express, Request } from 'express';
 import type { Database } from './database-contract.js';
 import { createSecurity, HttpError } from './security.js';
 
-export interface AnalysisOptions { baseUrl?: string; serviceToken?: string }
-interface ProjectSource { source: string; sourceName: string; duration: number; fileSize?: number; sourceUrl?: string; sportsSampleId?: string }
+export interface AnalysisOptions { baseUrl?: string; serviceToken?: string; fullTrackingEnabled?: boolean }
+export interface ProjectSource { source: string; sourceName: string; duration: number; fileSize?: number; sourceUrl?: string; sportsSampleId?: string }
 interface TranscriptSegment { id: string; segmentIndex: number; startSeconds: number; endSeconds: number; text: string }
 interface TranscriptRow { source_revision: string; source_sha256: string; segments: string }
 type Security = ReturnType<typeof createSecurity>;
@@ -17,7 +17,7 @@ export function analysisConfigured(options?: AnalysisOptions) {
   return Boolean(options?.baseUrl && options.serviceToken && options.serviceToken.length >= 32);
 }
 
-function service(options?: AnalysisOptions) {
+export function service(options?: AnalysisOptions) {
   if (!analysisConfigured(options)) throw new HttpError(503, 'ANALYSIS_NOT_CONFIGURED', '분석 서버가 아직 연결되지 않았습니다.');
   const url = new URL(options!.baseUrl!);
   if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname))) || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
@@ -26,7 +26,7 @@ function service(options?: AnalysisOptions) {
   return { url, token: options!.serviceToken! };
 }
 
-function ownedProject(db: Database, ownerId: string, projectId: string): ProjectSource {
+export function ownedProject(db: Database, ownerId: string, projectId: string): ProjectSource {
   const row = db.prepare('SELECT document FROM projects WHERE owner_id=? AND id=? AND archived_at IS NULL').get(ownerId, projectId) as { document: string } | undefined;
   if (!row) throw new HttpError(404, 'NOT_FOUND', '프로젝트를 찾을 수 없습니다.');
   const source = JSON.parse(row.document) as ProjectSource;
@@ -34,7 +34,7 @@ function ownedProject(db: Database, ownerId: string, projectId: string): Project
   return source;
 }
 
-function revision(source: ProjectSource) {
+export function revision(source: ProjectSource) {
   return createHash('sha256').update(JSON.stringify([source.source, source.sourceName, source.duration, source.fileSize ?? null, source.sourceUrl ?? null, source.sportsSampleId ?? null])).digest('hex');
 }
 
@@ -45,12 +45,44 @@ function dictionary(value: unknown): Record<string, unknown> {
 
 function finite(value: unknown): value is number { return typeof value === 'number' && Number.isFinite(value); }
 
-async function responseJson(response: globalThis.Response) {
+async function responseJson(response: globalThis.Response, maximumBytes = MAX_RESPONSE_BYTES) {
   if (!response.ok) {
-    await response.body?.cancel();
-    const status = [400, 413, 422, 429, 503, 504].includes(response.status) ? response.status : 502;
+    const retry = response.headers.get('retry-after');
+    const retryAfter = retry && /^\d{1,3}$/.test(retry) && Number(retry) >= 1 && Number(retry) <= 300 ? Number(retry) : undefined;
+    let detailCode: string | undefined;
+    if (response.body) {
+      const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let bytes = 0;
+      try {
+        while (true) { const item = await reader.read(); if (item.done) break; bytes += item.value.byteLength; if (bytes > 4096) break; chunks.push(item.value); }
+        if (bytes <= 4096) {
+          const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          if (body && typeof body.detail === 'object' && typeof body.detail?.code === 'string') detailCode = body.detail.code;
+        }
+      } catch { /* Internal failure text is deliberately never exposed. */ }
+      finally { await reader.cancel().catch(() => undefined); }
+    }
+    if (response.status === 503 && (retryAfter || detailCode === 'ANALYSIS_BUSY')) throw new HttpError(503, 'ANALYSIS_BUSY', '다른 영상을 분석 중입니다. 잠시 후 다시 시도해 주세요.', retryAfter ?? 15);
+    if (response.status === 503 && detailCode === 'MODEL_UNAVAILABLE') throw new HttpError(503, 'MODEL_UNAVAILABLE', '추적 모델이 준비되지 않았습니다. 서버 설정을 확인해 주세요.');
+    const providerFailures: Record<string, [number, string]> = {
+      SOURCE_CHANGED: [409, '원본 정보가 변경됐습니다. 현재 원본을 다시 연결해 주세요.'],
+      UPLOAD_INCOMPLETE: [409, '원본 업로드가 완료되지 않았습니다. 이어 올리기를 완료해 주세요.'],
+      UPLOAD_EXPIRED: [409, '업로드 세션이 만료됐습니다. 원본을 다시 선택해 주세요.'],
+      TRACKING_BUSY: [409, '다른 요청이 작업 상태를 변경했습니다. 다시 확인해 주세요.'],
+      JOB_NOT_RESUMABLE: [409, '중단되거나 실패한 작업만 이어서 분석할 수 있습니다.'],
+      UPLOAD_NOT_FOUND: [404, '업로드 원본을 찾지 못했습니다. 원본을 다시 선택해 주세요.'],
+      SOURCE_NOT_FOUND: [404, '원본을 찾지 못했습니다. 원본을 다시 연결해 주세요.'],
+      FULL_TRACKING_NOT_CONFIGURED: [503, '전체 영상 분석 저장소와 작업 서버가 아직 연결되지 않았습니다.'],
+      FULL_TRACKING_STORAGE_FAILED: [503, '전체 영상 저장소 또는 작업 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'],
+      TOOLS_UNAVAILABLE: [503, '영상 처리 도구가 준비되지 않았습니다. 서버 설정을 확인해 주세요.'],
+      FULL_TRACKING_INVALID: [422, '원본 또는 분석 작업 정보를 확인해 주세요.'],
+      INVALID_SOURCE: [422, '지원되는 MP4 또는 MOV 원본을 선택해 주세요.'],
+      UPLOAD_ORIGIN_INVALID: [422, '원본 업로드 출처 설정을 확인해 주세요.'],
+    };
+    const known = detailCode ? providerFailures[detailCode] : undefined;
+    if (known && response.status === known[0]) throw new HttpError(known[0], detailCode!, known[1], retryAfter);
+    const status = [400, 404, 409, 413, 422, 429, 503, 504].includes(response.status) ? response.status : 502;
     const messages: Record<number, string> = {
-      400: '분석할 영상과 구간을 확인해 주세요.', 413: '데모에서 분석할 수 있는 파일 크기를 초과했습니다.',
+      400: '분석할 영상과 구간을 확인해 주세요.', 404: '분석 원본 또는 작업을 찾지 못했습니다.', 409: '분석 원본 또는 작업 상태가 변경됐습니다. 다시 확인해 주세요.', 413: '데모에서 분석할 수 있는 파일 크기를 초과했습니다.',
       422: '영상 또는 전사 구간을 분석하지 못했습니다.', 429: '분석 요청이 많습니다. 잠시 후 다시 시도해 주세요.',
       503: '분석 모델 또는 API 연결이 준비되지 않았습니다.', 504: '분석 시간이 초과됐습니다. 잠시 후 다시 시도해 주세요.',
       502: '분석 서버에 연결하지 못했습니다.',
@@ -63,7 +95,7 @@ async function responseJson(response: globalThis.Response) {
     while (true) {
       const item = await reader.read(); if (item.done) break;
       total += item.value.byteLength;
-      if (total > MAX_RESPONSE_BYTES) throw new HttpError(502, 'ANALYSIS_RESPONSE_TOO_LARGE', '분석 결과가 저장 한도를 초과했습니다.');
+      if (total > maximumBytes) throw new HttpError(502, 'ANALYSIS_RESPONSE_TOO_LARGE', '분석 결과가 저장 한도를 초과했습니다.');
       chunks.push(item.value);
     }
     const bytes = Buffer.concat(chunks);
@@ -72,12 +104,12 @@ async function responseJson(response: globalThis.Response) {
   } finally { await reader.cancel().catch(() => undefined); }
 }
 
-async function callService(options: AnalysisOptions | undefined, path: string, init: RequestInit, timeout: number) {
+export async function callService(options: AnalysisOptions | undefined, path: string, init: RequestInit, timeout: number, maximumBytes = MAX_RESPONSE_BYTES) {
   const target = service(options);
   try {
     const headers = new Headers(init.headers); headers.set('Authorization', `Bearer ${target.token}`);
     const response = await fetch(new URL(path, target.url), { ...init, headers, redirect: 'error', signal: AbortSignal.timeout(timeout) });
-    return await responseJson(response);
+    return await responseJson(response, maximumBytes);
   } catch (error) {
     if (error instanceof HttpError) throw error;
     if (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)) throw new HttpError(504, 'ANALYSIS_TIMEOUT', '분석 시간이 초과됐습니다.');
@@ -87,7 +119,7 @@ async function callService(options: AnalysisOptions | undefined, path: string, i
 
 // The video is streamed to the private service. It is never buffered in the
 // Worker or placed in publicly accessible storage.
-async function multipartStream(req: Request, filename: string) {
+export async function multipartStream(req: Request, filename: string) {
   const contentType = req.get('content-type') ?? '';
   const boundary = /multipart\/form-data\s*;\s*boundary=(?:"([^"]+)"|([^;\s]+))/i.exec(contentType);
   if (!boundary || (boundary[1] ?? boundary[2]!).length > 200) throw new HttpError(415, 'MULTIPART_REQUIRED', '원본 영상 파일을 선택해 주세요.');

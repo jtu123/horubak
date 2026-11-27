@@ -11,8 +11,10 @@ import * as validate from './validation.js';
 import { mountAdmin } from './admin.js';
 import { mountSocialAuth } from './social-auth.js';
 import type { SocialProviders } from './social-providers.js';
-import { analysisConfigured, mountAnalysis } from './analysis.js';
+import { analysisConfigured, mountAnalysis, revision } from './analysis.js';
 import type { AnalysisOptions } from './analysis.js';
+import { mountTracking } from './tracking.js';
+import { fullTrackingConfigured, mountFullTracking } from './full-tracking.js';
 
 export interface ServerOptions extends SecurityOptions {
   staticDirectory?: string;
@@ -35,10 +37,12 @@ export async function createApp(db: Database, options: ServerOptions) {
     next();
   });
   mountSocialAuth(app, db, security, options);
+  mountFullTracking(app, db, security, { analysis: options.analysis, origin: options.origin });
   options.mountSources?.(app, security);
   mountAnalysis(app, db, security, options.analysis);
+  mountTracking(app, db, security, options.analysis);
   app.use('/api', express.json({ limit: '4mb' }), security.mutation);
-  app.get('/api/health', (_req, res) => res.json({ success: true, database: 'connected', analysisConfigured: analysisConfigured(options.analysis), ...(options.mountSources && { sourceUploads: true }) }));
+  app.get('/api/health', (_req, res) => res.json({ success: true, database: 'connected', analysisConfigured: analysisConfigured(options.analysis), fullTrackingConfigured: fullTrackingConfigured(options.analysis), ...(options.mountSources && { sourceUploads: true }) }));
   app.get('/api/auth/csrf', (req, res) => {
     const session = security.session(req);
     if (!session) security.rateAnonymousSession(req);
@@ -122,7 +126,11 @@ export async function createApp(db: Database, options: ServerOptions) {
     const owner = security.user(req); const body = validate.object(req.body);
     if (typeof body.ownerId !== 'string' || !Number.isSafeInteger(body.version) || !Array.isArray(body.projects) || body.projects.length > 100) throw new HttpError(400, 'INVALID_WORKSPACE', '저장 형식을 확인해 주세요.');
     if (body.ownerId !== owner.id) throw new HttpError(409, 'WORKSPACE_ACCOUNT_CHANGED', '다른 계정으로 로그인했어요. 편집 정보를 백업하고 서버 내용을 다시 불러와 주세요.');
-    const documents = body.projects.map(validate.project); const ids = documents.map(doc => doc.id as string);
+    const documents = body.projects.map(value => {
+      const input = validate.object(value);
+      const existing = typeof input.id === 'string' ? db.prepare('SELECT document FROM projects WHERE owner_id=? AND id=? AND archived_at IS NULL').get(owner.id, input.id) as { document: string } | undefined : undefined;
+      return validate.project(value, existing ? JSON.parse(existing.document) : undefined);
+    }); const ids = documents.map(doc => doc.id as string);
     if (new Set(ids).size !== ids.length) throw new HttpError(400, 'DUPLICATE_PROJECT', '중복된 프로젝트가 있습니다.');
     const version = db.transaction(() => {
       const current = db.prepare('SELECT workspace_version FROM users WHERE id=?').get(owner.id) as { workspace_version: number };
@@ -136,6 +144,8 @@ export async function createApp(db: Database, options: ServerOptions) {
           const source = JSON.parse(existing.document);
           Object.assign(doc, { source: 'file', sourceUrl: undefined, sourceName: source.sourceName, fileSize: source.fileSize, duration: source.duration, sourceUploaded: true });
         }
+        const cloud = db.prepare('SELECT source_revision FROM tracking_source_uploads WHERE owner_id=? AND project_id=? AND source_json IS NOT NULL ORDER BY created_at DESC,rowid DESC LIMIT 1').get(owner.id, doc.id as string);
+        if (cloud?.source_revision === revision(doc as unknown as import('./analysis.js').ProjectSource)) doc.sourceUploaded = true;
         db.prepare('INSERT INTO projects(owner_id,id,document) VALUES(?,?,?) ON CONFLICT(owner_id,id) DO UPDATE SET document=excluded.document').run(owner.id, doc.id as string, JSON.stringify(doc));
       }
       const active = db.prepare('SELECT id FROM projects WHERE owner_id=? AND archived_at IS NULL').all(owner.id) as { id: string }[];
@@ -163,7 +173,8 @@ export async function createApp(db: Database, options: ServerOptions) {
     if (res.headersSent) return next(error);
     const known = error instanceof HttpError;
     const parse = error?.type === 'entity.parse.failed'; const large = error?.type === 'entity.too.large';
-    if (known && error.status === 429) res.set('Retry-After', '900');
+    if (known && error.retryAfter) res.set('Retry-After', String(error.retryAfter));
+    else if (known && error.status === 429) res.set('Retry-After', '900');
     if (!known && !parse && !large) console.error('API error:', error instanceof Error ? error.message : 'unknown');
     res.status(known ? error.status : parse ? 400 : large ? 413 : 500).json({ code: known ? error.code : 'REQUEST_FAILED', message: known ? error.message : parse ? 'JSON 형식을 확인해 주세요.' : large ? '요청 크기가 너무 큽니다.' : '요청을 처리하지 못했습니다.' });
   };

@@ -1,4 +1,5 @@
 import type { EditState, Utterance } from './types';
+import { MAX_FULL_SOURCE_BYTES } from './full-tracking-model';
 
 export function formatTime(seconds: number): string {
   const s = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
@@ -9,7 +10,7 @@ export function validateVideo(file: Pick<File, 'name' | 'size'>): string | undef
   if (!/\.(mp4|mov)$/i.test(file.name)) return 'MP4 또는 MOV 영상을 선택해 주세요.';
   if (file.name.length > 500 || /[\u0000-\u001f\u007f]/u.test(file.name)) return '파일 이름은 특수 제어 문자 없이 500자 이내여야 해요.';
   if (file.size === 0) return '비어 있는 파일은 사용할 수 없어요.';
-  if (file.size > 4 * 1024 ** 3) return '초기 입력 기준은 파일당 최대 4GB예요.';
+  if (file.size > MAX_FULL_SOURCE_BYTES) return '초기 입력 기준은 파일당 최대 4GB예요.';
 }
 export const MAX_SOURCE_URL_LENGTH = 4096;
 export function validateSourceUrl(input: string): string | undefined {

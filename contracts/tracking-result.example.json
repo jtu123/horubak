@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "sourceSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source": { "duration": 60, "width": 1280, "height": 720 },
+  "range": { "start": 5, "end": 7, "sampleFps": 2 },
+  "model": {
+    "name": "opencv-zoo-nanodet",
+    "version": "2022nov",
+    "sha256": "4b82da9944b88577175ee23a459dce2e26e6e4be573def65b1055dc2d9720186"
+  },
+  "scenes": [{ "id": "s0", "start": 5, "end": 7 }],
+  "tracks": [{
+    "id": "s0-t1", "sceneId": "s0", "classId": 0, "label": "person",
+    "start": 5, "end": 6, "meanConfidence": 0.9,
+    "observations": [
+      { "time": 5, "bbox": [0.1, 0.1, 0.2, 0.5], "confidence": 0.9 },
+      { "time": 5.5, "bbox": [0.2, 0.1, 0.2, 0.5], "confidence": 0.9 },
+      { "time": 6, "bbox": [0.3, 0.1, 0.2, 0.5], "confidence": 0.9 }
+    ],
+    "gaps": []
+  }],
+  "recommendations": [{ "sceneId": "s0", "trackId": "s0-t1", "reason": "계약 시험용 대상" }],
+  "warnings": []
+}
