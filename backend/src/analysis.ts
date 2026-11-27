@@ -71,7 +71,7 @@ async function responseJson(response: globalThis.Response, maximumBytes = MAX_RE
       finally { await reader.cancel().catch(() => undefined); }
     }
     if (response.status === 503 && (retryAfter || detailCode === 'ANALYSIS_BUSY')) throw new HttpError(503, 'ANALYSIS_BUSY', '다른 영상을 분석 중입니다. 잠시 후 다시 시도해 주세요.', retryAfter ?? 15);
-    if (response.status === 503 && detailCode === 'MODEL_UNAVAILABLE') throw new HttpError(503, 'MODEL_UNAVAILABLE', '추적 모델이 준비되지 않았습니다. 서버 설정을 확인해 주세요.');
+    if (response.status === 503 && detailCode === 'MODEL_UNAVAILABLE') throw new HttpError(503, 'MODEL_UNAVAILABLE', '분석 모델이 준비되지 않았습니다. 서버 설정을 확인해 주세요.');
     const providerFailures: Record<string, [number, string]> = {
       SOURCE_CHANGED: [409, '원본 정보가 변경됐습니다. 현재 원본을 다시 연결해 주세요.'],
       UPLOAD_INCOMPLETE: [409, '원본 업로드가 완료되지 않았습니다. 이어 올리기를 완료해 주세요.'],
@@ -84,6 +84,17 @@ async function responseJson(response: globalThis.Response, maximumBytes = MAX_RE
       FULL_TRACKING_STORAGE_FAILED: [503, '전체 영상 저장소 또는 작업 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'],
       TOOLS_UNAVAILABLE: [503, '영상 처리 도구가 준비되지 않았습니다. 서버 설정을 확인해 주세요.'],
       FULL_TRACKING_INVALID: [422, '원본 또는 분석 작업 정보를 확인해 주세요.'],
+      FULL_TRANSCRIPTION_NOT_CONFIGURED: [503, '전체 영상 전사 저장소와 작업 서버가 아직 연결되지 않았습니다.'],
+      CONFIG_INVALID: [503, '분석 서버의 전사 설정을 확인해 주세요.'],
+      FULL_TRANSCRIPTION_STORAGE_FAILED: [503, '전체 영상 전사 저장소 또는 작업 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'],
+      TRANSCRIPTION_BUSY: [409, '다른 요청이 전사 작업 상태를 변경했습니다. 다시 확인해 주세요.'],
+      FULL_TRANSCRIPTION_INVALID: [422, '전사 원본 또는 작업 정보를 확인해 주세요.'],
+      TRANSCRIPT_NOT_READY: [409, '전사가 완료된 뒤 다시 요청해 주세요.'],
+      TRANSCRIPT_EMPTY_RANGE: [422, '이 구간에서 검토할 발화를 찾지 못했습니다.'],
+      INVALID_RANGE: [422, '원본 안의 전사 구간을 선택해 주세요.'],
+      RESULT_LIMIT: [422, '이 구간의 전사 결과가 처리 한도를 초과했습니다.'],
+      NO_AUDIO: [422, '원본 영상에 음성 트랙이 없습니다.'],
+      UNSUPPORTED_TIMELINE: [422, '원본의 영상·음성 시간 정보를 지원하지 않습니다.'],
       INVALID_SOURCE: [422, '지원되는 MP4 또는 MOV 원본을 선택해 주세요.'],
       UPLOAD_ORIGIN_INVALID: [422, '원본 업로드 출처 설정을 확인해 주세요.'],
     };
@@ -199,7 +210,7 @@ function transcript(payload: Record<string, unknown>, duration: number): Transcr
   return segments;
 }
 
-function contextResult(payload: Record<string, unknown>, start: number, end: number, duration: number) {
+export function contextResult(payload: Record<string, unknown>, start: number, end: number, duration: number) {
   const status = payload.status;
   if (typeof status !== 'string' || !['keep', 'expand', 'review'].includes(status) || typeof payload.reason !== 'string' || !payload.reason.trim() || payload.reason.length > 2000 || !finite(payload.originalStartSeconds) || !finite(payload.originalEndSeconds) || Math.abs(payload.originalStartSeconds - start) > 0.000001 || Math.abs(payload.originalEndSeconds - end) > 0.000001) {
     throw new HttpError(502, 'CONTEXT_RESPONSE_INVALID', '맥락 검토 결과가 현재 구간과 맞지 않습니다.');

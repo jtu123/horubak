@@ -15,6 +15,7 @@ export interface ContextResult {
   originalEndSeconds: number;
   suggestion: { startSeconds: number; endSeconds: number; durationSeconds: number } | null;
 }
+export interface ContextTranscriptIdentity { expectedJobId: string; expectedSourceSha256: string }
 const invalid = () => new ApiError(502, 'INVALID_ANALYSIS_RESPONSE', '분석 결과의 형식을 확인하지 못했어요. 다시 요청해 주세요.');
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
@@ -51,8 +52,8 @@ export const analysisApi = {
     const body = new FormData(); body.set('file', file);
     return transcriptResult(await request<unknown>(`/api/transcripts/projects/${encodeURIComponent(projectId)}/analyze`, { method: 'POST', body, signal }, 15 * 60 * 1000), duration);
   },
-  context: async (projectId: string, start: number, end: number, duration: number, signal?: AbortSignal) => {
+  context: async (projectId: string, start: number, end: number, duration: number, signal?: AbortSignal, expected?: ContextTranscriptIdentity) => {
     const query = new URLSearchParams({ start: String(start), end: String(end) });
-    return contextResult(await request<unknown>(`/api/transcripts/projects/${encodeURIComponent(projectId)}/context-check?${query}`, { method: 'POST', body: '{}', signal }, 120000), start, end, duration);
+    return contextResult(await request<unknown>(`/api/transcripts/projects/${encodeURIComponent(projectId)}/context-check?${query}`, { method: 'POST', body: JSON.stringify(expected ?? {}), signal }, 120000), start, end, duration);
   },
 };

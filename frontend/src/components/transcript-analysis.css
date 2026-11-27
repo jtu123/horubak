@@ -3,3 +3,8 @@
 .transcript-analysis p { margin: 10px 0 0; font-size: 12px; line-height: 1.6; }
 .v3-source-evidence .transcript-analysis { margin-bottom: 14px; padding: 0 0 16px; }
 .comparison-grid p { margin: 12px 0; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.transcript-progress { display: grid; gap: 8px; margin-top: 12px; padding: 12px; border-radius: 14px; background: var(--surface-soft, #f3f5f8); font-size: 12px; }
+.transcript-progress progress { width: 100%; accent-color: var(--primary, #3182f6); }
+.transcript-navigation, .transcript-pages { margin-top: 12px; }
+.transcript-navigation label { display: flex; gap: 8px; align-items: center; font-size: 12px; }
+.transcript-navigation input { width: 90px; padding: 6px 8px; border: 1px solid var(--border, #e8ebef); border-radius: 8px; color: inherit; background: var(--surface, white); }

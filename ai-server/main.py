@@ -21,6 +21,7 @@ from highlight import router as highlight_router
 from settings import FFMPEG_TIMEOUT_SECONDS, MAX_DURATION_SECONDS, MAX_UPLOAD_BYTES, STT_TIMEOUT_SECONDS, TRACKING_MAX_UPLOAD_BYTES
 from tracking import create_tracking_router
 from full_tracking_control import create_full_tracking_router
+from full_stt_control import create_full_stt_router
 
 logger = logging.getLogger(__name__)
 _analysis_lock = threading.Lock()
@@ -76,6 +77,7 @@ app.add_middleware(ServiceBoundary)
 app.include_router(highlight_router)
 app.include_router(create_tracking_router(_analysis_lock))
 app.include_router(create_full_tracking_router())
+app.include_router(create_full_stt_router())
 
 
 @app.get("/health")

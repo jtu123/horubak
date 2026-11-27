@@ -11,7 +11,11 @@ import { MAX_TRACKING_BYTES, validateTrackingResult } from './tracking-validatio
 import type { TrackingResult, TrackingSelection } from './tracking-validation.js';
 
 type Security = ReturnType<typeof createSecurity>;
-type Options = { analysis?: AnalysisOptions; origin: string };
+type Options = {
+  analysis?: AnalysisOptions; origin: string;
+  beforeSourceChange?: (req: Request) => Promise<void>;
+  assertNoReservedSourceChange?: (ownerId: string, projectId: string, sourceRevision: string) => void;
+};
 interface UploadRow {
   owner_id: string; project_id: string; upload_id: string; source_revision: string; filename: string; size: number;
   content_type: string; session_json: string; source_json: string | null; created_at: string;
@@ -73,6 +77,7 @@ export function mountFullTracking(app: Express, db: Database, security: Security
     const job = jobResult(value, row.id, JSON.parse(row.source_json)); cache(row, job); return job;
   };
   const noActiveJob = async (req: Request, ctx: Context) => {
+    await options.beforeSourceChange?.(req);
     const rows = db.prepare("SELECT * FROM tracking_full_jobs WHERE owner_id=? AND project_id=? AND source_revision=? AND json_extract(job_json,'$.state') IN ('queued','running','cancelling') ORDER BY created_at DESC").all(ctx.ownerId, ctx.projectId, ctx.sourceRevision) as unknown as JobRow[];
     for (const row of rows) {
       if (!activeJob(JSON.parse(row.job_json))) continue;
@@ -81,6 +86,7 @@ export function mountFullTracking(app: Express, db: Database, security: Security
     }
   };
   const noReservedJob = (ctx: Context) => {
+    options.assertNoReservedSourceChange?.(ctx.ownerId, ctx.projectId, ctx.sourceRevision);
     const rows = db.prepare('SELECT job_json FROM tracking_full_jobs WHERE owner_id=? AND project_id=? AND source_revision=?').all(ctx.ownerId, ctx.projectId, ctx.sourceRevision);
     if (rows.some(row => activeJob(JSON.parse(String(row.job_json))))) throw new HttpError(409, 'TRACKING_IN_PROGRESS', '실행 중인 전체 분석을 중단한 뒤 원본을 변경해 주세요.');
   };
@@ -138,8 +144,11 @@ export function mountFullTracking(app: Express, db: Database, security: Security
     const uploadId = randomUUID(); const inputBody = { ownerId: ctx.ownerId, projectId: ctx.projectId, uploadId, filename, size, contentType: input.contentType, origin: options.origin };
     const value = await provider('uploads/init', inputBody); recheck(req, ctx);
     const session = uploadSession(value, uploadId, options.analysis); const date = new Date().toISOString();
-    db.prepare('INSERT INTO tracking_source_uploads(owner_id,project_id,upload_id,source_revision,filename,size,content_type,session_json,source_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
-      .run(ctx.ownerId, ctx.projectId, uploadId, ctx.sourceRevision, filename, size, String(input.contentType), JSON.stringify(session), null, date, date);
+    db.transaction(() => {
+      noReservedJob(ctx);
+      db.prepare('INSERT INTO tracking_source_uploads(owner_id,project_id,upload_id,source_revision,filename,size,content_type,session_json,source_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+        .run(ctx.ownerId, ctx.projectId, uploadId, ctx.sourceRevision, filename, size, String(input.contentType), JSON.stringify(session), null, date, date);
+    });
     res.status(201).json(session);
   });
   router.post('/source/:uploadId/complete', ...mutation, async (req, res) => {

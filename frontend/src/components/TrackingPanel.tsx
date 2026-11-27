@@ -4,6 +4,7 @@ import type { Clip, Project } from '../types';
 import { formatSize, formatTime, validateVideo } from '../lib';
 import { readVideoDuration } from '../video-metadata';
 import { fullTrackingApi, requireJobSource, uploadResumable } from '../services/full-tracking';
+import { sourceUploadKey, withSourceUpload } from '../services/source-upload';
 import { activeTrackingJob, MAX_FULL_SOURCE_SECONDS, resumableTrackingJob, sameStoredSource, trackingWindowStart } from '../full-tracking-model';
 import type { FullJob, FullSource, FullTrackingWindow, UploadSession } from '../full-tracking-model';
 import { TrackingOverlay } from './TrackingOverlay';
@@ -18,7 +19,7 @@ const JOB_LABELS = { queued: '분석 대기', running: '전체 영상 추적 중
 export function TrackingPanel({ project, clip, enabled, ownerId, videoUrl, onSourceReady }: {
   project: Project; clip: Clip; enabled: boolean; ownerId?: string; videoUrl?: string; onSourceReady?: (uploadId: string) => void;
 }) {
-  const key = JSON.stringify([ownerId, project.id, project.source, project.sourceName, project.duration, project.fileSize, project.sourceUrl, project.sportsSampleId]);
+  const key = sourceUploadKey(ownerId, project);
   const active = useRef(key); active.current = key;
   const action = useRef<AbortController | null>(null); const actionVersion = useRef(0);
   const video = useRef<HTMLVideoElement>(null); const viewport = useRef<HTMLDivElement>(null);
@@ -127,12 +128,16 @@ export function TrackingPanel({ project, clip, enabled, ownerId, videoUrl, onSou
       let original = source;
       if (!original) {
         const file = currentFile!.file;
-        let upload = remote.key === key ? remote.upload : null;
-        if (!upload || Date.parse(upload.expiresAt) <= Date.now()) upload = await fullTrackingApi.init(project.id, file, request.abort.signal);
-        if (!request.current()) return;
-        setRemote(current => current.key === key ? { ...current, upload } : current);
-        await uploadResumable(file, upload, request.abort.signal, bytes => { if (request.current()) setUploadedBytes(bytes); });
-        original = await fullTrackingApi.complete(project.id, upload.uploadId, request.abort.signal);
+        original = await withSourceUpload(key, request.abort.signal, async () => {
+          const existing = await fullTrackingApi.source(project.id, request.abort.signal);
+          if (existing.source) return existing.source;
+          let upload = existing.upload ?? (remote.key === key ? remote.upload : null);
+          if (!upload || Date.parse(upload.expiresAt) <= Date.now()) upload = await fullTrackingApi.init(project.id, file, request.abort.signal);
+          if (!request.current()) throw request.abort.signal.reason ?? new DOMException('Aborted', 'AbortError');
+          setRemote(current => current.key === key ? { ...current, upload } : current);
+          await uploadResumable(file, upload, request.abort.signal, bytes => { if (request.current()) setUploadedBytes(bytes); });
+          return fullTrackingApi.complete(project.id, upload.uploadId, request.abort.signal);
+        });
         if (!request.current()) return;
         setRemote(current => current.key === key ? { ...current, source: original, upload: null, job: null } : current);
         onSourceReady?.(original.uploadId);

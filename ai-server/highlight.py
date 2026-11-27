@@ -6,7 +6,9 @@ from fastapi import APIRouter, HTTPException
 from google import genai
 from google.genai import errors, types
 from pydantic import BaseModel, Field, ValidationError
-from settings import GEMINI_TIMEOUT_MS, MAX_DURATION_SECONDS, MAX_SEGMENTS, gemini_settings
+from settings import GEMINI_TIMEOUT_MS, MAX_SEGMENTS, gemini_settings
+
+MAX_CONTEXT_SECONDS = 36000
 
 router = APIRouter()
 
@@ -19,8 +21,8 @@ GENRE_CRITERIA = {
 
 class Subtitle(BaseModel):
     segmentIndex: int = Field(ge=0)
-    startSeconds: float = Field(ge=0, le=MAX_DURATION_SECONDS, allow_inf_nan=False)
-    endSeconds: float = Field(gt=0, le=MAX_DURATION_SECONDS, allow_inf_nan=False)
+    startSeconds: float = Field(ge=0, le=MAX_CONTEXT_SECONDS, allow_inf_nan=False)
+    endSeconds: float = Field(gt=0, le=MAX_CONTEXT_SECONDS, allow_inf_nan=False)
     text: str = Field(min_length=1, max_length=2000)
 
 
@@ -161,8 +163,8 @@ def recommend_highlights(request: HighlightRequest):
     return {"genre": request.genre, "highlights": highlights}
 
 class ContextCheckRequest(BaseModel):
-    startSeconds: float = Field(ge=0, le=MAX_DURATION_SECONDS, allow_inf_nan=False)
-    endSeconds: float = Field(gt=0, le=MAX_DURATION_SECONDS, allow_inf_nan=False)
+    startSeconds: float = Field(ge=0, le=MAX_CONTEXT_SECONDS, allow_inf_nan=False)
+    endSeconds: float = Field(gt=0, le=MAX_CONTEXT_SECONDS, allow_inf_nan=False)
     segments: list[Subtitle] = Field(min_length=1, max_length=MAX_SEGMENTS)
 
 

@@ -16,6 +16,7 @@ import type { AnalysisOptions } from './analysis.js';
 import { mountAnalysisConnectivity } from './analysis-connectivity.js';
 import { mountTracking } from './tracking.js';
 import { fullTrackingConfigured, mountFullTracking } from './full-tracking.js';
+import { mountFullTranscription } from './full-transcription.js';
 
 export interface ServerOptions extends SecurityOptions {
   staticDirectory?: string;
@@ -39,7 +40,8 @@ export async function createApp(db: Database, options: ServerOptions) {
   });
   mountSocialAuth(app, db, security, options);
   mountAnalysisConnectivity(app, security, options.analysis);
-  mountFullTracking(app, db, security, { analysis: options.analysis, origin: options.origin });
+  const transcription = mountFullTranscription(app, db, security, { analysis: options.analysis, origin: options.origin });
+  mountFullTracking(app, db, security, { analysis: options.analysis, origin: options.origin, ...transcription });
   options.mountSources?.(app, security);
   mountAnalysis(app, db, security, options.analysis);
   mountTracking(app, db, security, options.analysis);

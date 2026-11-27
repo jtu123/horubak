@@ -97,6 +97,14 @@ export const DATABASE_SCHEMA = `
     FOREIGN KEY(owner_id, project_id) REFERENCES projects(owner_id, id) ON DELETE CASCADE
   );
   CREATE INDEX IF NOT EXISTS tracking_jobs_project ON tracking_full_jobs(owner_id,project_id,created_at);
+  CREATE TABLE IF NOT EXISTS transcript_full_jobs (
+    id TEXT PRIMARY KEY NOT NULL, owner_id TEXT NOT NULL, project_id TEXT NOT NULL,
+    source_revision TEXT NOT NULL, upload_id TEXT NOT NULL,
+    source_json TEXT NOT NULL CHECK(json_valid(source_json)), job_json TEXT NOT NULL CHECK(json_valid(job_json)),
+    provisioned INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+    FOREIGN KEY(owner_id, project_id) REFERENCES projects(owner_id, id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS transcript_jobs_project ON transcript_full_jobs(owner_id,project_id,created_at);
   CREATE TABLE IF NOT EXISTS tracking_full_selections (
     job_id TEXT NOT NULL REFERENCES tracking_full_jobs(id) ON DELETE CASCADE,
     scene_id TEXT NOT NULL, track_id TEXT NOT NULL, updated_at TEXT NOT NULL,

@@ -15,6 +15,7 @@
 !tracking_worker.py
 !tracking*.py
 !full_tracking*.py
+!full_stt*.py
 !LICENSE-NANODET.txt
 !NOTICE-NANODET.txt
 !.dockerignore

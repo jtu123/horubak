@@ -7,7 +7,7 @@ import { useWorkspace } from '../store';
 import { getActiveClip, getProjectClips } from '../workspace-model';
 import { describeProject } from '../project-presentation';
 import { formatTime, rangeError } from '../lib';
-import type { Candidate, EditState } from '../types';
+import type { Candidate, EditState, Utterance } from '../types';
 import { PillTabs } from '../components/lucian/PillTabs';
 import { SourceReconnect, VideoPreview } from '../components/VideoPreview';
 import { Modal } from '../components/Modal';
@@ -47,8 +47,8 @@ export function Editor() {
   const [readySource, setReadySource] = useState<{ key: string; uploadId: string } | null>(null);
   const previewSourceVersion = readySource?.key === previewSourceKey ? readySource.uploadId : undefined;
   const canAnalyze = serverAuth && !!user && !user.guest;
-  const transcriptState = useProjectTranscript(project, canAnalyze, user?.id);
-  const [contextReview, setContextReview] = useState<{ key: string; result: ContextResult } | null>(null);
+  const transcriptState = useProjectTranscript(project, canAnalyze, user?.id, clip?.edit.start ?? 0);
+  const [contextReview, setContextReview] = useState<{ key: string; identity: string; result: ContextResult; items: Utterance[] } | null>(null);
   const [contextLoading, setContextLoading] = useState(false);
   const [contextError, setContextError] = useState('');
   const contextKey = `${user?.id ?? ''}:${id}:${clipId}:${clip?.edit.start}:${clip?.edit.end}`;
@@ -58,8 +58,13 @@ export function Editor() {
     setContextReview(null); setContextLoading(false); setContextError('');
     contextAbort.current?.abort();
     return () => contextAbort.current?.abort();
-  }, [contextKey]);
-  const currentTranscript = useRef(transcriptState.items); currentTranscript.current = transcriptState.items;
+  }, [contextKey, transcriptState.identity]);
+  const currentTranscript = useRef(transcriptState.identity); currentTranscript.current = transcriptState.identity;
+  const sourceReady = useCallback((uploadId: string) => {
+    setReadySource(current => current?.key === previewSourceKey && current.uploadId === uploadId ? current : { key: previewSourceKey, uploadId });
+    if (project && !project.sourceUploaded) updateProject(project.id, { sourceUploaded: true });
+    transcriptState.syncSource(uploadId);
+  }, [previewSourceKey, project?.id, project?.sourceUploaded, updateProject, transcriptState.syncSource]);
   const onPlaying = useCallback((value: boolean) => setPlaying(value), []);
   const onTime = useCallback((value: number) => setTime(value), []);
   useEffect(() => {
@@ -115,24 +120,28 @@ export function Editor() {
   const seek = (value: number) => { setTime(value); setPlaying(false); };
   const switchClip = (nextId: string) => { selectClip(project.id, nextId); setParams({ clip: nextId }); };
   const checkContext = async () => {
-    if (!canAnalyze || !transcript.length || contextLoading || error) return;
+    if (!canAnalyze || !transcriptState.contextReady || transcriptState.analyzing || contextLoading || error) return;
     contextAbort.current?.abort();
     const abort = new AbortController(); contextAbort.current = abort;
     const requestKey = contextKey;
-    const requestTranscript = transcript;
+    const requestTranscript = transcriptState.identity;
     setContextLoading(true); setContextError(''); setContextReview(null); setPlaying(false);
     try {
-      const result = await analysisApi.context(project.id, edit.start, edit.end, project.duration, abort.signal);
+      const items = await transcriptState.contextItems(edit.start, edit.end, abort.signal);
+      abort.signal.throwIfAborted();
+      if (transcriptState.job && !transcriptState.job.sourceSha256) throw new Error('전사 원본의 지문을 확인하지 못했어요. 다시 불러와 주세요.');
+      const expected = transcriptState.job ? { expectedJobId: transcriptState.job.id, expectedSourceSha256: transcriptState.job.sourceSha256! } : undefined;
+      const result = await analysisApi.context(project.id, edit.start, edit.end, project.duration, abort.signal, expected);
       if (!abort.signal.aborted && activeContext.current === requestKey) {
         if (currentTranscript.current !== requestTranscript) setContextError('전사가 변경됐어요. 현재 구간의 맥락을 다시 확인해 주세요.');
-        else setContextReview({ key: requestKey, result });
+        else setContextReview({ key: requestKey, identity: requestTranscript, result, items });
       }
     } catch (reason) {
       if (!abort.signal.aborted && activeContext.current === requestKey) setContextError(reason instanceof Error ? reason.message : '맥락을 확인하지 못했어요.');
     } finally { if (!abort.signal.aborted && activeContext.current === requestKey) setContextLoading(false); }
   };
   const applyContext = () => {
-    if (!contextReview || contextReview.key !== contextKey || contextReview.result.status !== 'expand') return;
+    if (!contextReview || contextReview.key !== contextKey || contextReview.identity !== transcriptState.identity || contextReview.result.status !== 'expand') return;
     const { suggestion, originalStartSeconds, originalEndSeconds } = contextReview.result;
     if (!suggestion || edit.start !== originalStartSeconds || edit.end !== originalEndSeconds) return;
     const invalid = rangeError(suggestion.startSeconds, suggestion.endSeconds, project.duration);
@@ -146,7 +155,7 @@ export function Editor() {
     <div className="editor-layout">
       <aside className="candidate-panel editor-panel v3-editor-explorer">
         <PillTabs label="편집 탐색" value={leftTab} onChange={setLeftTab} options={[{ value: 'clips', label: '내 클립' }, { value: 'source', label: '원본 근거' }]} />
-        {leftTab === 'clips' ? <><div className="panel-subheading"><span>저장한 클립</span><b>{clips.length}</b></div><div className="v3-editor-clips">{clips.map((item, index) => <button key={item.id} className={'v3-editor-clip' + (item.id === clip.id ? ' selected' : '')} aria-pressed={item.id === clip.id} onClick={() => switchClip(item.id)}><span className="v3-editor-clip-index">{String(index + 1).padStart(2, '0')}</span><span><b>{item.title}</b><small>{formatTime(item.edit.start)} — {formatTime(item.edit.end)}</small></span>{item.id === clip.id && <Check size={14} />}</button>)}</div><Link className="v3-explorer-link" to={'/projects/' + project.id + '?tab=candidates'}><Plus size={14} />다른 후보에서 클립 만들기<ArrowRight size={14} /></Link></> : <><div className="panel-subheading"><span>{transcript.length ? '발화 근거' : '장면·이벤트 근거'}</span><b>{transcript.length || evidence.length}</b></div><TranscriptAnalysis project={project} videoUrl={videos[project.id]} enabled={canAnalyze} ownerId={user?.id} transcript={transcriptState} /><div className="v3-editor-evidence">{transcript.length ? transcript.map(item => <button key={item.id} className={'v3-evidence-row' + (time >= item.start && time < item.end ? ' is-current' : '')} onClick={() => seek(item.start)}><span>{formatTime(item.start)}<b>{item.speaker}</b></span><p>{item.text}</p></button>) : evidence.length ? evidence.map(item => <button key={item.id} className={'v3-evidence-row' + (time >= item.start && time < item.end ? ' is-current' : '')} onClick={() => seek(item.start)}><span>{formatTime(item.start)}<b>{item.kind === 'sound' ? '소리' : '장면'}</b></span><h3>{item.title}</h3><p>{item.description}</p></button>) : <div className="v3-evidence-empty"><ScanLine size={26} /><h3>{transcriptState.loading ? '전사 불러오는 중…' : '저장된 전사가 없어요'}</h3><p>한국어 전사를 시작하거나 원본에서 직접 구간을 지정하세요.</p></div>}</div>{sample && !transcript.length && <div className="v3-inline-note"><Info size={13} />음성 없는 영상의 샘플입니다.</div>}</>}
+        {leftTab === 'clips' ? <><div className="panel-subheading"><span>저장한 클립</span><b>{clips.length}</b></div><div className="v3-editor-clips">{clips.map((item, index) => <button key={item.id} className={'v3-editor-clip' + (item.id === clip.id ? ' selected' : '')} aria-pressed={item.id === clip.id} onClick={() => switchClip(item.id)}><span className="v3-editor-clip-index">{String(index + 1).padStart(2, '0')}</span><span><b>{item.title}</b><small>{formatTime(item.edit.start)} — {formatTime(item.edit.end)}</small></span>{item.id === clip.id && <Check size={14} />}</button>)}</div><Link className="v3-explorer-link" to={'/projects/' + project.id + '?tab=candidates'}><Plus size={14} />다른 후보에서 클립 만들기<ArrowRight size={14} /></Link></> : <><div className="panel-subheading"><span>{transcript.length ? '발화 근거' : '장면·이벤트 근거'}</span><b>{transcript.length || evidence.length}</b></div><TranscriptAnalysis project={project} videoUrl={videos[project.id]} enabled={canAnalyze} ownerId={user?.id} transcript={transcriptState} onSourceReady={sourceReady} /><div className="v3-editor-evidence">{transcript.length ? transcript.map(item => <button key={item.id} className={'v3-evidence-row' + (time >= item.start && time < item.end ? ' is-current' : '')} onClick={() => seek(item.start)}><span>{formatTime(item.start)}<b>{item.speaker}</b></span><p>{item.text}</p></button>) : evidence.length ? evidence.map(item => <button key={item.id} className={'v3-evidence-row' + (time >= item.start && time < item.end ? ' is-current' : '')} onClick={() => seek(item.start)}><span>{formatTime(item.start)}<b>{item.kind === 'sound' ? '소리' : '장면'}</b></span><h3>{item.title}</h3><p>{item.description}</p></button>) : <div className="v3-evidence-empty"><ScanLine size={26} /><h3>{transcriptState.loading || transcriptState.windowLoading ? '전사 불러오는 중…' : transcriptState.job ? '다른 전사 구간도 확인할 수 있어요' : '저장된 전사가 없어요'}</h3><p>{transcriptState.job ? '위의 전사 구간 이동에서 확인할 위치를 선택하세요.' : '한국어 전사를 시작하거나 원본에서 직접 구간을 지정하세요.'}</p></div>}</div>{sample && !transcript.length && <div className="v3-inline-note"><Info size={13} />음성 없는 영상의 샘플입니다.</div>}</>}
       </aside>
       <div className="editor-center">
         <section className="preview-panel"><div className="preview-toolbar"><span>클립 미리보기</span><span>{output.ratio}<ChevronRight size={12} />{output.label}</span></div><VideoPreview project={project} edit={edit} time={time} playing={playing} onTime={onTime} onPlaying={onPlaying} sourceVersion={previewSourceVersion} /><SourceReconnect project={project} />{selected && <div className="v3-reason"><div><span>{selected.evidenceKind === 'scene' ? <ScanLine size={14} /> : <FileText size={14} />}선정 이유</span><button className="text-link" onClick={() => { setLeftTab('source'); seek(selected.start); }}>원본 근거<ArrowRight size={13} /></button></div><p>{selected.reason}</p>{selected.warning && <button className="v3-context-open" onClick={() => { setReview(selected); setPlaying(false); }}><ShieldCheck size={15} /><span>{edit.contextApplied ? '맥락 보정 적용됨' : selected.warning.title}</span><ChevronRight size={14} /></button>}</div>}</section>
@@ -368,16 +377,16 @@ export function Editor() {
     핵심어를 쉼표로 구분하면 미리보기에서 강조됩니다.
   </div></>}
         {rightTab === 'crop' && <><OutputControls edit={edit} onChange={commit} /><div className="control-title"><h3>화면 구성</h3><span className="tiny-tag">수동</span></div><div className="layout-picker"><button className={edit.layout === 'speaker' ? 'selected' : ''} onClick={() => commit({ layout: 'speaker' })}><span className="layout-glyph portrait" /><b>피사체 중심</b></button><button className={edit.layout === 'full' ? 'selected' : ''} onClick={() => commit({ layout: 'full' })}><span className="layout-glyph landscape" /><b>원본 전체</b></button></div>{([{ label: '가로 위치', key: 'cropX', min: 0, max: 100, step: 1 }, { label: '세로 위치', key: 'cropY', min: 0, max: 100, step: 1 }, { label: '확대', key: 'scale', min: 1, max: 2, step: .05 }] as const).map(control => <div key={control.key}><label className="range-label" htmlFor={control.key}>{control.label}<b>{control.key === 'scale' ? edit[control.key].toFixed(2) + '×' : edit[control.key] + '%'}</b></label><input id={control.key} type="range" min={control.min} max={control.max} step={control.step} value={edit[control.key]} onChange={event => commit({ [control.key]: Number(event.target.value) })} /></div>)}<button className="text-link v3-reset-crop" onClick={() => commit({ cropX: 50, cropY: 50, scale: 1 })}><Undo2 size={13} />구도 초기화</button><div className="settings-note"><ScanLine size={15} />피사체 탭에서 대상을 추적할 수 있어요. 시간별 자동 크롭은 별도 기능입니다.</div></>}
-        {rightTab === 'tracking' && <TrackingPanel key={project.id} project={project} clip={clip} enabled={canAnalyze} ownerId={user?.id} videoUrl={videos[project.id]} onSourceReady={uploadId => { setReadySource(current => current?.key === previewSourceKey && current.uploadId === uploadId ? current : { key: previewSourceKey, uploadId }); if (!project.sourceUploaded) updateProject(project.id, { sourceUploaded: true }); }} />}
+        {rightTab === 'tracking' && <TrackingPanel key={project.id} project={project} clip={clip} enabled={canAnalyze} ownerId={user?.id} videoUrl={videos[project.id]} onSourceReady={sourceReady} />}
         {rightTab === 'ai' && <><div className="v3-ai-modes" role="group" aria-label="AI 기능"><button aria-pressed={aiMode === 'context'} onClick={() => setAiMode('context')}>맥락</button><button aria-pressed={aiMode === 'command'} onClick={() => setAiMode('command')}>자연어</button><button aria-pressed={aiMode === 'screen'} onClick={() => setAiMode('screen')}>화면 보존</button></div>{aiMode === 'context' ? <div className="v3-ai-content"><ShieldCheck size={26} /><h3>{edit.contextApplied ? '보정안을 적용했어요' : '앞뒤 맥락을 확인해요'}</h3>
-          {sample ? <><p>{selected?.warning?.description ?? '샘플의 원본 근거를 확인하고 구간을 결정해 주세요.'}</p>{selected?.warning && <button className="btn secondary full" onClick={() => setReview(selected)}>보정 전후 비교<ArrowRight size={14} /></button>}</> : <><p>전사와 현재 클립의 앞뒤 발화를 함께 검토합니다.</p><button type="button" className="btn secondary full" disabled={!canAnalyze || !transcript.length || transcriptState.analyzing || contextLoading || !!error} onClick={() => void checkContext()}>{contextLoading ? '맥락 검토 중…' : '현재 구간 맥락 확인'}<ShieldCheck size={14} /></button>{!transcript.length && <span className="v3-tool-footnote">원본 근거에서 한국어 전사를 먼저 생성해 주세요.</span>}{error && <p className="field-error">{error}</p>}{contextError && <p className="field-error" role="alert">{contextError}</p>}</>}
+          {sample ? <><p>{selected?.warning?.description ?? '샘플의 원본 근거를 확인하고 구간을 결정해 주세요.'}</p>{selected?.warning && <button className="btn secondary full" onClick={() => setReview(selected)}>보정 전후 비교<ArrowRight size={14} /></button>}</> : <><p>전사와 현재 클립의 앞뒤 발화를 함께 검토합니다.</p><button type="button" className="btn secondary full" disabled={!canAnalyze || !transcriptState.contextReady || transcriptState.analyzing || contextLoading || !!error} onClick={() => void checkContext()}>{contextLoading ? '맥락 검토 중…' : '현재 구간 맥락 확인'}<ShieldCheck size={14} /></button>{!transcriptState.contextReady && <span className="v3-tool-footnote">원본 근거에서 한국어 전사를 먼저 생성해 주세요.</span>}{error && <p className="field-error">{error}</p>}{contextError && <p className="field-error" role="alert">{contextError}</p>}</>}
           <button className="text-link" onClick={() => setLeftTab('source')}>원본 근거 열기<ArrowRight size={13} /></button></div> : aiMode === 'command' ? <div className="v3-ai-content"><MessageSquare size={26} /><h3>말로 편집하기</h3><p>구간·자막·스타일·구도를 요청하고 변경 내용을 확인하는 기능입니다.</p><label className="field-label" htmlFor="natural-command">편집 요청</label><textarea id="natural-command" className="text-input" rows={3} disabled placeholder="질문부터 포함하고 자막을 작게 바꿔줘" /><button className="btn secondary full" disabled>명령 해석 연결 전</button></div> : <div className="v3-ai-content"><ScanLine size={26} /><h3>핵심 화면 보존</h3><p>화면 글자·자료·중요 영역을 보존하는 자동 레이아웃은 연결 전입니다.</p><button className="btn secondary full" onClick={() => { setRightTab('crop'); commit({ layout: 'full' }); }}>원본 전체 화면 적용</button><span className="v3-tool-footnote">수동 구도로 중요한 영역을 유지할 수 있어요.</span></div>}</>}
       </div></aside>
     </div>
-    {contextReview?.key === contextKey && <Modal title="맥락 확인 결과" onClose={() => setContextReview(null)}>
+    {contextReview?.key === contextKey && contextReview.identity === transcriptState.identity && <Modal title="맥락 확인 결과" onClose={() => setContextReview(null)}>
       <span className="modal-kicker">현재 클립 · {contextReview.result.status === 'expand' ? '구간 보정 제안' : contextReview.result.status === 'keep' ? '현재 구간 유지' : '직접 확인 필요'}</span>
       <div className="context-evidence"><Info size={17} /><div><b>검토 근거</b><p>{contextReview.result.reason}</p></div></div>
-      <div className="comparison-grid"><div><span>현재 구간</span><b>{formatTime(edit.start)} — {formatTime(edit.end)}</b><small>{(edit.end - edit.start).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}초</small><p>{transcript.filter(item => item.end > edit.start && item.start < edit.end).map(item => item.text).join(' ').slice(0, 1000)}</p><button className="text-link" onClick={() => { seek(edit.start); setLeftTab('source'); setContextReview(null); }}>원본에서 확인</button></div>{contextReview.result.suggestion && <div><span>제안 구간</span><b>{formatTime(contextReview.result.suggestion.startSeconds)} — {formatTime(contextReview.result.suggestion.endSeconds)}</b><small>{contextReview.result.suggestion.durationSeconds.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}초</small><p>{transcript.filter(item => item.end > contextReview.result.suggestion!.startSeconds && item.start < contextReview.result.suggestion!.endSeconds).map(item => item.text).join(' ').slice(0, 1000)}</p></div>}</div>
+      <div className="comparison-grid"><div><span>현재 구간</span><b>{formatTime(edit.start)} — {formatTime(edit.end)}</b><small>{(edit.end - edit.start).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}초</small><p>{contextReview.items.filter(item => item.end > edit.start && item.start < edit.end).map(item => item.text).join(' ').slice(0, 1000)}</p><button className="text-link" onClick={() => { seek(edit.start); transcriptState.selectTime(edit.start); setLeftTab('source'); setContextReview(null); }}>원본에서 확인</button></div>{contextReview.result.suggestion && <div><span>제안 구간</span><b>{formatTime(contextReview.result.suggestion.startSeconds)} — {formatTime(contextReview.result.suggestion.endSeconds)}</b><small>{contextReview.result.suggestion.durationSeconds.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}초</small><p>{contextReview.items.filter(item => item.end > contextReview.result.suggestion!.startSeconds && item.start < contextReview.result.suggestion!.endSeconds).map(item => item.text).join(' ').slice(0, 1000)}</p></div>}</div>
       <p className="muted">원본 발화를 확인한 뒤 보정안을 적용해 주세요.</p><div className="modal-actions"><button className="btn secondary" onClick={() => setContextReview(null)}>닫기</button>{contextReview.result.status === 'expand' && contextReview.result.suggestion && <button className="btn primary" onClick={applyContext}>확인하고 적용<Check size={15} /></button>}</div>
     </Modal>}
     {shortcuts && <Modal title="편집 단축키" onClose={() => setShortcuts(false)}><table className="v3-shortcut-table"><tbody><tr><th scope="row">되돌리기</th><td><kbd>Ctrl / ⌘ Z</kbd></td></tr><tr><th scope="row">다시 실행</th><td><kbd>Ctrl / ⌘ Shift Z</kbd><br /><kbd>Ctrl Y</kbd></td></tr><tr><th scope="row">대화상자 닫기</th><td><kbd>Esc</kbd></td></tr></tbody></table><p className="v3-shortcut-note">현재 클립의 최근 20개 편집을 이 화면에서 되돌리거나 다시 실행합니다. 새로고침하면 이력은 초기화됩니다. 입력 중에는 브라우저의 글자 되돌리기를 사용합니다.</p><div className="modal-actions"><button className="btn primary" onClick={() => setShortcuts(false)}>확인</button></div></Modal>}
