@@ -6,7 +6,7 @@ import { useWorkspace } from '../store';
 import type { EditState, Project } from '../types';
 import { getOutputProfile } from '../output-profile';
 import { getSportsSample } from '../sports-samples';
-import { clipPlaybackStart, readVideoDuration, useVideoProbe } from '../video-metadata';
+import { clipPlaybackStart, previewMediaUrl, readVideoDuration, useVideoProbe } from '../video-metadata';
 import '../styles/output-profile.css';
 
 const sampleVideos = new Map<string, Promise<Blob>>();
@@ -53,9 +53,9 @@ export function SourceReconnect({ project }: { project: Project }) {
   }} /></div>;
 }
 
-export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }: {
+export function VideoPreview({ project, edit, time, playing, onTime, onPlaying, sourceVersion }: {
   project: Project; edit: EditState; time: number; playing: boolean;
-  onTime: (time: number) => void; onPlaying: (playing: boolean) => void;
+  onTime: (time: number) => void; onPlaying: (playing: boolean) => void; sourceVersion?: string;
 }) {
   const { videos } = useWorkspace();
   const video = useRef<HTMLVideoElement>(null);
@@ -66,8 +66,8 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
   const match = getSportsSample(project);
   const sampleSource = match?.videoUrl;
   const loadedSample = sampleMedia?.source === sampleSource ? sampleMedia : undefined;
-  const uploadedSource = project.sourceUploaded ? '/api/projects/' + encodeURIComponent(project.id) + '/source' : undefined;
-  const url = videos[project.id] ?? uploadedSource ?? loadedSample?.url ?? undefined;
+  const uploadedSource = !!(project.sourceUploaded || sourceVersion);
+  const url = previewMediaUrl({ projectId: project.id, sourceUploaded: project.sourceUploaded, sourceVersion, localUrl: videos[project.id], sampleUrl: loadedSample?.url });
   const stillSample = project.source === 'sample' && !match && !url;
   const canMute = !!url && !match;
   const mediaError = error || loadedSample?.url === null;
@@ -118,7 +118,7 @@ export function VideoPreview({ project, edit, time, playing, onTime, onPlaying }
   return <div className="preview-player">
     <div className="preview-stage"><div className={'portrait-frame output-frame' + (edit.layout === 'full' ? ' full-frame' : '')} data-aspect-ratio={profile.ratio} style={{ width: 'min(100%, calc(var(--output-frame-height) * ' + profile.width / profile.height + '))', height: 'auto', maxHeight: 'none', aspectRatio: profile.cssRatio }} ref={frame}>
       <div className="preview-source" style={{ transform: 'scale(' + edit.scale + ')' }}>
-        {url ? <video ref={video} src={url} poster={match && (match.candidateThumbnails?.[edit.candidateId] ?? match.thumbnail)} muted={!!match || muted} playsInline preload="metadata" style={{ objectPosition: edit.cropX + '% ' + edit.cropY + '%' }} onLoadedMetadata={event => { event.currentTarget.currentTime = Math.min(Math.max(0, time), Math.max(0, event.currentTarget.duration - .05)); }} onTimeUpdate={event => {
+        {url ? <video key={url} ref={video} src={url} poster={match && (match.candidateThumbnails?.[edit.candidateId] ?? match.thumbnail)} muted={!!match || muted} playsInline preload="metadata" style={{ objectPosition: edit.cropX + '% ' + edit.cropY + '%' }} onLoadedMetadata={event => { event.currentTarget.currentTime = Math.min(Math.max(0, time), Math.max(0, event.currentTarget.duration - .05)); }} onTimeUpdate={event => {
           const value = event.currentTarget.currentTime;
           if (value >= edit.end && playing) { onPlaying(false); event.currentTarget.currentTime = edit.start; onTime(edit.start); }
           else onTime(value);

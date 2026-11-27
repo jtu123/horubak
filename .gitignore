@@ -17,5 +17,7 @@ backend/data/
 .idea/
 .venv/
 ai-server/.venv/
+ai-server/.venv-tracking/
+ai-server/models/
 __pycache__/
 *.pyc

@@ -89,7 +89,7 @@ export function NewProject() {
 
   return <div className="new-project new-project-v3">
     <Link to="/projects" className="back-link"><ArrowLeft size={15} />프로젝트</Link>
-    <div className="page-heading"><div><div className="page-eyebrow">새 프로젝트</div><h1>영상으로 시작하기</h1><p>분야 제한 없이, 원하는 순간을 클립으로.</p></div></div>
+    <div className="page-heading"><div><div className="page-eyebrow">새 프로젝트</div><h1>영상으로 시작하기</h1><p>최대 4GB·10시간의 원본을 등록할 수 있어요.</p></div></div>
     <div className="registration-layout">
       <form className="registration-card" aria-busy={busy} onSubmit={submit} onChangeCapture={() => { if (phase === 'probing') cancelProbe(); }}>
         <section className="form-section" inert={registering}><div className="form-section-title"><span>01</span><h2>원본 영상</h2></div>

@@ -6,7 +6,7 @@ import type { VideoMetadata } from '../types/project.types.js';
 
 const runProbe = promisify(execFile);
 const PROBE_TIMEOUT_MS = 15_000;
-const MAX_DURATION_SECONDS = 7 * 86_400;
+const MAX_DURATION_SECONDS = 10 * 3600;
 
 interface ProbeStream {
   codec_type?: string;

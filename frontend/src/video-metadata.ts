@@ -1,8 +1,18 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { EditState } from './types';
+import { MAX_FULL_SOURCE_SECONDS } from './full-tracking-model';
 
 const METADATA_TIMEOUT_MS = 10_000;
-const MAX_VIDEO_SECONDS = 7 * 86_400;
+const MAX_VIDEO_SECONDS = MAX_FULL_SOURCE_SECONDS;
+
+export function previewMediaUrl({ projectId, sourceUploaded, sourceVersion, localUrl, sampleUrl }: {
+  projectId: string; sourceUploaded?: boolean; sourceVersion?: string; localUrl?: string; sampleUrl?: string | null;
+}): string | undefined {
+  const uploaded = sourceUploaded || sourceVersion ? '/api/projects/' + encodeURIComponent(projectId) + '/source'
+    + (sourceVersion ? '?version=' + encodeURIComponent(sourceVersion) : '') : undefined;
+  // A confirmed analysis source must also be the central preview source.
+  return sourceVersion ? uploaded : localUrl ?? uploaded ?? sampleUrl ?? undefined;
+}
 
 export function readVideoDuration(file: File, signal: AbortSignal): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -35,7 +45,7 @@ export function readVideoDuration(file: File, signal: AbortSignal): Promise<numb
         return;
       }
       if (duration > MAX_VIDEO_SECONDS) {
-        fail(new Error('원본 영상의 길이는 최대 7일이에요.'));
+        fail(new Error('원본 영상의 길이는 최대 10시간이에요.'));
         return;
       }
       cleanUp();

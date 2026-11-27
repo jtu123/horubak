@@ -1,7 +1,7 @@
 import { HttpError } from './security.js';
 
 const MAX_SOURCE_URL_LENGTH = 4096;
-const MAX_VIDEO_SECONDS = 7 * 86400;
+const MAX_VIDEO_SECONDS = 10 * 3600;
 const MAX_PASSWORD_LENGTH = 128;
 
 export function object(value: unknown): Record<string, unknown> {
@@ -44,11 +44,17 @@ export function loginPassword(value: unknown) {
 }
 function number(value: unknown, max: number) { return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= max; }
 function choice(value: unknown, options: string[]) { return typeof value === 'string' && options.includes(value); }
-export function project(value: unknown) {
+export function project(value: unknown, existingSource?: Record<string, unknown>) {
   const doc = object(value);
   if (typeof doc.id !== 'string' || !/^[\w-]{1,100}$/.test(doc.id)) throw new HttpError(400, 'INVALID_PROJECT', '프로젝트 ID를 확인해 주세요.');
   text(doc.title, 200, '프로젝트 제목'); text(doc.sourceName, doc.source === 'url' ? MAX_SOURCE_URL_LENGTH : 500, '원본 이름');
-  if (!choice(doc.status, ['ready', 'processing', 'completed', 'cancelled', 'failed']) || !choice(doc.genre, ['lecture', 'speech', 'podcast', 'general']) || !choice(doc.source, ['sample', 'file', 'url']) || !number(doc.duration, MAX_VIDEO_SECONDS) || !number(doc.progress, 100) || typeof doc.favorite !== 'boolean') throw new HttpError(400, 'INVALID_PROJECT', '프로젝트 형식을 확인해 주세요.');
+  // Preserve already-saved legacy originals without allowing a new over-limit
+  // registration or replacing their source under the same project identifier.
+  const sourceFields = ['source', 'sourceName', 'duration', 'fileSize', 'sourceUrl', 'sportsSampleId'];
+  const legacySource = existingSource && typeof existingSource.duration === 'number' && existingSource.duration > MAX_VIDEO_SECONDS
+    && existingSource.duration <= 7 * 86400 && sourceFields.every(key => doc[key] === existingSource[key]);
+  const maximumSeconds = legacySource ? 7 * 86400 : MAX_VIDEO_SECONDS;
+  if (!choice(doc.status, ['ready', 'processing', 'completed', 'cancelled', 'failed']) || !choice(doc.genre, ['lecture', 'speech', 'podcast', 'general']) || !choice(doc.source, ['sample', 'file', 'url']) || !number(doc.duration, maximumSeconds) || !number(doc.progress, 100) || typeof doc.favorite !== 'boolean') throw new HttpError(400, 'INVALID_PROJECT', '프로젝트 형식을 확인해 주세요.');
   for (const date of [doc.createdAt, doc.updatedAt]) if (typeof date !== 'string' || date.length > 35 || !Number.isFinite(Date.parse(date))) throw new HttpError(400, 'INVALID_PROJECT', '프로젝트 날짜를 확인해 주세요.');
   if (doc.sourceUrl !== undefined) {
     let address: URL;
@@ -59,7 +65,7 @@ export function project(value: unknown) {
     const item = object(value);
     // Draft edits can temporarily fall outside the source range while the editor inputs change.
     for (const time of [item.start, item.end]) {
-      if (typeof time !== 'number' || !Number.isFinite(time) || Math.abs(time) > MAX_VIDEO_SECONDS) throw new HttpError(400, 'INVALID_PROJECT', '편집 구간을 확인해 주세요.');
+      if (typeof time !== 'number' || !Number.isFinite(time) || Math.abs(time) > maximumSeconds) throw new HttpError(400, 'INVALID_PROJECT', '편집 구간을 확인해 주세요.');
     }
     text(item.subtitle, 10000, '자막', 0);
   }

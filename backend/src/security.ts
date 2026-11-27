@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 import type { Database, UserRow } from './database-contract.js';
 
 export class HttpError extends Error {
-  constructor(public status: number, public code: string, message: string) { super(message); }
+  constructor(public status: number, public code: string, message: string, public retryAfter?: number) { super(message); }
 }
 export const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
 const secret = () => randomBytes(32).toString('hex');

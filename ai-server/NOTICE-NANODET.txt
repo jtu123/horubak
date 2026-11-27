@@ -1,0 +1,11 @@
+OpenCV Zoo NanoDet model and inference adaptation
+Source: https://github.com/opencv/opencv_zoo/tree/48b10fa505aeb51fbd127fc60a5c660040e823b7/models/object_detection_nanodet
+Upstream model/training project: https://github.com/RangiLyu/nanodet
+License: Apache License 2.0; see LICENSE-NANODET.txt.
+
+tracking_model.py adapts the OpenCV Zoo NanoDet Python decoding and letterbox
+reference. Modifications include bounded class-aware NMS, stable DFL softmax,
+original-frame normalized boxes, appearance descriptors, lazy CPU-only loading,
+and a fixed-size/SHA-256 model check. Tracking association and HTTP integration
+are maintained by the Horubak project. The checkpoint is fetched separately from
+the pinned official source; video content is not sent to that source.

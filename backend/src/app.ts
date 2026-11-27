@@ -14,7 +14,7 @@ async function start() {
   const app = await createApp(db, {
     origin, secureCookies, trustProxy: process.env.TRUST_PROXY === '1', staticDirectory: process.env.FRONTEND_DIST,
     socialProviders: configureSocialProviders(origin, secureCookies),
-    analysis: { baseUrl: process.env.ANALYSIS_BASE_URL, serviceToken: process.env.ANALYSIS_SERVICE_TOKEN },
+    analysis: { baseUrl: process.env.ANALYSIS_BASE_URL, serviceToken: process.env.ANALYSIS_SERVICE_TOKEN, fullTrackingEnabled: process.env.FULL_TRACKING_ENABLED === '1' },
     mountSources: enableUploads ? mountProjectSources(db) : undefined,
   });
   const port = Number(process.env.PORT ?? 8080); const host = process.env.HOST ?? '127.0.0.1';
